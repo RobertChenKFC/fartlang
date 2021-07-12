@@ -1,0 +1,423 @@
+\documentclass[titlepage]{article}
+\usepackage{amssymb}
+\usepackage[
+	margin=1.5cm,
+	includefoot,
+	footskip=30pt,
+]{geometry}
+
+\usepackage{amsthm}
+\usepackage[open,openlevel=0]{bookmark}
+\usepackage{mathrsfs}
+\usepackage{dsfont}
+\usepackage{amsmath}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage{multirow}
+\usepackage{CJKutf8}
+\usepackage{enumerate}
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{wasysym}
+\usepackage{enumerate}
+\usepackage[RPvoltages]{circuitikz}
+\usepackage{soul}
+\usepackage{karnaugh-map}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\newcommand{\pushcode}[1][1]{\hskip\dimexpr#1\algorithmicindent\relax}
+\newcommand{\MyComment}[2][.5] {\Comment{\parbox[t]{#1\linewidth}{#2}}}
+\makeatletter
+
+\newenvironment{breakablealgorithm}
+  {% \begin{breakablealgorithm}
+   \begin{center}
+     \refstepcounter{algorithm}% New algorithm
+     \hrule height.8pt depth0pt \kern2pt% \@fs@pre for \@fs@ruled
+     \renewcommand{\caption}[2][\relax]{% Make a new \caption
+       {\raggedright\textbf{\ALG@name~\thealgorithm} ##2\par}%
+       \ifx\relax##1\relax % #1 is \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##2}%
+       \else % #1 is not \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##1}%
+       \fi
+       \kern2pt\hrule\kern2pt
+     }
+  }{% \end{breakablealgorithm}
+     \kern2pt\hrule\relax% \@fs@post for \@fs@ruled
+   \end{center}
+  }
+\makeatother
+
+\usetikzlibrary{arrows, shapes.gates.logic.US, calc, positioning}
+
+\theoremstyle{plain}
+\newtheorem*{axiom}{Axiom}
+\newtheorem*{theorem}{Theorem}
+\newtheorem*{observation}{Observation}
+\newtheorem*{exercise}{Exercise}
+
+\theoremstyle{definition}
+\newtheorem*{definition}{Definition}
+
+\theoremstyle{remark}
+\newtheorem*{solution}{Solution}
+\newtheorem*{remark}{Remark}
+
+\DeclareMathOperator{\dom}{dom}
+
+\title{Lexical Analysis}
+\author{Robert Chen}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+\tableofcontents
+
+\newpage
+\section{Regular Expressions}
+The following is the definition of a \textit{regular expression}:
+\begin{definition}
+  A \textit{regular expression} (\textit{regex} for short) over finite alphabet
+  $\Sigma$ is recursively built from the following rules:
+  \begin{itemize}
+    \item Any $a\in\Sigma$ is a regex.
+    \item If $\alpha,\beta$ are regex, then $\alpha\beta$ is a regex.
+    \item If $\alpha,\beta$ are regex, then $\alpha|\beta$ is a regex.
+    \item If $\alpha$ is a regex, then $\alpha^*$ is a regex.
+  \end{itemize}
+\end{definition}
+A regex defines a language --- a set of strings it accepts. The
+following is the definiion of the language of a regex:
+\begin{definition}
+  Let $\gamma$ be a regex over $\Sigma$ and $L(\gamma)$ denote the language it
+  accepts, then
+  \begin{itemize}
+    \item If $\gamma=\varnothing$, then
+      \[
+        L(\gamma)=\varnothing
+      \]
+    \item If $\gamma=a\in\Sigma$, then
+      \[
+        L(\gamma)=\{a\}
+      \]
+    \item If $\gamma=\alpha\beta$, then
+      \[
+        L(\gamma)=\{w_1\mathbin\Vert w_2:w_1\in L(\alpha),w_2\in L(\beta)\}
+      \]
+      where $\Vert$ denotes the concatenation operation on two strings.
+    \item If $\gamma=\alpha|\beta$, then
+      \[
+        L(\gamma)=L(\alpha)\cup L(\beta)
+      \]
+    \item If $\gamma=\alpha^*$, then
+      \[
+        L(\gamma)=\bigcup_{w\in L(\alpha)}\bigcup_{n\in\mathds{N}}w^n
+      \]
+      where $w^n$ denotes $n$ concatenations of the same string $w$. Note that
+      $w^0$ denotes the empty string (string of length 0), and is commonly
+      denoted as $\varepsilon$.
+  \end{itemize}
+\end{definition}
+We use regexs as a tool to describe what each type of token should look like,
+and the language it defines a set containing all valid tokens of that type.
+For common use, regexes are often defined over the ASCII characters and extended
+with the following:
+\begin{itemize}
+  \item $x_a-x_b\equiv x_a|x_{a+1}|\cdots|x_b$: a range (can only be used in character
+    classes), where $x_i$ represents the $i$-th ASCII character.
+  \item $[a_1a_2\cdots a_n]\equiv a_1|a_2|\cdots|a_n$: a character class, where
+    each $a_i$ is either from $\Sigma$ or a range.
+  \item $[{}^\wedge x]\equiv [a_1a_2\cdots a_n]$: a negated character class, where
+    $\{a_1,a_2,\ldots,a_n\}=\Sigma\setminus L([x])$.
+  \item $.=[x_0-x_{127}]$: match any ASCII character.
+  \item $\text{\textbackslash}d\equiv [0-9]$: digits.
+  \item $\text{\textbackslash}w\equiv [A-Za-z]$: letters.
+  \item $\alpha?\equiv \alpha|\varnothing^*$: 0 or 1 occurrences of $\alpha$.
+  \item $\alpha+\equiv \alpha\alpha^*$: 1 or more occurrences of $\alpha$.
+\end{itemize}
+
+\section{Non-deterministic Finite Automata}
+A \textit{non-deterministic finite automata} is defined as the following:
+\begin{definition}
+  A \textit{non-deterministic finite automata} (\textit{NFA} for short) is
+  a 5-tuple $\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$ where
+  \begin{itemize}
+    \item $\Sigma$ is a finite alphabet.
+    \item $Q$ is a set of states.
+    \item $q_0\in Q$ is the initial state.
+    \item $F\subseteq Q$ is a set of accepting states.
+    \item $\delta\subseteq (Q\times(\Sigma\cup\{\varepsilon\}))\times Q$ denotes
+      a set of transitions. Let $\delta(p,a)=q$ denote every $((p,a),q)\in
+      \delta$.
+  \end{itemize}
+\end{definition}
+An NFA also defines a language:
+\begin{definition}
+  Let $\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$ be an NFA and $L(\mathcal{A})$
+  denote the language it accepts, then
+  \[
+    L(\mathcal{A})=\{w\in\Sigma^*: \exists q_0,q_1,\ldots,q_n\in Q\quad
+    \alpha(a_1,a_2,\ldots,a_n,w)\land
+    \beta(q_0,a_1,q_1,a_2,q_2,\ldots,a_n,q_n,\delta)\land
+    (q_n\in F)\}
+  \]
+  where
+  \begin{itemize}
+    \item $\Sigma^*$ denotes all strings over $\Sigma$. In other words,
+      \[
+        \Sigma^*=\bigcup_{n\in\mathds{N}}
+        \{a_1\mathbin\Vert a_2\mathbin\Vert\cdots\mathbin\Vert a_n:
+        a_1,a_2,\ldots,a_n\in\Sigma\}
+      \]
+    \item $\alpha(a_1,a_2,\ldots,a_n,w)$ denotes the following boolean
+      expression:
+      \[
+        a_1\mathbin\Vert a_2\mathbin\Vert\cdots\mathbin\Vert a_n=w
+      \]
+    \item $\beta(q_0,a_1,q_1,a_2,q_2,\ldots,a_n,q_n,\delta)$ defines the following
+      boolean expression:
+      \[
+        \bigwedge_{i=0,\ldots,n-1}\delta(q_i,a_{i+1})=q_{i+1}
+      \]
+  \end{itemize}
+\end{definition}
+The connection between NFA and regex is the following theorem:
+\begin{theorem}
+  For every regex $\gamma$ over finite alphabet $\Sigma$, there is a NFA
+  $\mathcal{A}$ such that $L(\gamma)=L(\mathcal{A})$.
+\end{theorem}
+\begin{proof}
+  We prove this by induction on $\gamma$:
+  \begin{itemize}
+    \item Base case:
+      \begin{itemize}
+        \item If $\gamma=\varnothing$, then let $\mathcal{A}=(\Sigma,\{q_0\},
+          q_0,\varnothing,\varnothing)$.
+        \item If $\gamma=a\in\Sigma$, then let $\mathcal{A}=(\Sigma,Q,q_0,F,
+          \delta)$ where
+          \begin{itemize}
+            \item $Q=\{q_0,q_1\}$.
+            \item $F=\{q_1\}$.
+            \item $\delta=\{((q_0,a),q_1)\}$.
+          \end{itemize}
+      \end{itemize}
+      In both cases, it is obvious that $L(\alpha)=\{a\}=L(\mathcal{A})$.
+    \item Induction case: suppose $\alpha,\beta$ are regexes, $\mathcal{A}_1
+      =(\Sigma,Q_1,q_{10},F_1,\delta_1), \mathcal{A}_2=(\Sigma,Q_2,q_{20},F_2,
+      \delta_2)$ are NFAs, and $L(\alpha)=L(\mathcal{A}_1),L(\beta)=
+      L(\mathcal{A}_2)$ by inductive hypothesis, then
+      \begin{itemize}
+        \item If $\gamma=\alpha\beta$, then let $\mathcal{A}=(\Sigma,
+          Q_1\cup Q_2,q_{10},F_2,\delta)$ where
+          \[
+            \delta=\delta_1\cup\delta_2\cup((F_1\times\{\varepsilon\})
+            \times\{q_{20}\})
+          \]
+        \item If $\gamma=\alpha|\beta$, then let $\mathcal{A}=(\Sigma,
+          Q_1\cup Q_2,q_{10},F_1\cup F_2,\delta)$ where
+          \[
+            \delta=\delta_1\cup\delta_2\cup\{((q_{10},\varepsilon),q_{20})\}
+          \]
+        \item If $\gamma=\alpha^*$, then let $\mathcal{A}=(\Sigma,
+          Q_1,q_{10},F_1,\delta)$ where
+          \[
+            \delta=\delta_1\cup((F_1\times\{\varepsilon\})\times\{q_{10}\})
+          \]
+      \end{itemize}
+      In all three cases, it is clear that $L(\gamma)=L(\mathcal{A})$.
+  \end{itemize}
+\end{proof}
+This proof also gives a (recursive) constructive algorithm for building an
+NFA that accepts the same language as an arbitrary regex.
+
+\section{Deterministic Finite Automata}
+An NFA is not ideal for implementation because:
+\begin{itemize}
+  \item From a state $q$ reading input $a$, we can go to multiple different
+    states.
+  \item From a state $q$ without reading any input, we can go to multiple
+    different states. These are called $\varepsilon$-transitions.
+\end{itemize}
+A \textit{deterministic finite automata} solves this issue:
+\begin{definition}
+  A \textit{deterministic finite automata} (\textit{DFA} for short) is a 5-tuple
+  $\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$ where
+  \begin{itemize}
+    \item $\Sigma$ is a finite alphabet.
+    \item $Q$ is a set of states.
+    \item $q_0\in Q$ is the initial state.
+    \item $F\subseteq Q$ is a set of accepting states.
+    \item $\delta:I\to Q$ is a set of transitions where
+      $I\subseteq Q\times\Sigma$.
+  \end{itemize}
+\end{definition}
+The only difference between a DFA and NFA is the set of transitions. The
+definition of the language accepted by a DFA is also the same as that of an
+NFA\@. The connection between a DFA and an NFA is the following theorem:
+\begin{theorem}
+  For every NFA $\mathcal{A}$, there is a DFA $\mathcal{A}'$ such that
+  $L(\mathcal{A})=L(\mathcal{A}')$.
+\end{theorem}
+We omit the proof, and only show how to construct such DFA\@. We first define
+what an \textit{$\varepsilon$-closure} is:
+\begin{definition}
+  Let $\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$ be an NFA, and let $q\in Q$. The
+  \textit{$\varepsilon$-closure of $q$} is a set
+  \[
+    \{q\}\cup\{p\in Q:\delta(q,\varepsilon)=p\}
+  \]
+  we typically denote such a set as $\varepsilon\text{-closure}(q)$.
+\end{definition}
+Then, the following is the algorithm to construct the DFA $\mathcal{A}'$ from an
+NFA $\mathcal{A}$:
+\begin{breakablealgorithm}
+  \caption{\textproc{NFA To DFA Conversion}}
+  \begin{algorithmic}[1]
+    \Function{NFA-To-DFA-Conversion}{$\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$}
+      \State{$Q'\leftarrow\varnothing$}
+      \For{$q\in Q$}
+        \State{$Q'\leftarrow Q'\cup\varepsilon\text{-closure}(q)$}
+        \MyComment{each state of the DFA is a subset of $Q$}
+      \EndFor{}
+      \State{$q_0'\leftarrow\varepsilon\text{-closure}(q_0)$}
+      \State{$F'\leftarrow\varnothing$}
+      \For{$q'\in Q'$}
+        \If{$q'\cap F\neq\varnothing$}
+          \State{$F'\leftarrow F'\cup\{q'\}$}
+          \MyComment{any DFA state containing an accepting NFA state is an
+                     accepting DFA state}
+        \EndIf{}
+      \EndFor{}
+      \State{$\delta'\leftarrow\varnothing$}
+      \For{$p'\in Q'$}
+        \For{$a\in\Sigma$}
+          \State{$q'\leftarrow\varnothing$}
+          \For{$p\in p'$}
+            \For{$((p,a),q)\in\delta$}
+              \State{$q'\leftarrow q'\cup\varepsilon\text{-closure}(q)$}
+              \MyComment{combine all reachable NFA states (when going from an NFA
+                         state $p\in p'$ and reading $a$) into a DFA state $q'$}
+            \EndFor{}
+          \EndFor{}
+        \EndFor{}
+      \EndFor{}
+      \State{$\mathcal{A}'\leftarrow(\Sigma,Q',q_0',F',\delta')$}
+      \State{\Return{$\mathcal{A}'$}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+
+\section{DFA Minimization}
+For efficent lexing, we would want the minimal DFA that accepts the same
+language. The following theorem applies to all DFA\@:
+\begin{theorem}
+  For every DFA $\mathcal{A}$, there is a unique minimal DFA
+  $\mathcal{A}'=(\Sigma,Q',q_0',F',\delta')$ such that
+  \begin{itemize}
+    \item $L(\mathcal{A})=L(\mathcal{A}')$.
+    \item $|Q'|$ is minimized.
+  \end{itemize}
+\end{theorem}
+This proof is also omitted. We provide the algorithm to minimize such DFA\@:
+\begin{breakablealgorithm}
+  \caption{\textproc{DFA Minimization}}
+  \begin{algorithmic}[1]
+    \Function{DFA-Minimization}{$\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$}
+      \State{$P\leftarrow\{F,Q\setminus F\}$}
+      \MyComment{partition the original states $Q$, each partition represents
+                 a set of potentially indistinguishable states}
+      \State{$\text{changed}\leftarrow\textbf{true}$}
+      \While{changed}
+        \State{$\text{changed}\leftarrow\textbf{false}$}
+        \For{$p'\in P$}
+          \State{$\text{comesFrom}\leftarrow\text{an empty dictionary}$}
+          \For{$a\in\Sigma$}
+            \For{$p\in p'$}
+              \State{$q'\leftarrow q'\in P$ such that $\delta(p,a)\in q'$}
+              \MyComment{check which partition $q'$ each state $p$ in the
+                         current partition $p'$ goes to when reading $a$}
+              \If{$\text{comesFrom}[q']$ is set}
+                \State{$\text{comesFrom}[q']\leftarrow\text{comesFrom}[q']
+                       \cup\{p\}$}
+              \Else{}
+                \State{$\text{comesFrom}[q']\leftarrow\{p\}$}
+              \EndIf{}
+            \EndFor{}
+            \If{$|\text{comesFrom.keys}|\neq1$}
+            \MyComment{states in current partition $P'$ goes to different
+                       partitions, thus we must change the current partition}
+              \State{$P\leftarrow(P\setminus\{p'\})\cup\text{comesFrom.values}$}
+              \State{$\text{changed}\leftarrow\textbf{true}$}
+              \State{\textbf{break}}
+            \EndIf{}
+          \EndFor{}
+          \If{changed}
+            \State{\textbf{break}}
+          \EndIf{}
+        \EndFor{}
+      \EndWhile{}
+      \State{$Q'\leftarrow\varnothing$}
+      \State{$F'\leftarrow\varnothing$}
+      \For{$p'\in P$}
+        \If{$p'=\varnothing$}
+          \State{\textbf{continue}}
+        \EndIf{}
+        \If{$q_0\in p'$}
+          \State{$p\leftarrow q_0$}
+          \MyComment{make sure to choose $q_0$}
+        \Else{}
+          \State{$p\leftarrow$ any $p\in p'$}
+          \MyComment{otherwise, choosing any state from the partition $p'$ is
+                     sufficient because they are indistinguishable}
+        \EndIf{}
+        \State{$Q'\leftarrow Q'\cup\{p\}$}
+        \If{$p\in F$}
+          \State{$F'\leftarrow F'\cup\{p\}$}
+        \EndIf{}
+      \EndFor{}
+      \State{$\delta'\leftarrow\varnothing$}
+      \For{$((p,a),q)\in\delta$}
+        \If{$p\in Q'$ and $q\in Q'$}
+          \State{$\delta'\leftarrow\delta'\cup\{((p,a),q)\}$}
+        \EndIf{}
+      \EndFor{}
+      \State{$\mathcal{A}\leftarrow(\Sigma,Q',q_0,F',\delta')$}
+      \State{\Return{$\mathcal{A}$}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+
+\section{Multiple Tokens}
+So far we have only considered building a DFA for one token. To build a DFA
+for multiple tokens, we do the following steps:
+\begin{enumerate}
+  \item Build the regex for each token.
+  \item Convert the regexes to NFAs.
+  \item Combine the NFAs into one big NFA using $\varepsilon$-transitions.
+  \item Convert the big NFA into a DFA\@.
+  \item Minimize the DFA\@.
+\end{enumerate}
+The only tricky part is minimizing the DFA\@. To be able to identify which
+type of token is read, we must initially split the accepting states of the DFA
+into different partitions if the accepting states it contains from different
+the original NFAs. Furthermore, because each accepting state in the DFA can now
+contain accepting states from different NFAs, choosing when to accept and which
+kind of token to accept will depend on
+\begin{itemize}
+  \item Longest matching rule: match the longest token; this will require
+    backtracking.
+  \item User preference: define a priority on which tokens to be accepted first.
+  \item Whitespace: typically, a programming language contains separating
+    characters such as whitespace, and reading such character tells us to
+    accept now.
+\end{itemize}
+
+\section{Tokens Defined By Fartlang}
+
+\end{document}
