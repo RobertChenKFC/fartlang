@@ -1,9 +1,72 @@
 #ifndef REGEX_H
 #define REGEX_H
 
+// Forward declarations
 typedef struct RegexRange RegexRange;
 typedef struct RegexCharacterClass RegexCharacterClass;
 typedef struct Regex Regex;
+
+// Regex range which represents a continuous set of ASCII characters
+struct RegexRange {
+  unsigned char from, to;
+};
+
+// Regex character class which represents a set of ASCII characters
+struct RegexCharacterClass {
+  unsigned char characters[128];
+  int numChars;
+};
+
+// Regex that accepts the empty language
+typedef struct {} RegexNull;
+
+// Regex that accepts a single alphabet
+typedef struct {
+  unsigned char a;
+} RegexLetter;
+
+// A list structure that can link multiple regexes together
+typedef struct RegexListNode {
+  Regex *cur;
+  struct RegexListNode *next;
+} RegexListNode;
+typedef struct {
+  RegexListNode *head, *tail;
+} RegexList;
+
+// Regex that accepts the union of the languages of a list of regexes
+typedef struct {
+  RegexList list;
+} RegexUnion;
+
+// Regex that accepts the concatenattion of the languages of a list of regexes
+typedef struct {
+  RegexList list;
+} RegexConcat;
+
+// Regex that accepts zero or more occurrences of the language of a regex
+typedef struct {
+  Regex *regex;
+} RegexStar;
+
+// Polymorphic type regex
+typedef enum {
+  REGEX_NULL,
+  REGEX_LETTER,
+  REGEX_UNION,
+  REGEX_CONCAT,
+  REGEX_STAR,
+} RegexType;
+struct Regex {
+  union {
+    RegexNull regexNull;
+    RegexLetter regexLetter;
+    RegexUnion regexUnion;
+    RegexConcat regexConcat;
+    RegexStar regexStar;
+  };
+  RegexType type;
+};
 
 // The regex that accepts only the empty string
 Regex *REGEX_EMPTY_STRING;

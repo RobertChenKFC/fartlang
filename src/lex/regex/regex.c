@@ -1,78 +1,10 @@
 #include "lex/regex/regex.h"
+#include "util/vector/vector.h"
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
-
-// Regex range which represents a continuous set of ASCII characters
-struct RegexRange {
-  unsigned char from, to;
-};
-
-// Regex character class which represents a set of ASCII characters
-struct RegexCharacterClass {
-  unsigned char characters[128];
-  int numChars;
-};
-
-// Regex that accepts the empty language
-typedef struct {} RegexNull;
-
-// Regex that accepts a single alphabet
-typedef struct {
-  unsigned char a;
-} RegexLetter;
-
-// A list structure that can link multiple regexes together
-typedef struct RegexListNode {
-  Regex *cur;
-  struct RegexListNode *next;
-} RegexListNode;
-typedef struct {
-  RegexListNode *head, *tail;
-} RegexList;
-
-// Regex that accepts the union of the languages of a list of regexes
-typedef struct {
-  RegexList list;
-} RegexUnion;
-
-// Regex that accepts the concatenattion of the languages of a list of regexes
-typedef struct {
-  RegexList list;
-} RegexConcat;
-
-// Regex that accepts zero or more occurrences of the language of a regex
-typedef struct {
-  Regex *regex;
-} RegexStar;
-
-// Polymorphic type regex
-typedef enum {
-  REGEX_NULL,
-  REGEX_LETTER,
-  REGEX_UNION,
-  REGEX_CONCAT,
-  REGEX_STAR,
-} RegexType;
-struct Regex {
-  union {
-    RegexNull regexNull;
-    RegexLetter regexLetter;
-    RegexUnion regexUnion;
-    RegexConcat regexConcat;
-    RegexStar regexStar;
-  };
-  RegexType type;
-};
-
-// A vector structure that can contain multiple pointers and dynamically
-// increase its size
-typedef struct {
-  void **arr;
-  int size, capacity;
-} Vector;
 
 // Constants
 Regex *REGEX_EMPTY_STRING;
@@ -83,7 +15,7 @@ Regex *REGEX_LETTERS;
                               (r) == REGEX_ANY          || \
                               (r) == REGEX_DIGITS       || \
                               (r) == REGEX_LETTERS)
-#define DEFAULT_VEC_SIZE 64
+#define VECTOR_DEFAULT_CAPACITY 64
 #define IS_CONTROL_CHARACTER(a) (((a) >= 0 && (a) <= 31) || (a) == 127)
 bool IS_SPECIAL_CHARACTER[128];
 
@@ -99,12 +31,6 @@ Regex *RegexFromUnionVector(int n, Regex *vec[]);
 Regex *RegexFromConcatVector(int n, Regex *vec[]);
 // Add regex to the end of list
 void RegexListAdd(RegexList *list, Regex *regex);
-// Create a new empty pointer vector with defualt capacity
-Vector *VectorNew();
-// Delete a vector created with VectorNew
-void VectorDelete(Vector *vec);
-// Add regex to the end of vector
-void VectorAdd(Vector *vec, void *ptr);
 // Add entire regex list, including each individual regex and the node that
 // contains it, to a deletion vector
 void RegexListRequestDelete(RegexList *list, Vector *vec);
@@ -165,10 +91,10 @@ void RegexRangeDelete(RegexRange *range) {
 }
 
 RegexCharacterClass *RegexCharacterClassFromRanges(int n, ...) {
-  static RegexRange *buf[DEFAULT_VEC_SIZE];
+  static RegexRange *buf[VECTOR_DEFAULT_CAPACITY];
 
   RegexRange **vec;
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     vec = malloc(sizeof(RegexRange*) * n);
   else
     vec = buf;
@@ -181,7 +107,7 @@ RegexCharacterClass *RegexCharacterClassFromRanges(int n, ...) {
 
   RegexCharacterClass *c = RegexCharacterClassFromRangeVector(n, vec);
 
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     free(vec);
 
   return c;
@@ -237,10 +163,10 @@ Regex *RegexFromLetter(unsigned char a) {
 }
 
 Regex *RegexFromUnion(int n, ...) {
-  static Regex *buf[DEFAULT_VEC_SIZE];
+  static Regex *buf[VECTOR_DEFAULT_CAPACITY];
 
   Regex **vec;
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     vec = malloc(sizeof(Regex*) * n);
   else
     vec = buf;
@@ -253,7 +179,7 @@ Regex *RegexFromUnion(int n, ...) {
 
   Regex *regex = RegexFromUnionVector(n, vec);
 
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     free(vec);
 
   return regex;
@@ -268,10 +194,10 @@ Regex *RegexFromUnionVector(int n, Regex *vec[]) {
 }
 
 Regex *RegexFromConcat(int n, ...) {
-  static Regex *buf[DEFAULT_VEC_SIZE];
+  static Regex *buf[VECTOR_DEFAULT_CAPACITY];
 
   Regex **vec;
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     vec = malloc(sizeof(Regex*) * n);
   else
     vec = buf;
@@ -284,7 +210,7 @@ Regex *RegexFromConcat(int n, ...) {
 
   Regex *regex = RegexFromConcatVector(n, vec);
 
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     free(vec);
 
   return regex;
@@ -299,11 +225,11 @@ Regex *RegexFromConcatVector(int n, Regex *vec[]) {
 }
 
 Regex *RegexFromString(const char *s) {
-  static Regex *buf[DEFAULT_VEC_SIZE];
+  static Regex *buf[VECTOR_DEFAULT_CAPACITY];
 
   int n = strlen(s);
   Regex **vec;
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     vec = malloc(sizeof(Regex*) * n);
   else
     vec = buf;
@@ -313,7 +239,7 @@ Regex *RegexFromString(const char *s) {
 
   Regex *regex = RegexFromConcatVector(n, vec);
 
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     free(vec);
 
   return regex;
@@ -335,11 +261,11 @@ Regex *RegexZeroOrOne(Regex *regex) {
 }
 
 Regex *RegexFromCharacterClass(RegexCharacterClass *c) {
-  static Regex *buf[DEFAULT_VEC_SIZE];
+  static Regex *buf[VECTOR_DEFAULT_CAPACITY];
 
   Regex **vec;
   int n = c->numChars;
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     vec = malloc(sizeof(Regex*) * n);
   else
     vec = buf;
@@ -350,31 +276,10 @@ Regex *RegexFromCharacterClass(RegexCharacterClass *c) {
 
   Regex *regex = RegexFromUnionVector(n, vec);
 
-  if (n > DEFAULT_VEC_SIZE)
+  if (n > VECTOR_DEFAULT_CAPACITY)
     free(vec);
 
   return regex;
-}
-
-Vector *VectorNew() {
-  Vector *vec = malloc(sizeof(Vector));
-  vec->arr = malloc(sizeof(void*) * DEFAULT_VEC_SIZE);
-  vec->capacity = DEFAULT_VEC_SIZE;
-  vec->size = 0;
-  return vec;
-}
-
-void VectorDelete(Vector *vec) {
-  free(vec->arr);
-  free(vec);
-}
-
-void VectorAdd(Vector *vec, void *ptr) {
-  if (vec->size == vec->capacity) {
-    vec->capacity *= 2;
-    vec->arr = realloc(vec->arr, sizeof(void*) * vec->capacity);
-  }
-  vec->arr[vec->size++] = ptr;
 }
 
 void RegexRequestDelete(Regex *regex, Vector *vec) {

@@ -220,12 +220,13 @@ The connection between NFA and regex is the following theorem:
             \times\{q_{20}\})
           \]
         \item If $\gamma=\alpha|\beta$, then let $\mathcal{A}=(\Sigma,
-          Q_1\cup Q_2,q_{10},F_1\cup F_2,\delta)$ where
+          Q_1\cup Q_2\cup\{q_0\},q_{0},F_1\cup F_2,\delta)$ where
           \[
-            \delta=\delta_1\cup\delta_2\cup\{((q_{10},\varepsilon),q_{20})\}
+            \delta=\delta_1\cup\delta_2\cup((\{q_0\}\times\{\varepsilon\})
+            \times\{q_{10},q_{20}\})
           \]
         \item If $\gamma=\alpha^*$, then let $\mathcal{A}=(\Sigma,
-          Q_1,q_{10},F_1,\delta)$ where
+          Q_1,q_{10},F_1\cup\{q_0\},\delta)$ where
           \[
             \delta=\delta_1\cup((F_1\times\{\varepsilon\})\times\{q_{10}\})
           \]

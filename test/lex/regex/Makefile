@@ -10,4 +10,5 @@ test_regex: test_regex.c
 	$(CC) -o $(BIN)/test_regex $(CFLAGS) $(BIN)/regex.o test_regex.c
 
 clean:
+	$(MAKE) -C $(SRC) clean
 	rm -rf $(BIN)/test_regex

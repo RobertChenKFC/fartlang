@@ -1,0 +1,7 @@
+digraph NFA {
+  rankdir=LR;
+  node [shape=doublecircle]; 2;
+  node [shape=circle]; 0 1;
+  0 -> 1 [label="'*'"];
+  1 -> 2 [label="'/'"];
+}
