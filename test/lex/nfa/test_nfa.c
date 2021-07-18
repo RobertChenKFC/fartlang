@@ -91,4 +91,19 @@ int main() {
   RegexDelete(regex);
   NFADelete(nfa);
   fclose(file);
+
+  // 8. Nested Kleene-star regex (originally, the initial state of the sub-NFA
+  //    was incorrectly modified to accepting, which will make the NFA accept
+  //    more strings than what the regex accepts; this test is added just to
+  //    remind myself of this case, even though the original method will also
+  //    output a valid NFA when encountering this test case)
+  regex = RegexZeroOrMore(RegexFromConcat(2,
+      RegexFromLetter('a'),
+      RegexZeroOrMore(RegexFromString("bca"))));
+  nfa = NFAFromRegex(regex);
+  file = fopen("8.out", "w");
+  NFAPrint(nfa, file);
+  RegexDelete(regex);
+  NFADelete(nfa);
+  fclose(file);
 }

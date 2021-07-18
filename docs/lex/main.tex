@@ -226,9 +226,10 @@ The connection between NFA and regex is the following theorem:
             \times\{q_{10},q_{20}\})
           \]
         \item If $\gamma=\alpha^*$, then let $\mathcal{A}=(\Sigma,
-          Q_1,q_{10},F_1\cup\{q_0\},\delta)$ where
+          Q_1\cup\{q_0\},q_0,F_1\cup\{q_0\},\delta)$ where
           \[
-            \delta=\delta_1\cup((F_1\times\{\varepsilon\})\times\{q_{10}\})
+            \delta=\delta_1\cup((F_1\times\{\varepsilon\})\times\{q_{0}\})
+            \cup\{((q_0,\varepsilon),q_{10})\}
           \]
       \end{itemize}
       In all three cases, it is clear that $L(\gamma)=L(\mathcal{A})$.

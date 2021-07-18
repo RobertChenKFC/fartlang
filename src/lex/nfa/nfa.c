@@ -202,17 +202,23 @@ NFA *NFAFromRegex(Regex *regex) {
       }
       return nfa;
     } case REGEX_STAR: {
-      // An NFA accepting zero or more occrurrences of a regex can be
-      // constructed by first constructing the NFA for the regex, then modifying
-      // the NFA to connect all accepting states to the initial state via
-      // epsilon transitions, and change the initial state to accepting
-      NFA *nfa = NFAFromRegex(regex->regexStar.regex);
-      NFAState *init = nfa->init;
-      for (NFAState *state = init; state; state = state->next) {
+      // An NFA accepting zero or more occrurrences of a sub-regex can be
+      // constructed by first having an initial accepting state "init",
+      // then construct the sub-NFA from the sub-regex, connect "init" to the
+      // initial state of the sub-NFA via epsilon transitions, and finally
+      // connect all final states of the sub-NFA to "init" via epsilon
+      // transitions
+      NFA *nfa = NFANew();
+      NFAState *init = NFAStateNew(true);
+      NFAAddState(nfa, init);
+      NFA *subNFA = NFAFromRegex(regex->regexStar.regex);
+      NFAAddStates(nfa, subNFA);
+      NFAStateAddTransition(init, NFA_EPSILON, subNFA->init);
+      for (NFAState *state = subNFA->init; state; state = state->next) {
         if (state->accepting)
           NFAStateAddTransition(state, NFA_EPSILON, init);
       }
-      init->accepting = true;
+      free(subNFA);
       return nfa;
     }
   }

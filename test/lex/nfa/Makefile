@@ -11,8 +11,14 @@ LIBS += $(BIN_ROOT)/util/vector/vector.o
 
 all: test_nfa
 	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_nfa
-	# DEBUG
-	# $(CMP) $(CMP_FLAGS) 1.out 1.ref
+	$(CMP) $(CMP_FLAGS) 1.out 1.ref
+	$(CMP) $(CMP_FLAGS) 2.out 2.ref
+	$(CMP) $(CMP_FLAGS) 3.out 3.ref
+	$(CMP) $(CMP_FLAGS) 4.out 4.ref
+	$(CMP) $(CMP_FLAGS) 5.out 5.ref
+	$(CMP) $(CMP_FLAGS) 6.out 6.ref
+	$(CMP) $(CMP_FLAGS) 7.out 7.ref
+	$(CMP) $(CMP_FLAGS) 8.out 8.ref
 
 test_nfa: test_nfa.c
 	$(MAKE) -C $(SRC)
@@ -30,6 +36,7 @@ visualize: test_nfa
 	$(DOT) $(DOT_FLAGS) -o 5.png 5.out
 	$(DOT) $(DOT_FLAGS) -o 6.png 6.out
 	$(DOT) $(DOT_FLAGS) -o 7.png 7.out
+	$(DOT) $(DOT_FLAGS) -o 8.png 8.out
 
 clean:
 	$(MAKE) -C $(SRC) clean

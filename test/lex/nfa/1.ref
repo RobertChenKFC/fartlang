@@ -1,5 +1,6 @@
 digraph NFA {
   rankdir=LR;
   node [shape=doublecircle]; 0;
-  node [shape=circle];
+  node [shape=circle]; 1;
+  0 -> 1 [label="&epsilon;"];
 }
