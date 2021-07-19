@@ -31,7 +31,8 @@ void HashTableAddToList(HashTable *table, HashTableEntry *entry);
 void HashTableBucketAdd(HashTableBucket *bucket, HashTableEntry *entry);
 
 HashTable *HashTableNew(
-    HashTableHashFunction hash, HashTableEqualFunction equal) {
+    HashTableHashFunction hash, HashTableEqualFunction equal,
+    HashTableDestructor keyDelete, HashTableDestructor valDelete) {
   HashTable *table = malloc(sizeof(HashTable));
   table->capacityIdx = 0;
   table->capacity = HASH_TABLE_CAPACITIES[0];
@@ -39,20 +40,22 @@ HashTable *HashTableNew(
   table->buckets = calloc(table->capacity, sizeof(HashTableBucket));
   table->hash = hash;
   table->equal = equal;
+  table->keyDelete = keyDelete;
+  table->valDelete = valDelete;
   table->head = NULL;
   table->last = NULL;
   return table;
 }
 
-void HashTableDelete(HashTable *table, bool deleteKey, bool deleteValue) {
+void HashTableDelete(HashTable *table) {
   free(table->buckets);
   HashTableEntry *next;
   for (HashTableEntry *entry = table->head; entry; entry = next) {
     next = entry->nextInTable;
-    if (deleteKey)
-      free(entry->key);
-    if (deleteValue)
-      free(entry->value);
+    if (table->keyDelete)
+      table->keyDelete(entry->key);
+    if (table->valDelete)
+      table->valDelete(entry->value);
     free(entry);
   }
   free(table);
@@ -85,16 +88,15 @@ void HashTableBucketAdd(HashTableBucket *bucket, HashTableEntry *entry) {
   }
 }
 
-void HashTableEntryAdd(HashTable *table, void *key, void *value,
-    bool deleteKey, bool deleteValue) {
+void HashTableEntryAdd(HashTable *table, void *key, void *value) {
   uint64_t hash = table->hash(key);
   HashTableBucket *bucket = &table->buckets[hash % table->capacity];
   for (HashTableEntry *entry = bucket->head; entry; entry = entry->next) {
     if (table->equal(key, entry->key)) {
-      if (deleteKey)
-        free(entry->key);
-      if (deleteValue)
-        free(entry->value);
+      if (table->keyDelete)
+        table->keyDelete(entry->key);
+      if (table->valDelete)
+        table->valDelete(entry->value);
       entry->key = key;
       entry->value = value;
       return;
@@ -129,8 +131,7 @@ HashTableEntry *HashTableEntryRetrieve(HashTable *table, void *key) {
   return NULL;
 }
 
-void HashTableEntryDelete(
-    HashTable *table, HashTableEntry *entry, bool deleteKey, bool deleteValue) {
+void HashTableEntryDelete(HashTable *table, HashTableEntry *entry) {
   if (entry->prevInTable)
     entry->prevInTable->nextInTable = entry->nextInTable;
   if (entry->nextInTable)
@@ -151,9 +152,11 @@ void HashTableEntryDelete(
   if (bucket->last == entry)
     bucket->last = entry->prev;
 
-  if (deleteKey)
-    free(entry->key);
-  if (deleteValue)
-    free(entry->value);
+  if (table->keyDelete)
+    table->keyDelete(entry->key);
+  if (table->valDelete)
+    table->valDelete(entry->value);
   free(entry);
+
+  --table->size;
 }

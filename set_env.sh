@@ -6,7 +6,7 @@ export TEST_ROOT=$(pwd)/test
 export BIN_ROOT=$(pwd)/bin
 
 # tools
-export CC=clang
+export CC=gcc
 export MAKE=make
 export VALGRIND=valgrind
 export CMP=cmp

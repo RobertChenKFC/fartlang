@@ -1,4 +1,3 @@
-REGEX_BIN=$(BIN_ROOT)/lex/regex
 BIN=$(BIN_ROOT)/lex/nfa
 
 all: nfa.c

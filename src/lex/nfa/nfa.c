@@ -248,10 +248,11 @@ bool NFAStatePtrEqual(void *state1, void *state2) {
 }
 
 void NFAPrint(NFA *nfa, FILE *file) {
-  HashTable *table = HashTableNew(NFAStatePtrHash, NFAStatePtrEqual);
+  HashTable *table = HashTableNew(NFAStatePtrHash, NFAStatePtrEqual,
+                                  NULL, NULL);
   int idx = 0;
   for (NFAState *state = nfa->init; state; state = state->next)
-    HashTableEntryAdd(table, state, (void*)(uint64_t)idx++, false, false);
+    HashTableEntryAdd(table, state, (void*)(uint64_t)idx++);
 
   fprintf(file, "digraph NFA {\n");
   fprintf(file, "  rankdir=LR;\n");
@@ -326,7 +327,7 @@ void NFAPrint(NFA *nfa, FILE *file) {
 
   fprintf(file, "}\n");
 
-  HashTableDelete(table, false, false);
+  HashTableDelete(table);
 }
 
 int NFATransitionCmp(const void *a, const void *b) {

@@ -1,15 +1,22 @@
-SRC=$(SRC_ROOT)/lex/nfa
 BIN=$(BIN_ROOT)/lex/nfa
 
 # dependencies
-REGEX_SRC=$(SRC_ROOT)/lex/regex
-LIBS += $(BIN_ROOT)/lex/regex/regex.o
-HASHTABLE_SRC=$(SRC_ROOT)/util/hashtable
-LIBS += $(BIN_ROOT)/util/hashtable/hashtable.o
-VECTOR_SRC=$(SRC_ROOT)/util/vector
-LIBS += $(BIN_ROOT)/util/vector/vector.o
+SRC_DEPS += $(SRC_ROOT)/lex/regex
+LIB_DEPS += $(BIN_ROOT)/lex/regex/regex.o
+SRC_DEPS += $(SRC_ROOT)/lex/nfa
+LIB_DEPS += $(BIN_ROOT)/lex/nfa/nfa.o
+SRC_DEPS += $(SRC_ROOT)/util/hashtable
+LIB_DEPS += $(BIN_ROOT)/util/hashtable/hashtable.o
+SRC_DEPS += $(SRC_ROOT)/util/vector
+LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
 
-all: test_nfa
+all: $(addsuffix .all,$(SRC_DEPS))
+	$(CC) -o $(BIN)/test_nfa $(CFLAGS) $(LIB_DEPS) test_nfa.c
+
+%.all:
+	$(MAKE) -C $*
+
+test: all
 	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_nfa
 	$(CMP) $(CMP_FLAGS) 1.out 1.ref
 	$(CMP) $(CMP_FLAGS) 2.out 2.ref
@@ -20,14 +27,7 @@ all: test_nfa
 	$(CMP) $(CMP_FLAGS) 7.out 7.ref
 	$(CMP) $(CMP_FLAGS) 8.out 8.ref
 
-test_nfa: test_nfa.c
-	$(MAKE) -C $(SRC)
-	$(MAKE) -C $(REGEX_SRC)
-	$(MAKE) -C $(HASHTABLE_SRC)
-	$(MAKE) -C $(VECTOR_SRC)
-	$(CC) -o $(BIN)/test_nfa $(CFLAGS) $(BIN)/nfa.o $(LIBS) test_nfa.c
-
-visualize: test_nfa
+visualize: all
 	$(BIN)/test_nfa
 	$(DOT) $(DOT_FLAGS) -o 1.png 1.out
 	$(DOT) $(DOT_FLAGS) -o 2.png 2.out
@@ -38,6 +38,8 @@ visualize: test_nfa
 	$(DOT) $(DOT_FLAGS) -o 7.png 7.out
 	$(DOT) $(DOT_FLAGS) -o 8.png 8.out
 
-clean:
-	$(MAKE) -C $(SRC) clean
+clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_nfa
+
+%.clean:
+	$(MAKE) -C $* clean

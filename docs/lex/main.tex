@@ -284,7 +284,7 @@ NFA $\mathcal{A}$:
     \Function{NFA-To-DFA-Conversion}{$\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$}
       \State{$Q'\leftarrow\varnothing$}
       \For{$q\in Q$}
-        \State{$Q'\leftarrow Q'\cup\varepsilon\text{-closure}(q)$}
+        \State{$Q'\leftarrow Q'\cup\{\varepsilon\text{-closure}(q)\}$}
         \MyComment{each state of the DFA is a subset of $Q$}
       \EndFor{}
       \State{$q_0'\leftarrow\varepsilon\text{-closure}(q_0)$}

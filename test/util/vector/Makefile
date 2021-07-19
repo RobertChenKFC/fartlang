@@ -1,13 +1,20 @@
-SRC=$(SRC_ROOT)/util/vector
 BIN=$(BIN_ROOT)/util/vector
 
-all: test_vector
+# dependencies
+SRC_DEPS += $(SRC_ROOT)/util/vector
+LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
+
+all: $(addsuffix .all,$(SRC_DEPS))
+	$(CC) -o $(BIN)/test_vector $(CFLAGS) $(LIB_DEPS) test_vector.c
+
+%.all:
+	$(MAKE) -C $*
+
+test: all
 	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_vector
 
-test_vector: test_vector.c
-	$(MAKE) -C $(SRC)
-	$(CC) -o $(BIN)/test_vector $(CFLAGS) $(BIN)/vector.o test_vector.c
-
-clean:
-	$(MAKE) -C $(SRC) clean
+clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_vector
+
+%.clean:
+	$(MAKE) -C $* clean
