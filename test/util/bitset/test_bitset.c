@@ -31,10 +31,34 @@ int main() {
   for (int i = 0; i < numBits; ++i)
     assert(BitsetIsSet(bitset, i) == (i % 3 == 0 || i % 5 == 0));
 
-  // 5. Test bitset in hash table
-  HashTable *table = HashTableNew(BitsetHash, BitsetEqual, BitsetDelete, NULL);
+  // 5. Test bitset set all
+  BitsetSetAll(bitset);
+  for (int i = 0; i < numBits; ++i)
+    assert(BitsetIsSet(bitset, i));
+
+  // 6. Test bitset clear all
+  BitsetClearAll(bitset);
+  for (int i = 0; i < numBits; ++i)
+    assert(!BitsetIsSet(bitset, i));
+
+  // 7. Test bitset and
   Bitset *bitset2 = BitsetNew(numBits);
+  for (int i = 0; i < numBits; ++i) {
+    BitsetSetVal(bitset, i, i % 2 == 0);
+    BitsetSetVal(bitset2, i, (i / 2) % 2 == 0);
+  }
   Bitset *bitset3 = BitsetNew(numBits);
+  BitsetAnd(bitset3, bitset, bitset2);
+  for (int i = 0; i < numBits; ++i)
+    assert(BitsetIsSet(bitset3, i) == (i % 4 == 0));
+
+  // 8. Test bitset or
+  BitsetOr(bitset, bitset, bitset2);
+  for (int i = 0; i < numBits; ++i)
+    assert(BitsetIsSet(bitset, i) == (i % 4 != 3));
+
+  // 9. Test bitset in hash table
+  HashTable *table = HashTableNew(BitsetHash, BitsetEqual, BitsetDelete, NULL);
   Bitset *bitset4 = BitsetNew(numBits + 1);
   for (int i = 0; i < numBits; ++i) {
     uint64_t val = BitsetIsSet(bitset, i) ? 1 : 0;

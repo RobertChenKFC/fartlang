@@ -1,0 +1,10 @@
+digraph FA {
+  rankdir=LR;
+  node [shape=doublecircle]; 0 1 2;
+  node [shape=circle];
+  0 -> 0 [label="'1'"];
+  0 -> 1 [label="'0'"];
+  1 -> 1 [label="'1'"];
+  1 -> 2 [label="'0'"];
+  2 -> 2 [label="'0' ~ '1'"];
+}

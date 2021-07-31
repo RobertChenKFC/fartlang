@@ -1,4 +1,4 @@
-digraph NFA {
+digraph FA {
   rankdir=LR;
   node [shape=doublecircle]; 2;
   node [shape=circle]; 0 1;

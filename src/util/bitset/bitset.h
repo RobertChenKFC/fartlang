@@ -23,13 +23,25 @@ Bitset *BitsetNew(int n);
 void BitsetDelete(void *b);
 // Set the "i"-th bit of "bitset" to one
 void BitsetSet(Bitset *bitset, int i);
-// Set the "i"-th bit of "bitset" to zero
+// Clear the "i"-th bit of "bitset" to zero
 void BitsetClear(Bitset *bitset, int i);
-// Set the "i"-th bit of "bitset" to "val"; not that "val" is expected to be
+// Set the "i"-th bit of "bitset" to "val"; note that "val" is expected to be
 // either zero or one, and passing any other value may mess up "bitset"
 void BitsetSetVal(Bitset *bitset, int i, BITSET_WORD_T val);
 // Check if the "i"-th bit of "bitset" is set to one or not
 bool BitsetIsSet(Bitset *bitset, int i);
+// Set all bits of "bitset" to one
+void BitsetSetAll(Bitset *bitset);
+// Clear all bits of "bitset" to zero
+void BitsetClearAll(Bitset *bitset);
+// Performs the bitwise AND of two bitsets "a", and "b", and store it in "dst";
+// note that only the first n bits "dst" are updated, where n is the minimum
+// length among "a", "b" and "dst"
+void BitsetAnd(Bitset *dst, Bitset *a, Bitset *b);
+// Performs the bitwise OR of two bitsets "a", and "b", and store it in "dst";
+// note that only the first n bits "dst" are updated, where n is the minimum
+// length among "a", "b" and "dst"
+void BitsetOr(Bitset *dst, Bitset *a, Bitset *b);
 // A hash function for bitset "a"; used in hash tables
 uint64_t BitsetHash(void *a);
 // A equal function for bitsets "a" and "b"; used in hash tables

@@ -1,8 +1,13 @@
 #include "util/bitset/bitset.h"
+#include "util/hashtable/hashtable.h"
 #include <stdlib.h>
 
 // Calculate the ceiling function of the quotient of two integers "p" and "q"
 #define CEIL(p, q) ((p) / (q) + ((p) % (q) == 0 ? 0 : 1))
+
+// Helper functions
+// Get the mininum number of words used among bitsets "a", "b" and "c"
+int BitsetMinNumWords(Bitset *a, Bitset *b, Bitset *c);
 
 Bitset *BitsetNew(int n) {
   Bitset *bitset = malloc(sizeof(Bitset));
@@ -42,6 +47,41 @@ bool BitsetIsSet(Bitset *bitset, int i) {
   int wordIdx = i / BITSET_WORD_NBITS;
   int bitIdx = i % BITSET_WORD_NBITS;
   return (bitset->words[wordIdx] >> bitIdx) & ((BITSET_WORD_T)1);
+}
+
+void BitsetSetAll(Bitset *bitset) {
+  int numWords = CEIL(bitset->n, BITSET_WORD_NBITS);
+  for (int i = 0; i < numWords; ++i)
+    bitset->words[i] = ~((BITSET_WORD_T)0);
+}
+
+void BitsetClearAll(Bitset *bitset) {
+  int numWords = CEIL(bitset->n, BITSET_WORD_NBITS);
+  for (int i = 0; i < numWords; ++i)
+    bitset->words[i] = 0;
+}
+
+int BitsetMinNumWords(Bitset *a, Bitset *b, Bitset *c) {
+  int minNumWords = CEIL(a->n, BITSET_WORD_NBITS);
+  int numWords = CEIL(b->n, BITSET_WORD_NBITS);
+  if (numWords < minNumWords)
+    minNumWords = numWords;
+  numWords = CEIL(c->n, BITSET_WORD_NBITS);
+  if (numWords < minNumWords)
+    minNumWords = numWords;
+  return minNumWords;
+}
+
+void BitsetAnd(Bitset *dst, Bitset *a, Bitset *b) {
+  int numWords = BitsetMinNumWords(dst, a, b);
+  for (int i = 0; i < numWords; ++i)
+    dst->words[i] = a->words[i] & b->words[i];
+}
+
+void BitsetOr(Bitset *dst, Bitset *a, Bitset *b) {
+  int numWords = BitsetMinNumWords(dst, a, b);
+  for (int i = 0; i < numWords; ++i)
+    dst->words[i] = a->words[i] | b->words[i];
 }
 
 uint64_t BitsetHash(void *a) {

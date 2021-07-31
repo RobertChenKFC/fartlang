@@ -272,9 +272,14 @@ what an \textit{$\varepsilon$-closure} is:
   Let $\mathcal{A}=(\Sigma,Q,q_0,F,\delta)$ be an NFA, and let $q\in Q$. The
   \textit{$\varepsilon$-closure of $q$} is a set
   \[
-    \{q\}\cup\{p\in Q:\delta(q,\varepsilon)=p\}
+    \{p\in Q:\exists q_1,q_2,\ldots,q_n\in Q\quad (q_1=q)\land(q_n=p)\land
+    \alpha(q_1,q_2,\ldots,q_n)\}
   \]
-  we typically denote such a set as $\varepsilon\text{-closure}(q)$.
+  where
+  \[
+    \alpha(q_1,q_2,\ldots,q_n)=\bigwedge_{i=1}^{n-1}\delta(q_i,\varepsilon)=q_{i+1}
+  \]
+  We typically denote such a set as $\varepsilon\text{-closure}(q)$.
 \end{definition}
 Then, the following is the algorithm to construct the DFA $\mathcal{A}'$ from an
 NFA $\mathcal{A}$:
@@ -307,6 +312,8 @@ NFA $\mathcal{A}$:
                          state $p\in p'$ and reading $a$) into a DFA state $q'$}
             \EndFor{}
           \EndFor{}
+          \State{$Q'\leftarrow Q'\cup\{q'\}$}
+          \State{$\delta'\leftarrow\delta'\cup\{((p',a),q')\}$}
         \EndFor{}
       \EndFor{}
       \State{$\mathcal{A}'\leftarrow(\Sigma,Q',q_0',F',\delta')$}

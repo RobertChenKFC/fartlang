@@ -2,53 +2,53 @@
 #include <stdio.h>
 
 int main() {
-  // Initialize NFA
-  NFAInit();
+  // Initialize regex
+  RegexInit();
 
   // 1. Test regex base case - empty (cannot be tested directly, thus can only
   //    be constructed by empty string, which also contains a Kleene star
   //    operation)
   Regex *regex = REGEX_EMPTY_STRING;
-  NFA *nfa = NFAFromRegex(regex);
+  FA *nfa = NFAFromRegex(regex);
   FILE *file = fopen("1.out", "w");
-  NFAPrint(nfa, file);
-  NFADelete(nfa);
+  FAPrint(nfa, file);
+  FADelete(nfa);
   fclose(file);
 
   // 2. Test regex base case - letter
   regex = RegexFromLetter('a');
   nfa = NFAFromRegex(regex);
   file = fopen("2.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 3. Test inductive case - union
   regex = RegexFromUnion(2, RegexFromLetter('+'), RegexFromLetter('-'));
   nfa = NFAFromRegex(regex);
   file = fopen("3.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 4. Test inductive case - concatenation
   regex = RegexFromConcat(2, RegexFromLetter('*'), RegexFromLetter('/'));
   nfa = NFAFromRegex(regex);
   file = fopen("4.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 5. Test inductive case - Kleene star
   regex = RegexZeroOrMore(RegexFromLetter('?'));
   nfa = NFAFromRegex(regex);
   file = fopen("5.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 6. Complex regex 1
@@ -65,9 +65,9 @@ int main() {
   regex = RegexFromConcat(4, name, RegexFromLetter('@'), name, domain);
   nfa = NFAFromRegex(regex);
   file = fopen("6.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 7. Complex regex 2
@@ -87,9 +87,9 @@ int main() {
       RegexFromLetter(')'));
   nfa = NFAFromRegex(regex);
   file = fopen("7.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 
   // 8. Nested Kleene-star regex (originally, the initial state of the sub-NFA
@@ -102,8 +102,8 @@ int main() {
       RegexZeroOrMore(RegexFromString("bca"))));
   nfa = NFAFromRegex(regex);
   file = fopen("8.out", "w");
-  NFAPrint(nfa, file);
+  FAPrint(nfa, file);
   RegexDelete(regex);
-  NFADelete(nfa);
+  FADelete(nfa);
   fclose(file);
 }
