@@ -38,6 +38,9 @@ test: all
 	$(CMP) $(CMP_FLAGS) 12.out 12.ref
 	$(CMP) $(CMP_FLAGS) 13.out 13.ref
 	$(CMP) $(CMP_FLAGS) 14.out 14.ref
+	$(CMP) $(CMP_FLAGS) 15.out 15.ref
+	$(CMP) $(CMP_FLAGS) 15.out 15.ref
+	$(CMP) $(CMP_FLAGS) 16.out 16.ref
 
 visualize: all
 	$(BIN)/test_dfa
@@ -55,6 +58,8 @@ visualize: all
 	$(DOT) $(DOT_FLAGS) -o 12.png 12.out
 	$(DOT) $(DOT_FLAGS) -o 13.png 13.out
 	$(DOT) $(DOT_FLAGS) -o 14.png 14.out
+	$(DOT) $(DOT_FLAGS) -o 15.png 15.out
+	$(DOT) $(DOT_FLAGS) -o 16.png 16.out
 
 clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_dfa

@@ -41,7 +41,7 @@ void FADelete(FA *fa) {
   free(fa);
 }
 
-FAState *FAStateNew(bool accepting) {
+FAState *FAStateNew(int accepting) {
   FAState *state = calloc(1, sizeof(FAState));
   state->accepting = accepting;
   return state;
@@ -94,51 +94,57 @@ void FATransitionPrint(
 }
 
 void FAPrintChar(unsigned char a, FILE *file) {
-  if (IS_CONTROL_CHARACTER(a)) {
-    fprintf(file, "'\\x%02x'", (unsigned)a);
-  } else {
-    switch (a) {
-      case '\r': fprintf(file, "'\\r'"); break;
-      case '\t': fprintf(file, "'\\t'"); break;
-      case '\n': fprintf(file, "'\\n'"); break;
-      case '"': fprintf(file, "'\\\"'"); break;
-      case FA_EPSILON: fprintf(file, "&epsilon;"); break;
-      default: fprintf(file, "'%c'", a); break;
-    }
+  switch (a) {
+    case '\r': fprintf(file, "'\\\\r'"); break;
+    case '\t': fprintf(file, "'\\\\t'"); break;
+    case '\n': fprintf(file, "'\\\\n'"); break;
+    case '"': fprintf(file, "'\\\"'"); break;
+    case FA_EPSILON: fprintf(file, "&epsilon;"); break;
+    default:
+    if (IS_CONTROL_CHARACTER(a))
+      fprintf(file, "'\\x%02x'", (unsigned)a);
+    else
+      fprintf(file, "'%c'", a);
+    break;
   }
 }
 
 void FAPrint(FA *fa, FILE *file) {
   HashTable *table = HashTableNew(FAStatePtrHash, FAStatePtrEqual,
                                   NULL, NULL);
-  int idx = 0;
+  int idx = 1;
   for (FAState *state = fa->init; state; state = state->next)
     HashTableEntryAdd(table, state, (void*)(uint64_t)idx++);
 
   fprintf(file, "digraph FA {\n");
+  fprintf(file, "  label=\"%d states\";\n", idx - 1);
   fprintf(file, "  rankdir=LR;\n");
 
   // Print accepting states
-  fprintf(file, "  node [shape=doublecircle];");
-  idx = 0;
+  fprintf(file, "  node [shape=doublecircle];\n");
+  idx = 1;
   bool empty = true;
   for (FAState *state = fa->init; state; state = state->next) {
-    if (state->accepting) {
-      fprintf(file, " %d", idx);
+    if (state->accepting != FA_ACCEPT_NONE) {
+      if (!empty)
+        fprintf(file, "\n");
+      fprintf(file, "  %d [label=\"%d\"]", idx, state->accepting);
       empty = false;
     }
     ++idx;
   }
   if (!empty)
     fprintf(file, ";");
-  fprintf(file, "\n  node [shape=circle];");
+  fprintf(file, "\n  node [shape=circle];\n");
 
   // Print non-accepting states
-  idx = 0;
+  idx = 1;
   empty = true;
   for (FAState *state = fa->init; state; state = state->next) {
-    if (!state->accepting) {
-      fprintf(file, " %d", idx);
+    if (state->accepting == FA_ACCEPT_NONE) {
+      if (!empty)
+        fprintf(file, "\n");
+      fprintf(file, "  %d [label=\"\"]", idx);
       empty = false;
     }
     ++idx;
@@ -147,8 +153,12 @@ void FAPrint(FA *fa, FILE *file) {
     fprintf(file, ";");
   fprintf(file, "\n");
 
+  // Add arrow to point to initial state
+  fprintf(file, "  0 [label= \"\", shape=none,height=.0,width=.0];\n");
+  fprintf(file, "  0 -> 1;\n");
+
   // Print transitions of all states
-  idx = 0;
+  idx = 1;
   Vector *vec = VectorNew();
   for (FAState *state = fa->init; state; state = state->next) {
     // Sort all transitions so that all transtitions are first grouped by

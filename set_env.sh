@@ -13,7 +13,7 @@ export CMP=cmp
 export DOT=dot
 
 # flags
-export CFLAGS="-g -O0 -I$SRC_ROOT"
+export CFLAGS="-g -O0 -Wall -Wpedantic -I$SRC_ROOT"
 export VALGRIND_FLAGS="--error-exitcode=1 --leak-check=full -q"
 export CMP_FLAGS="-s"
 export DOT_FLAGS="-Tpng"

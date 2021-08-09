@@ -1,5 +1,11 @@
 digraph FA {
+  label="3 states";
   rankdir=LR;
-  node [shape=doublecircle]; 1;
-  node [shape=circle]; 0 2;
+  node [shape=doublecircle];
+  2 [label="0"];
+  node [shape=circle];
+  1 [label=""]
+  3 [label=""];
+  0 [label= "", shape=none,height=.0,width=.0];
+  0 -> 1;
 }

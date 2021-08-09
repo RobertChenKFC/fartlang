@@ -1,0 +1,49 @@
+    6 |   Source *source = [31;1mSourceFromFile[0m(file);
+
+   13 |   SourcePointIncrement[32;1m(source, &point);
+[0m   14 |[32;1m   assert(point.lineNo == 5 && point.charNo == 40);
+[0m   15 |[32;1m   SourcePointIncrement(source, &point);
+[0m
+    4 | [33;1mint[0m main() {
+    5 |   [33;1mFILE [0m*file = fopen([34;1m__FILE__[0m, [35;1m"r"[0m);
+
+   22 |   [31;1mlocation.from.lineNo = 5;
+[0m   23 |[31;1m   location.from.charNo = 19;
+[0m   24 |[31;1m   location.to.lineNo = 5;
+[0m   25 |[31;1m   location.to.charNo = 32[0m;
+   26 |   SourceLocationPrint(source, 1, SOURCE_COLOR_RED, &location);
+   27 | 
+   28 |   // 3. Print a multi-line location
+   29 |   [32;1mlocation.from.lineNo = 12;
+[0m   30 |[32;1m   location.from.charNo = 22;
+[0m   31 |[32;1m   location.to.lineNo = 14;
+[0m   32 |[32;1m   location.to.charNo = 40;[0m
+   33 |   fprintf(stderr, "\n");
+   34 |   SourceLocationPrint(source, 1, SOURCE_COLOR_GREEN, &location);
+   35 | 
+   36 |   // 4. Print multiple single-line locations
+   37 |   SourceLocation location2;
+   38 |   SourceLocation location3;
+   39 |   SourceLocation location4;
+   40 |   location.from.lineNo = 3;
+   41 |   location.from.charNo = 0;
+   42 |   location.to.lineNo = 3;
+   43 |   location.to.charNo = 2;
+   44 |   location2.from.lineNo = 4;
+   45 |   location2.from.charNo = 2;
+   46 |   location2.to.lineNo = 4;
+   47 |   location2.to.charNo = 6;
+   48 |   location3.from.lineNo = 4;
+   49 |   location3.from.charNo = 21;
+   50 |   location3.to.lineNo = 4;
+   51 |   location3.to.charNo = 28;
+   52 |   location4.from.lineNo = 4;
+   53 |   location4.from.charNo = 31;
+   54 |   location4.to.lineNo = 4;
+   55 |   location4.to.charNo = 33;
+   56 |   fprintf(stderr, "\n");
+   57 |   SourceLocationPrint(source, 4,
+   58 |       [36;1mSOURCE_COLOR_YELLOW, &location,
+[0m   59 |[36;1m       SOURCE_COLOR_YELLOW, &location2,
+[0m   60 |[36;1m       SOURCE_COLOR_BLUE, &location3,
+[0m   61 |[36;1m       SOURCE_COLOR_PURPLE, &location4[0m);

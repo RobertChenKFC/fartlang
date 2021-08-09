@@ -8,8 +8,8 @@ int main() {
   FA *fa = FANew();
 
   // 1. Test adding states (individually)
-  FAState *state = FAStateNew(false);
-  FAState *state2 = FAStateNew(true);
+  FAState *state = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state2 = FAStateNew(0);
   FAAddState(fa, state);
   FAAddState(fa, state2);
   FILE *file = fopen("1.out", "w");
@@ -18,7 +18,7 @@ int main() {
 
   // 2. Test adding states (from another FA)
   FA *fa2 = FANew();
-  FAState *state3 = FAStateNew(false);
+  FAState *state3 = FAStateNew(FA_ACCEPT_NONE);
   FAAddState(fa2, state3);
   FAAddStates(fa, fa2);
   file = fopen("2.out", "w");

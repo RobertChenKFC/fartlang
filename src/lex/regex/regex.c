@@ -119,7 +119,7 @@ RegexCharacterClass *RegexCharacterClassFromRangeVector(
   unsigned char *characters = c->characters;
   int numChars = 0;
 
-  bool chosen[128] = {};
+  bool chosen[128] = {false};
   for (int i = 0; i < n; ++i) {
     RegexRange *range = vec[i];
     for (unsigned char a = range->from; a <= range->to; ++a) {
@@ -135,7 +135,7 @@ RegexCharacterClass *RegexCharacterClassFromRangeVector(
 }
 
 RegexCharacterClass *RegexCharacterClassNegated(RegexCharacterClass *c) {
-  bool chosen[128] = {};
+  bool chosen[128] = {false};
   unsigned char *characters = c->characters;
   int numChars = c->numChars;
   for (int i = 0; i < numChars; ++i)
@@ -356,7 +356,7 @@ void RegexPrint(Regex *regex) {
       if (IS_CONTROL_CHARACTER(a)) {
         printf("\\x%02x", (int)a);
       } else {
-        if (IS_SPECIAL_CHARACTER[a])
+        if (IS_SPECIAL_CHARACTER[(int)a])
           putchar('\\');
         putchar(a);
       }

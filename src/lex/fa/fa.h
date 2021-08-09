@@ -16,11 +16,12 @@ struct FA {
   FAState *init, *last;
 };
 
-// A state in an FA, which contains all transitions to other states, whether
-// it is an accepting state, and a pointer to the next state to connect all
-// states in the FA together as a list
+// A state in an FA, which contains all transitions to other states, what kind
+// of accepting state it is (if it is one), and a pointer to the next state to
+// connect all states in the FA together as a list
+#define FA_ACCEPT_NONE -1
 struct FAState {
-  bool accepting;
+  int accepting;
   FATransition *transition;
   FAState *next;
 };
@@ -40,7 +41,7 @@ FA *FANew();
 // Deletes an "fa" created with FANew, as well as the transitions it contains
 void FADelete(FA *fa);
 // Creates a new FA state with no transitions and property "accepting"
-FAState *FAStateNew(bool accepting);
+FAState *FAStateNew(int accepting);
 // Adds "state" to "fa"; note that if "fa" currently has no states, then
 // "state" will become its initial state
 void FAAddState(FA *fa, FAState *state);
@@ -59,7 +60,9 @@ void FAPrint(FA *fa, FILE *file);
 uint64_t FAStatePtrHash(void *a);
 // A equal function for state pointers "a" and "b"; used in hash tables
 bool FAStatePtrEqual(void *a, void *b);
-// A compare function for two FA transitions "a" and "b"; used for sorting
+// A compare function for two FA transitions "a" and "b", which first compares
+// by the state that the transitions go to, then compares by character; used for
+// sorting
 int FATransitionCmp(const void *a, const void *b);
 
 #endif // FA_H

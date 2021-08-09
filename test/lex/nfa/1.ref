@@ -1,6 +1,11 @@
 digraph FA {
+  label="2 states";
   rankdir=LR;
-  node [shape=doublecircle]; 0;
-  node [shape=circle]; 1;
-  0 -> 1 [label="&epsilon;"];
+  node [shape=doublecircle];
+  1 [label="0"];
+  node [shape=circle];
+  2 [label=""];
+  0 [label= "", shape=none,height=.0,width=.0];
+  0 -> 1;
+  1 -> 2 [label="&epsilon;"];
 }

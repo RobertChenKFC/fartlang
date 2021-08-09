@@ -1,16 +1,31 @@
 digraph FA {
+  label="12 states";
   rankdir=LR;
-  node [shape=doublecircle]; 11;
-  node [shape=circle]; 0 1 2 3 4 5 6 7 8 9 10;
-  0 -> 1 [label="'h'"];
-  1 -> 2 [label="'e'"];
-  2 -> 3 [label="'l'"];
+  node [shape=doublecircle];
+  12 [label="0"];
+  node [shape=circle];
+  1 [label=""]
+  2 [label=""]
+  3 [label=""]
+  4 [label=""]
+  5 [label=""]
+  6 [label=""]
+  7 [label=""]
+  8 [label=""]
+  9 [label=""]
+  10 [label=""]
+  11 [label=""];
+  0 [label= "", shape=none,height=.0,width=.0];
+  0 -> 1;
+  1 -> 2 [label="'h'"];
+  2 -> 3 [label="'e'"];
   3 -> 4 [label="'l'"];
-  4 -> 5 [label="'o'"];
-  5 -> 7 [label="'w'"];
-  6 -> 7 [label="'w'"];
-  7 -> 8 [label="'o'"];
-  8 -> 9 [label="'r'"];
-  9 -> 10 [label="'l'"];
-  10 -> 11 [label="'d'"];
+  4 -> 5 [label="'l'"];
+  5 -> 6 [label="'o'"];
+  6 -> 8 [label="'w'"];
+  7 -> 8 [label="'w'"];
+  8 -> 9 [label="'o'"];
+  9 -> 10 [label="'r'"];
+  10 -> 11 [label="'l'"];
+  11 -> 12 [label="'d'"];
 }

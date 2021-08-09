@@ -1,0 +1,4 @@
+tokenID: 1, location: 1:1 ~ 1:25, length: 25, token: AaBbCcDd.com.tw@gmail.com
+tokenID: 1, location: 1:26 ~ 1:64, length: 39, token: HeyHelloHi.WhatWhenHow.1234@hotmail.com
+tokenID: 0, location: 2:1 ~ 2:15, length: 15, token: 123.456.789.012
+tokenID: 1, location: 2:18 ~ 2:48, length: 31, token: 9.8.7.6.qwerty.com.tw@gmail.com

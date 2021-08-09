@@ -39,8 +39,8 @@ void BitsetSetVal(Bitset *bitset, int i, BITSET_WORD_T val) {
   int wordIdx = i / BITSET_WORD_NBITS;
   int bitIdx = i % BITSET_WORD_NBITS;
   bitset->words[wordIdx] =
-      bitset->words[wordIdx] & (~(((BITSET_WORD_T)1) << bitIdx))
-                             | (((BITSET_WORD_T)val) << bitIdx);
+      (bitset->words[wordIdx] & (~(((BITSET_WORD_T)1) << bitIdx)))
+                              | (((BITSET_WORD_T)val) << bitIdx);
 }
 
 bool BitsetIsSet(Bitset *bitset, int i) {

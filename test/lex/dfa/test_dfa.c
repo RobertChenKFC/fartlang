@@ -8,20 +8,22 @@
 // Forward declarations
 void NFAToDFATest();
 void DFAMinimizationTest();
+void NFAsToDFATest();
 
 int main() {
   RegexInit();
   DFAInit();
   NFAToDFATest();
   DFAMinimizationTest();
+  NFAsToDFATest();
 }
 
 void NFAToDFATest() {
   // 1. Directly convert NFA (1)
   FA *nfa = FANew();
-  FAState *state = FAStateNew(false);
-  FAState *state2 = FAStateNew(false);
-  FAState *state3 = FAStateNew(true);
+  FAState *state = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state2 = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state3 = FAStateNew(0);
   FAAddState(nfa, state);
   FAAddState(nfa, state2);
   FAAddState(nfa, state3);
@@ -39,9 +41,9 @@ void NFAToDFATest() {
 
   // 2. Directly convert NFA (2)
   nfa = FANew();
-  state = FAStateNew(false);
-  state2 = FAStateNew(false);
-  state3 = FAStateNew(true);
+  state = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(FA_ACCEPT_NONE);
+  state3 = FAStateNew(0);
   FAAddState(nfa, state);
   FAAddState(nfa, state2);
   FAAddState(nfa, state3);
@@ -62,9 +64,9 @@ void NFAToDFATest() {
 
   // 3. Directly convert NFA (3)
   nfa = FANew();
-  state = FAStateNew(false);
-  state2 = FAStateNew(false);
-  state3 = FAStateNew(true);
+  state = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(FA_ACCEPT_NONE);
+  state3 = FAStateNew(0);
   FAAddState(nfa, state);
   FAAddState(nfa, state2);
   FAAddState(nfa, state3);
@@ -85,10 +87,10 @@ void NFAToDFATest() {
 
   // 4. Directly convert NFA (4)
   nfa = FANew();
-  state = FAStateNew(false);
-  state2 = FAStateNew(false);
-  state3 = FAStateNew(false);
-  FAState *state4 = FAStateNew(true);
+  state = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(FA_ACCEPT_NONE);
+  state3 = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state4 = FAStateNew(0);
   FAAddState(nfa, state);
   FAAddState(nfa, state2);
   FAAddState(nfa, state3);
@@ -165,12 +167,12 @@ void NFAToDFATest() {
 void DFAMinimizationTest() {
   // 9. Directly convert DFA (1)
   FA *dfa = FANew();
-  FAState *state0 = FAStateNew(false);
-  FAState *state1 = FAStateNew(true);
-  FAState *state2 = FAStateNew(true);
-  FAState *state3 = FAStateNew(false);
-  FAState *state4 = FAStateNew(true);
-  FAState *state5 = FAStateNew(false);
+  FAState *state0 = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state1 = FAStateNew(0);
+  FAState *state2 = FAStateNew(0);
+  FAState *state3 = FAStateNew(FA_ACCEPT_NONE);
+  FAState *state4 = FAStateNew(0);
+  FAState *state5 = FAStateNew(FA_ACCEPT_NONE);
   FAAddState(dfa, state0);
   FAAddState(dfa, state1);
   FAAddState(dfa, state2);
@@ -198,12 +200,12 @@ void DFAMinimizationTest() {
 
   // 10. Directly convert DFA (2)
   dfa = FANew();
-  state0 = FAStateNew(false);
-  state1 = FAStateNew(false);
-  state2 = FAStateNew(false);
-  state3 = FAStateNew(true);
-  state4 = FAStateNew(false);
-  state5 = FAStateNew(true);
+  state0 = FAStateNew(FA_ACCEPT_NONE);
+  state1 = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(FA_ACCEPT_NONE);
+  state3 = FAStateNew(0);
+  state4 = FAStateNew(FA_ACCEPT_NONE);
+  state5 = FAStateNew(0);
   FAAddState(dfa, state0);
   FAAddState(dfa, state1);
   FAAddState(dfa, state2);
@@ -231,12 +233,12 @@ void DFAMinimizationTest() {
 
   // 11. Directly convert DFA (3)
   dfa = FANew();
-  state0 = FAStateNew(false);
-  state1 = FAStateNew(false);
-  state2 = FAStateNew(false);
-  state3 = FAStateNew(true);
-  state4 = FAStateNew(true);
-  state5 = FAStateNew(false);
+  state0 = FAStateNew(FA_ACCEPT_NONE);
+  state1 = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(FA_ACCEPT_NONE);
+  state3 = FAStateNew(0);
+  state4 = FAStateNew(0);
+  state5 = FAStateNew(FA_ACCEPT_NONE);
   FAAddState(dfa, state0);
   FAAddState(dfa, state1);
   FAAddState(dfa, state2);
@@ -264,9 +266,9 @@ void DFAMinimizationTest() {
 
   // 12. NFA to minimized DFA
   FA *nfa = FANew();
-  state0 = FAStateNew(false);
-  state1 = FAStateNew(false);
-  state2 = FAStateNew(true);
+  state0 = FAStateNew(FA_ACCEPT_NONE);
+  state1 = FAStateNew(FA_ACCEPT_NONE);
+  state2 = FAStateNew(0);
   FAAddState(nfa, state0);
   FAAddState(nfa, state1);
   FAAddState(nfa, state2);
@@ -342,6 +344,68 @@ void DFAMinimizationTest() {
   fclose(file);
   RegexDelete(regex);
   FADelete(nfa);
+  FADelete(dfa);
+  FADelete(minDFA);
+}
+
+void NFAsToDFATest() {
+  // 15. Multiple disjoint regexes to minimized DFA
+  Regex *regex = RegexFromUnion(3,
+      RegexFromString("hello"),
+      RegexFromString("hell"),
+      RegexFromString("hey"));
+  Regex *regex2 = RegexFromConcat(2,
+      RegexFromString("fart"),
+      RegexZeroOrMore(REGEX_DIGITS));
+  FA *nfa = NFAFromRegex(regex);
+  FA *nfa2 = NFAFromRegex(regex2);
+  Vector *nfas = VectorNew();
+  VectorAdd(nfas, nfa);
+  VectorAdd(nfas, nfa2);
+  FA *dfa = DFAFromNFAs(nfas);
+  FA *minDFA = DFAMinimize(dfa);
+  FILE *file = fopen("15.out", "w");
+  FAPrint(minDFA, file);
+  fclose(file);
+  RegexDelete(regex);
+  RegexDelete(regex2);
+  VectorDelete(nfas);
+  FADelete(nfa);
+  FADelete(nfa2);
+  FADelete(dfa);
+  FADelete(minDFA);
+
+  // 16. Multiple regexes to minimized DFA
+  regex = RegexFromUnion(3,
+      RegexFromString("hello"),
+      RegexFromString("hell"),
+      RegexFromString("hi"));
+  regex2 = RegexFromConcat(2,
+      RegexOneOrMore(REGEX_LETTERS),
+      RegexZeroOrMore(RegexFromConcat(2,
+          RegexFromLetter('.'),
+          RegexOneOrMore(REGEX_LETTERS))));
+  Regex *regex3 = RegexFromConcat(2,
+      regex2,
+      RegexFromUnion(2, RegexFromString(".com"), RegexFromString(".org")));
+  nfa = NFAFromRegex(regex);
+  nfa2 = NFAFromRegex(regex2);
+  FA *nfa3 = NFAFromRegex(regex3);
+  nfas = VectorNew();
+  VectorAdd(nfas, nfa);
+  VectorAdd(nfas, nfa3);
+  VectorAdd(nfas, nfa2);
+  dfa = DFAFromNFAs(nfas);
+  minDFA = DFAMinimize(dfa);
+  file = fopen("16.out", "w");
+  FAPrint(minDFA, file);
+  fclose(file);
+  RegexDelete(regex);
+  RegexDelete(regex3);
+  VectorDelete(nfas);
+  FADelete(nfa);
+  FADelete(nfa2);
+  FADelete(nfa3);
   FADelete(dfa);
   FADelete(minDFA);
 }

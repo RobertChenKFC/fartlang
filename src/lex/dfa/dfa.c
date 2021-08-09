@@ -1,6 +1,7 @@
 #include "lex/dfa/dfa.h"
 #include "util/bitset/bitset.h"
 #include "util/hashtable/hashtable.h"
+#include "util/source/source.h"
 #include "util/vector/vector.h"
 #include <assert.h>
 #include <stdio.h>
@@ -24,7 +25,7 @@ DFAStateSet *DFA_STATE_SET_NULL;
 // unreachable states
 struct DFAState {
   bool init;
-  bool accepting;
+  int accepting;
   DFATransition *transition;
   DFAStateSet *set;
   DFAState *prev, *next;
@@ -179,12 +180,24 @@ FAState *DFAAddBitsetStateToTable(
     dfaState = entry->value;
     BitsetDelete(bitset);
   } else {
-    bool accepting = false;
+    int accepting = FA_ACCEPT_NONE;
     for (int i = 0; i < bitset->n; ++i) {
       FAState *state = nfaStates[i];
-      if (BitsetIsSet(bitset, i) && state->accepting) {
-        accepting = true;
-        break;
+      if (BitsetIsSet(bitset, i) && state->accepting != FA_ACCEPT_NONE) {
+        if (accepting == FA_ACCEPT_NONE) {
+          accepting = state->accepting;
+        } else {
+          int chosenAccepting = accepting < state->accepting ?
+                                accepting : state->accepting;
+          if (accepting != state->accepting) {
+            // TODO: change this warning message later
+            fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET
+                    " Regex for token #%d and #%d are not disjoint, choosing "
+                    "token #%d.\n",
+                    state->accepting, accepting, chosenAccepting);
+          }
+          accepting = chosenAccepting;
+        }
       }
     }
     dfaState = FAStateNew(accepting);
@@ -211,8 +224,7 @@ FA *DFAFromNFA(FA *nfa) {
   for (FAState *state = nfa->init; state; state = state->next) {
     Bitset *bitset = DFAEpsilonClosureFromNFAState(
         state, nfaStateToIdx, numNFAStates);
-    FAState *faState = DFAAddBitsetStateToTable(
-        bitset, idxToNFAState, bitsetToDFAState);
+    DFAAddBitsetStateToTable(bitset, idxToNFAState, bitsetToDFAState);
   }
 
   // Iterate through all DFA states "dfaStateFrom", each of which is a set of
@@ -223,7 +235,7 @@ FA *DFAFromNFA(FA *nfa) {
   FA *dfa = FANew();
   for (HashTableEntry *dfaStateEntry = bitsetToDFAState->head; dfaStateEntry;
        dfaStateEntry = dfaStateEntry->nextInTable) {
-    Bitset *dfaTransitions[128] = {};
+    Bitset *dfaTransitions[128] = {false};
     Bitset *dfaBitsetFrom = dfaStateEntry->key;
     for (int i = 0; i < dfaBitsetFrom->n; ++i) {
       if (!BitsetIsSet(dfaBitsetFrom, i))
@@ -263,6 +275,44 @@ FA *DFAFromNFA(FA *nfa) {
   HashTableDelete(nfaStateToIdx);
   free(idxToNFAState);
   HashTableDelete(bitsetToDFAState);
+
+  return dfa;
+}
+
+FA *DFAFromNFAs(Vector *nfas) {
+  FAState *init = FAStateNew(FA_ACCEPT_NONE);
+  FA *combinedNFA = FANew();
+  FAAddState(combinedNFA, init);
+  int numNFAs = nfas->size;
+  for (int i = 0; i < numNFAs; ++i) {
+    FA *nfa = nfas->arr[i];
+    FAAddStates(combinedNFA, nfa);
+    FAStateAddTransition(init, FA_EPSILON, nfa->init);
+    for (FAState *state = nfa->init; state; state = state->next) {
+      if (state->accepting != FA_ACCEPT_NONE)
+        state->accepting = i;
+    }
+  }
+  FA *dfa = DFAFromNFA(combinedNFA);
+
+  // To make sure that the NFAs that are passed in this function are not
+  // deleted, we only delete the initial state as well as the transitions we
+  // added, instead of directly using FADelete on "combinedNFA"; also, we need
+  // to split the list of states of the original NFA's apart because they
+  // are joined together in "combinedNFA"
+  FATransition *nextTransition;
+  for (FATransition *transition = init->transition; transition;
+       transition = nextTransition) {
+    nextTransition = transition->next;
+    free(transition);
+  }
+  for (int i = 0; i < numNFAs; ++i) {
+    FA *nfa = nfas->arr[i];
+    if (nfa->last)
+      nfa->last->next = NULL;
+  }
+  free(init);
+  free(combinedNFA);
 
   return dfa;
 }
@@ -428,27 +478,35 @@ int DFATransitionCmpByStateToSet(const void *a, const void *b) {
 }
 
 FA *DFAMinimize(FA *dfa) {
-  // Initially partition the states into only accepting and rejecting sets, and
-  // also construct the table of converting original FA states to new DFA states
-  // so that the new DFA transitions can be constructed properly
+  // Initially partition the states according to their "accepting" properties,
+  // and also construct the table of converting original FA states to new DFA
+  // states so that the new DFA transitions can be constructed properly
   DFAStatePartition *partition = DFAStatePartitionNew();
-  DFAStateSet *acceptingSet = DFAStateSetNew();
+  Vector *acceptingSets = VectorNew();
   DFAStateSet *rejectingSet = DFAStateSetNew();
-  DFAStatePartitionAddSet(partition, acceptingSet);
   DFAStatePartitionAddSet(partition, rejectingSet);
   HashTable *toDFAState = HashTableNew(
       FAStatePtrHash, FAStatePtrEqual, NULL, NULL);
   for (FAState *state = dfa->init; state; state = state->next) {
     DFAState *dfaState = DFAStateNew(state, state == dfa->init);
     HashTableEntryAdd(toDFAState, state, dfaState);
-    if (state->accepting) {
-      DFAStateSetAddState(acceptingSet, dfaState);
-      dfaState->set = acceptingSet;
-    } else {
+    int accepting = state->accepting;
+    if (accepting == FA_ACCEPT_NONE) {
       DFAStateSetAddState(rejectingSet, dfaState);
       dfaState->set = rejectingSet;
+    } else {
+      DFAStateSet *acceptingSet;
+      while (acceptingSets->size <= accepting) {
+        acceptingSet = DFAStateSetNew();
+        VectorAdd(acceptingSets, acceptingSet);
+        DFAStatePartitionAddSet(partition, acceptingSet);
+      }
+      acceptingSet = acceptingSets->arr[accepting];
+      DFAStateSetAddState(acceptingSet, dfaState);
+      dfaState->set = acceptingSet;
     }
   }
+  VectorDelete(acceptingSets);
 
   // Construct the DFA transitions for the newly created DFA states
   for (FAState *stateFrom = dfa->init; stateFrom; stateFrom = stateFrom->next) {

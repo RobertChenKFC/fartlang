@@ -1,0 +1,4 @@
+tokenID: 0, location: 1:1 ~ 1:5, length: 5, token: Hello
+tokenID: 0, location: 1:6 ~ 1:10, length: 5, token: hello
+tokenID: 0, location: 2:1 ~ 2:5, length: 5, token: hello
+tokenID: 0, location: 2:6 ~ 2:10, length: 5, token: Hello

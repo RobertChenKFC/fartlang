@@ -26,8 +26,8 @@ bool NFAAllLetterRegexes(RegexList *list) {
 
 FA *NFAFromUnionLetterRegexes(RegexUnion *regexUnion) {
   FA *nfa = FANew();
-  FAState *init = FAStateNew(false);
-  FAState *accept = FAStateNew(true);
+  FAState *init = FAStateNew(FA_ACCEPT_NONE);
+  FAState *accept = FAStateNew(0);
   FAAddState(nfa, init);
   FAAddState(nfa, accept);
   for (RegexListNode *node = regexUnion->list.head; node;
@@ -41,18 +41,18 @@ FA *NFAFromUnionLetterRegexes(RegexUnion *regexUnion) {
 
 FA *NFAFromConcatLetterRegexes(RegexConcat *regexConcat) {
   FA *nfa = FANew();
-  FAState *prev = FAStateNew(false);
+  FAState *prev = FAStateNew(FA_ACCEPT_NONE);
   FAAddState(nfa, prev);
   for (RegexListNode *node = regexConcat->list.head; node;
        node = node->next) {
     Regex *subRegex = node->cur;
     unsigned char a = subRegex->regexLetter.a;
-    FAState *state = FAStateNew(false);
+    FAState *state = FAStateNew(FA_ACCEPT_NONE);
     FAAddState(nfa, state);
     FAStateAddTransition(prev, a, state);
     prev = state;
   }
-  prev->accepting = true;
+  prev->accepting = 0;
   return nfa;
 }
 
@@ -60,14 +60,14 @@ FA *NFAFromRegex(Regex *regex) {
   switch (regex->type) {
     case REGEX_NULL: {
       FA *nfa = FANew();
-      FAState *init = FAStateNew(false);
+      FAState *init = FAStateNew(FA_ACCEPT_NONE);
       FAAddState(nfa, init);
       return nfa;
     } case REGEX_LETTER: {
       unsigned char a = regex->regexLetter.a;
       FA *nfa = FANew();
-      FAState *init = FAStateNew(false);
-      FAState *accept = FAStateNew(true);
+      FAState *init = FAStateNew(FA_ACCEPT_NONE);
+      FAState *accept = FAStateNew(0);
       // An NFA accepting a single letter "a" can be constructed by having
       // two states: the initiali state "init" and the accepting state "accept",
       // connecting them with a transition "a"
@@ -81,7 +81,7 @@ FA *NFAFromRegex(Regex *regex) {
       if (NFAAllLetterRegexes(&regex->regexUnion.list))
         return NFAFromUnionLetterRegexes(&regex->regexUnion);
       FA *nfa = FANew();
-      FAState *init = FAStateNew(false);
+      FAState *init = FAStateNew(FA_ACCEPT_NONE);
       FAAddState(nfa, init);
       // An NFA accepting a union of sub-regexes can be constructed by having
       // an initial state "init", and connecting "init" to all the initial
@@ -114,9 +114,9 @@ FA *NFAFromRegex(Regex *regex) {
         FA *subNFA = NFAFromRegex(subRegex);
         if (prev) {
           for (FAState *state = prev; state; state = state->next) {
-            if (state->accepting) {
+            if (state->accepting != FA_ACCEPT_NONE) {
               FAStateAddTransition(state, FA_EPSILON, subNFA->init);
-              state->accepting = false;
+              state->accepting = FA_ACCEPT_NONE;
             }
           }
         }
@@ -133,17 +133,19 @@ FA *NFAFromRegex(Regex *regex) {
       // connect all final states of the sub-NFA to "init" via epsilon
       // transitions
       FA *nfa = FANew();
-      FAState *init = FAStateNew(true);
+      FAState *init = FAStateNew(0);
       FAAddState(nfa, init);
       FA *subNFA = NFAFromRegex(regex->regexStar.regex);
       FAAddStates(nfa, subNFA);
       FAStateAddTransition(init, FA_EPSILON, subNFA->init);
       for (FAState *state = subNFA->init; state; state = state->next) {
-        if (state->accepting)
+        if (state->accepting != FA_ACCEPT_NONE)
           FAStateAddTransition(state, FA_EPSILON, init);
       }
       free(subNFA);
       return nfa;
     }
   }
+  // To deal with complaining compiler; the switch is fully handled
+  __builtin_unreachable();
 }

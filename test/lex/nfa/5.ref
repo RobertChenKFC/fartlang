@@ -1,8 +1,14 @@
 digraph FA {
+  label="3 states";
   rankdir=LR;
-  node [shape=doublecircle]; 0 2;
-  node [shape=circle]; 1;
-  0 -> 1 [label="&epsilon;"];
-  1 -> 2 [label="'?'"];
-  2 -> 0 [label="&epsilon;"];
+  node [shape=doublecircle];
+  1 [label="0"]
+  3 [label="0"];
+  node [shape=circle];
+  2 [label=""];
+  0 [label= "", shape=none,height=.0,width=.0];
+  0 -> 1;
+  1 -> 2 [label="&epsilon;"];
+  2 -> 3 [label="'?'"];
+  3 -> 1 [label="&epsilon;"];
 }

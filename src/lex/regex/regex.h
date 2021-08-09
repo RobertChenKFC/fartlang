@@ -17,9 +17,6 @@ struct RegexCharacterClass {
   int numChars;
 };
 
-// Regex that accepts the empty language
-typedef struct {} RegexNull;
-
 // Regex that accepts a single alphabet
 typedef struct {
   unsigned char a;
@@ -59,7 +56,6 @@ typedef enum {
 } RegexType;
 struct Regex {
   union {
-    RegexNull regexNull;
     RegexLetter regexLetter;
     RegexUnion regexUnion;
     RegexConcat regexConcat;

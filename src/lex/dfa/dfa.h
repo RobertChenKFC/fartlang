@@ -2,6 +2,7 @@
 #define DFA_H
 
 #include "lex/fa/fa.h"
+#include "util/vector/vector.h"
 #include <stdbool.h>
 #include <stdio.h>
 
@@ -9,6 +10,8 @@
 void DFAInit();
 // Construct an FA from "nfa"
 FA *DFAFromNFA(FA *nfa);
+// Construct an FA from a vector of multiple "nfa"s
+FA *DFAFromNFAs(Vector *nfas);
 // Minimizes "dfa"
 FA *DFAMinimize(FA *dfa);
 
