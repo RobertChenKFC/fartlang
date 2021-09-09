@@ -351,7 +351,7 @@ This proof is also omitted. We provide the algorithm to minimize such DFA\@:
               \State{$q'\leftarrow q'\in P$ such that $\delta(p,a)\in q'$}
               \MyComment{check which partition $q'$ each state $p$ in the
                          current partition $p'$ goes to when reading $a$}
-              \If{$\text{comesFrom}[q']$ is set}
+              \If{$\text{comesFrom}[q']$ exists}
                 \State{$\text{comesFrom}[q']\leftarrow\text{comesFrom}[q']
                        \cup\{p\}$}
               \Else{}

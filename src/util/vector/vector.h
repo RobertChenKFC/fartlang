@@ -9,8 +9,10 @@ typedef struct {
   int size, capacity;
 } Vector;
 
-// Creates a new vector
+// Creates a new vector with default capacity
 Vector *VectorNew();
+// Creates a new vector with "capacity"; note that "capacity" must be > 0
+Vector *VectorNewWithCapacity(int capacity);
 // Deletes a "vec" created by VectorNew
 void VectorDelete(Vector *vec);
 // Adds "elem" to the end of "vec"

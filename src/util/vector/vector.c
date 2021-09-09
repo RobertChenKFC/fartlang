@@ -1,11 +1,19 @@
 #include "util/vector/vector.h"
 #include <stdlib.h>
 
+// DEBUG
+#include <stdio.h>
+
 Vector *VectorNew() {
+  return VectorNewWithCapacity(VECTOR_DEFAULT_CAPACITY);
+}
+
+Vector *VectorNewWithCapacity(int capacity) {
   Vector *vec = malloc(sizeof(Vector));
-  vec->arr = malloc(sizeof(void*) * VECTOR_DEFAULT_CAPACITY);
+  capacity = capacity == 0 ? 1 : capacity;
+  vec->arr = malloc(sizeof(void*) * capacity);
   vec->size = 0;
-  vec->capacity = VECTOR_DEFAULT_CAPACITY;
+  vec->capacity = capacity;
   return vec;
 }
 
@@ -18,6 +26,17 @@ void VectorAdd(Vector *vec, void *elem) {
   if (vec->capacity == vec->size) {
     vec->capacity *= 2;
     vec->arr = realloc(vec->arr, sizeof(void*) * vec->capacity);
+
+    // DEBUG
+    if (!vec->arr) {
+      printf("Realloc to capacity %d is not allowed\n", vec->capacity);
+      getchar();
+    }
   }
+
+  // DEBUG
+  if (vec->size < 0 || vec->size >= vec->capacity)
+    printf("YO WTF???\n");
+
   vec->arr[vec->size++] = elem;
 }

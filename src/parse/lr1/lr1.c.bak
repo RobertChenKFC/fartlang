@@ -1,0 +1,524 @@
+#include "parse/lr1/lr1.h"
+#include <stdlib.h>
+#include <assert.h>
+
+// Helper functions
+// Create a new LR(1) symbol string from a point to the head of the string "w",
+// a starting position "i", and a length "n"
+LR1SymbolString *LR1SymbolStringNew(int *w, int i, int n);
+// Delete a LR(1) symbol string "a" created by LR1SymbolStringNew; can be used
+// as a hash table destructor
+void LR1SymbolStringDelete(void *a);
+// Creates a new LR(1) item from "rule", "dot" and "lookahead"; the newly
+// created LR(1) item does not belong to any state
+LR1Item *LR1ItemNew(CFGRule *rule, int dot, Vector *lookahead);
+// Creates a new LR(1) item from "item", and advances its dot to the right by 1
+LR1Item *LR1ItemNewAdvanced(LR1Item *item);
+// Delete LR(1) item "a" created from LR1ItemNew; can be used as a hash table
+// destructor
+void LR1ItemDelete(void *a);
+// Compare LR(1) items "a" and "b" by the ID of the RHS after the dot; if the
+// dot is at the end of its RHS, it is considered the largest; used for sorting
+int LR1ItemCmp(const void *a, const void *b);
+// Copies the content of "set" to a newly created set
+Vector *LR1SetCopy(Vector *set);
+// Constructs the first set of a LR(1) symbol "string" from the CFG "cfg"; note
+// that this function deletes "string"
+Vector *LR1FirstSet(CFG *cfg, LR1SymbolString *string);
+// The implementation of LR1FirstSet for recursive calls, which takes extra
+// arguments "set" and "table"; note that it deletes "string" if "string" is
+// already in "table"
+void LR1FirstSetImpl(
+    Vector *set, HashTable *table, CFG *cfg, LR1SymbolString *string);
+// Constructs the follow set from a string "string", as well as a default "set",
+// using the CFG "cfg"; note that this function deletes "string"
+Vector *LR1FollowSet(CFG *cfg, LR1SymbolString *string, Vector *set);
+// Construct the closure of a LR(1) "item", using the CFG "cfg"; if "state"
+// is NULL, a new LR(1) state is created and returned, otherwise the items are
+// added to "state", and "state" is returned
+LR1State *LR1ItemClosure(CFG *cfg, LR1Item *item, LR1State *state);
+// Delete a LR(1) state "a" created from LR1Closure; can be used as a hash
+// table destructor
+void LR1StateDelete(void *a);
+// Add an LR(1) "item" to an LR(1) "state", and assigns "state" to the state
+// that "item" belongs to; note that it deletes the "item" if "item" already
+// exists in "state"; returns the LR(1) item that is in "state"
+LR1Item *LR1StateAddItem(LR1State *state, LR1Item *item);
+// Add a LR(1) "transition" to "state"
+void LR1StateAddTransition(LR1State *state, LR1Transition *transition);
+// Creates a new LR(1) transition to "state" via "id"
+LR1Transition *LR1TransitionNew(int id, LR1State *state);
+// Deletes an LR(1) "transition" created from LR1TransitionNew
+void LR1TransitionDelete(LR1Transition *transition);
+// Creates a new LR(1) state graph with no states
+LR1StateGraph *LR1StateGraphNew();
+// Add an LR(1) "state" to an LR(1) state "graph"; note that it deletes "state"
+// if "state" is already in "graph"; returns the LR(1) state that is in "graph";
+// also sets the initial state of "graph" to "state" if "state" is the first
+// state added
+LR1State *LR1StateGraphAddState(LR1StateGraph *graph, LR1State *state);
+// Compare function for IDs "a" and "b" stored in a vector; used for sorting
+int LR1IDCmp(const void *a, const void *b);
+// A hash function for a LR(1) symbol string "a"; used in hash tables
+uint64_t LR1SymbolStringHash(void *a);
+// An equal function for LR(1) symbol strings "a" and "b"; used in hash tables
+bool LR1SymbolStringEqual(void *a, void *b);
+// A hash function for a LR1Item "a"; used in hash tables
+uint64_t LR1ItemHash(void *a);
+// An equal function for a LR1Items "a" and "b"; used in hash tables
+bool LR1ItemEqual(void *a, void *b);
+// A hash function for a LR1State "a"; used in hash tables
+uint64_t LR1StateHash(void *a);
+// An equal function for a LR1States "a" and "b"; used in hash tables
+bool LR1StateEqual(void *a, void *b);
+
+LR1SymbolString *LR1SymbolStringNew(int *w, int i, int n) {
+  LR1SymbolString *string = malloc(sizeof(LR1SymbolString));
+  string->w = w;
+  string->i = i;
+  string->n = n;
+  return string;
+}
+
+void LR1SymbolStringDelete(void *a) {
+  LR1SymbolString *string = a;
+  free(string);
+}
+
+LR1Item *LR1ItemNew(CFGRule *rule, int dot, Vector *lookahead) {
+  LR1Item *item = malloc(sizeof(LR1Item));
+  item->rule = rule;
+  item->dot = dot;
+  item->lookahead = lookahead;
+  item->state = NULL;
+  return item;
+}
+
+LR1Item *LR1ItemNewAdvanced(LR1Item *item) {
+  LR1Item *newItem = LR1ItemNew(
+      item->rule, item->dot + 1, LR1SetCopy(item->lookahead));
+  return newItem;
+}
+
+void LR1ItemDelete(void *a) {
+  LR1Item *item = a;
+  VectorDelete(item->lookahead);
+  free(item);
+}
+
+int LR1ItemCmp(const void *a, const void *b) {
+  LR1Item *item1 = *((LR1Item **)a);
+  LR1Item *item2 = *((LR1Item **)b);
+  CFGRule *rule1 = item1->rule;
+  CFGRule *rule2 = item2->rule;
+  if (item1->dot == rule1->numRHS)
+    return 1;
+  if (item2->dot == rule2->numRHS)
+    return -1;
+  int id1 = rule1->rhs[item1->dot];
+  int id2 = rule2->rhs[item2->dot];
+  return id1 - id2;
+}
+
+Vector *LR1SetCopy(Vector *set) {
+  int size = set->size;
+  Vector *newSet = VectorNewWithCapacity(size);
+  for (int i = 0; i < size; ++i)
+    VectorAdd(newSet, set->arr[i]);
+  return newSet;
+}
+
+Vector *LR1FirstSet(CFG *cfg, LR1SymbolString *string) {
+  Vector *set = VectorNewWithCapacity(1);
+  HashTable *table = HashTableNew(
+      LR1SymbolStringHash, LR1SymbolStringEqual, LR1SymbolStringDelete, NULL);
+  LR1FirstSetImpl(set, table, cfg, string);
+  HashTableDelete(table);
+  qsort(set->arr, set->size, sizeof(set->arr[0]), LR1IDCmp);
+  return set;
+}
+
+void LR1FirstSetImpl(
+    Vector *set, HashTable *table, CFG *cfg, LR1SymbolString *string) {
+  HashTableEntry *entry = HashTableEntryRetrieve(table, string);
+  if (entry) {
+    LR1SymbolStringDelete(string);
+    return;
+  }
+  HashTableEntryAdd(table, string, NULL);
+
+  int *w = string->w;
+  int i = string->i;
+  int n = string->n;
+  if (i < n) {
+    if (CFG_IS_TOKEN_ID(cfg, w[i])) {
+      VectorAdd(set, (void*)(long long)w[i]);
+    } else {
+      int variableID = w[i];
+      int variableIdx = CFG_VARIABLE_ID_TO_IDX(cfg, variableID);
+      Vector *rules = cfg->rules;
+      int numRules = rules->size;
+      for (int j = cfg->variableToRule[variableIdx]; j < numRules; ++j) {
+        CFGRule *rule = rules->arr[j];
+        if (rule->lhs != variableID)
+          break;
+        LR1SymbolString *newString = LR1SymbolStringNew(
+            rule->rhs, 0, rule->numRHS);
+        LR1FirstSetImpl(set, table, cfg, newString);
+      }
+    }
+  }
+}
+
+Vector *LR1FollowSet(CFG *cfg, LR1SymbolString *string, Vector *set) {
+  if (string->i == string->n) {
+    LR1SymbolStringDelete(string);
+    return LR1SetCopy(set);
+  }
+  return LR1FirstSet(cfg, string);
+}
+
+LR1State *LR1ItemClosure(CFG *cfg, LR1Item *item, LR1State *state) {
+  if (!state) {
+    state = malloc(sizeof(LR1State));
+    state->items = HashTableNew(LR1ItemHash, LR1ItemEqual, LR1ItemDelete, NULL);
+    state->transition = NULL;
+  }
+  LR1StateAddItem(state, item);
+
+  Vector *rules = cfg->rules;
+  int numRules = rules->size;
+  int *variableToRule = cfg->variableToRule;
+  HashTable *items = state->items;
+  for (HashTableEntry *entry = items->head; entry; entry = entry->nextInTable) {
+    LR1Item *curItem = entry->key;
+    CFGRule *rule = curItem->rule;
+    int *rhs = rule->rhs;
+    int numRHS = rule->numRHS;
+    int dot = curItem->dot;
+    if (dot < numRHS && !CFG_IS_TOKEN_ID(cfg, rhs[dot])) {
+      LR1SymbolString *string = LR1SymbolStringNew(rhs, dot + 1, numRHS);
+      Vector *followSet = LR1FollowSet(cfg, string, curItem->lookahead);
+      int variableID = rhs[dot];
+      int variableIdx = CFG_VARIABLE_ID_TO_IDX(cfg, variableID);
+      for (int i = variableToRule[variableIdx]; i < numRules; ++i) {
+        CFGRule *curRule = rules->arr[i];
+        if (curRule->lhs != variableID)
+          break;
+        LR1Item *newItem = LR1ItemNew(curRule, 0, LR1SetCopy(followSet));
+        LR1StateAddItem(state, newItem);
+      }
+      // "followSet" must be deleted since all added items use a copy of it
+      VectorDelete(followSet);
+    }
+  }
+
+  return state;
+}
+
+void LR1StateDelete(void *a) {
+  LR1State *state = a;
+  HashTableDelete(state->items);
+  for (LR1Transition *transition = state->transition, *nextTransition;
+       transition; transition = nextTransition) {
+    nextTransition = transition->next;
+    LR1TransitionDelete(transition);
+  }
+  free(state);
+}
+
+LR1Item *LR1StateAddItem(LR1State *state, LR1Item *item) {
+  HashTable *items = state->items;
+  HashTableEntry *entry = HashTableEntryRetrieve(items, item);
+  if (entry) {
+    LR1ItemDelete(item);
+    return entry->key;
+  }
+  HashTableEntryAdd(items, item, NULL);
+  item->state = state;
+  return item;
+}
+
+void LR1StateAddTransition(LR1State *state, LR1Transition *transition) {
+  transition->next = state->transition;
+  state->transition = transition;
+}
+
+LR1Transition *LR1TransitionNew(int id, LR1State *state) {
+  LR1Transition *transition = malloc(sizeof(LR1Transition));
+  transition->id = id;
+  transition->state = state;
+  transition->next = NULL;
+  return transition;
+}
+
+void LR1TransitionDelete(LR1Transition *transition) {
+  free(transition);
+}
+
+LR1StateGraph *LR1StateGraphNew() {
+  LR1StateGraph *graph = malloc(sizeof(LR1StateGraph));
+  graph->states = HashTableNew(
+      LR1StateHash, LR1StateEqual, LR1StateDelete, NULL);
+  graph->init = NULL;
+  return graph;
+}
+
+LR1State *LR1StateGraphAddState(LR1StateGraph *graph, LR1State *state) {
+  HashTable *states = graph->states;
+  HashTableEntry *entry = HashTableEntryRetrieve(states, state);
+  if (entry) {
+    LR1StateDelete(state);
+    return entry->key;
+  }
+  HashTableEntryAdd(states, state, NULL);
+  if (!graph->init)
+    graph->init = state;
+  return state;
+}
+
+int LR1IDCmp(const void *a, const void *b) {
+  void *id1 = *((void **)a);
+  void *id2 = *((void **)b);
+  if (id1 < id2)
+    return -1;
+  if (id1 > id2)
+    return 1;
+  return 0;
+}
+
+uint64_t LR1SymbolStringHash(void *a) {
+  LR1SymbolString *string = a;
+  return (uint64_t)string->w ^
+         ((uint64_t)string->i << 32) ^
+         (uint64_t)string->n;
+}
+
+bool LR1SymbolStringEqual(void *a, void *b) {
+  LR1SymbolString *string1 = a;
+  LR1SymbolString *string2 = b;
+  return string1->w == string2->w &&
+         string1->i == string2->i &&
+         string1->n == string2->n;
+}
+
+uint64_t LR1ItemHash(void *a) {
+  LR1Item *item = a;
+  uint64_t hash = (uint64_t)item->rule ^ (uint64_t)item->dot;
+  Vector *lookahead = item->lookahead;
+  hash ^= (uint64_t)lookahead->size << 32;
+  int numLookahead = lookahead->size;
+  for (int i = 0; i < numLookahead; ++i) {
+    hash = (hash << 7) | (hash >> 57);
+    hash ^= (uint64_t)lookahead->arr[i];
+  }
+  return hash;
+}
+
+bool LR1ItemEqual(void *a, void *b) {
+  LR1Item *item1 = a;
+  LR1Item *item2 = b;
+  Vector *lookahead1 = item1->lookahead;
+  Vector *lookahead2 = item2->lookahead;
+  if (item1->rule != item2->rule ||
+      item1->dot != item2->dot ||
+      lookahead1->size != lookahead2->size)
+    return false;
+  int numLookahead = lookahead1->size;
+  for (int i = 0; i < numLookahead; ++i) {
+    if (lookahead1->arr[i] != lookahead2->arr[i])
+      return false;
+  }
+  return true;
+}
+
+uint64_t LR1StateHash(void *a) {
+  LR1State *state = a;
+  uint64_t hash = 0;
+  for (HashTableEntry *entry = state->items->head; entry;
+       entry = entry->nextInTable) {
+    LR1Item *item = entry->key;
+    hash ^= LR1ItemHash(item);
+  }
+  return hash;
+}
+
+bool LR1StateEqual(void *a, void *b) {
+  LR1State *state1 = a;
+  LR1State *state2 = b;
+  HashTable *items1 = state1->items;
+  HashTable *items2 = state2->items;
+  if (items1->size != items2->size)
+    return false;
+  for (HashTableEntry *entry1 = items1->head; entry1;
+       entry1 = entry1->nextInTable) {
+    HashTableEntry *entry2 = HashTableEntryRetrieve(items2, entry1->key);
+    if (!entry2)
+      return false;
+  }
+  return true;
+}
+
+LR1StateGraph *LR1StateGraphFromCFG(CFG *cfg) {
+  int startVariable = CFGAddVariable(cfg);
+  int eofTokenID = cfg->eofTokenID;
+  CFGRule *initRule = CFGAddRule(
+      cfg, startVariable, 1, cfg->startVariable);
+  cfg->startVariable = startVariable;
+  CFGFinalize(cfg);
+
+  Vector *initLookahead = VectorNewWithCapacity(1);
+  VectorAdd(initLookahead, (void*)(long long)eofTokenID);
+  LR1Item *initItem = LR1ItemNew(initRule, 0, initLookahead);
+  LR1State *initState = LR1ItemClosure(cfg, initItem, NULL);
+  LR1StateGraph *graph = LR1StateGraphNew();
+  initState = LR1StateGraphAddState(graph, initState);
+
+  HashTable *states = graph->states;
+  Vector *sortedItems = VectorNew();
+  for (HashTableEntry *stateEntry = states->head; stateEntry;
+       stateEntry = stateEntry->nextInTable) {
+    LR1State *state = stateEntry->key;
+    HashTable *items = state->items;
+    sortedItems->size = 0;
+    for (HashTableEntry *itemEntry = items->head; itemEntry;
+         itemEntry = itemEntry->nextInTable) {
+      LR1Item *item = itemEntry->key;
+      VectorAdd(sortedItems, item);
+    }
+    int numItems = sortedItems->size;
+    qsort(sortedItems->arr, numItems, sizeof(sortedItems->arr[0]), LR1ItemCmp);
+
+    LR1State *newState = NULL;
+    for (int i = 0; i < numItems; ++i) {
+      LR1Item *item = sortedItems->arr[i];
+      CFGRule *rule = item->rule;
+      int dot = item->dot;
+      if (dot == rule->numRHS)
+        break;
+      LR1Item *newItem = LR1ItemNewAdvanced(item);
+      newState = LR1ItemClosure(cfg, newItem, newState);
+      LR1Item *nextItem = (i == numItems - 1) ? NULL : sortedItems->arr[i + 1];
+      // The closure is complete and can be added to the set of states if:
+      // (1) There are no more items to add to the closure
+      // (2) The next item's RHS has nothing on the right of its dot
+      // (3) The next item's ID of the RHS after its dot is different to that of
+      //     the current item's
+      if (!nextItem ||
+          nextItem->dot == nextItem->rule->numRHS ||
+          nextItem->rule->rhs[nextItem->dot] != rule->rhs[dot]) {
+        newState = LR1StateGraphAddState(graph, newState);
+        LR1Transition *transition = LR1TransitionNew(rule->rhs[dot], newState);
+        LR1StateAddTransition(state, transition);
+        newState = NULL;
+      }
+    }
+  }
+  VectorDelete(sortedItems);
+
+  return graph;
+}
+
+void LR1StateGraphDelete(LR1StateGraph *graph) {
+  HashTableDelete(graph->states);
+  free(graph);
+}
+
+void LR1StateGraphPrint(
+    CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
+    FILE *file) {
+  int idx = 1;
+  HashTable *states = graph->states;
+  for (HashTableEntry *entry = states->head; entry; entry = entry->nextInTable)
+    entry->value = (void*)(long long)idx++;
+
+  fprintf(file, "digraph LR1 {\n");
+  fprintf(file, "  label=\"%d states\";\n", idx - 1);
+  fprintf(file, "  rankdir=LR;\n");
+  fprintf(file, "  node[shape=box];\n");
+
+  // Need to add extra token and variable strings, since a new EOF token and
+  // start variable were added to the CFG when constructing the LR(1) graph
+  VectorAdd(tokens, "$");
+  VectorAdd(variables, "S'");
+
+  for (HashTableEntry *entry = states->head; entry;
+       entry = entry->nextInTable) {
+    LR1State *state = entry->key;
+    idx = (int)(long long)entry->value;
+    fprintf(file, "  %d [label=\"", idx);
+
+    HashTable *items = state->items;
+    for (HashTableEntry *entryItem = items->head; entryItem;
+         entryItem = entryItem->nextInTable) {
+      // Print rule with dot at the RHS
+      LR1Item *item = entryItem->key;
+      CFGRule *rule = item->rule;
+      int dot = item->dot;
+      int id = rule->lhs;
+      fprintf(file, "%s -> ",
+              (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)]);
+      int *rhs = rule->rhs;
+      int numRHS = rule->numRHS;
+      for (int i = 0; i < numRHS; ++i) {
+        if (i == dot)
+          fprintf(file, "• ");
+        id = rhs[i];
+        char *idStr;
+        if (CFG_IS_TOKEN_ID(cfg, id))
+          idStr = tokens->arr[id];
+        else
+          idStr = variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)];
+        fprintf(file, "%s", idStr);
+        if (i != numRHS - 1)
+          fprintf(file, " ");
+      }
+      if (dot == numRHS)
+        fprintf(file, " •");
+
+      // Print lookahead tokens
+      fprintf(file, ", ");
+      Vector *lookahead = item->lookahead;
+      int numLookahead = lookahead->size;
+      for (int i = 0; i < numLookahead; ++i) {
+        int tokenID = (int)(long long)lookahead->arr[i];
+        if (i != 0)
+          fprintf(file, "/");
+        fprintf(file, "%s", (char*)tokens->arr[tokenID]);
+      }
+      fprintf(file, "\\l");
+    }
+
+    fprintf(file, "\"];\n");
+  }
+
+  // Add arrow to point to initial state
+  fprintf(file, "  0 [label= \"\", shape=none,height=.0,width=.0];\n");
+  fprintf(file, "  0 -> 1;\n");
+
+  idx = 1;
+  for (HashTableEntry *entry = states->head; entry;
+       entry = entry->nextInTable) {
+    LR1State *stateFrom = entry->key;
+    int from = (int)(long long)entry->value;
+    for (LR1Transition *transition = stateFrom->transition; transition;
+         transition = transition->next) {
+      LR1State *stateTo = transition->state;
+      HashTableEntry *entryTo = HashTableEntryRetrieve(states, stateTo);
+      assert(entryTo);
+      int to = (int)(long long)entryTo->value;
+      const char *id;
+      if (CFG_IS_TOKEN_ID(cfg, transition->id))
+        id = tokens->arr[transition->id];
+      else
+        id = variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, transition->id)];
+      fprintf(file, "  %d -> %d [label=\"%s\"];\n", from, to, id);
+    }
+  }
+
+  // Remove the extra added EOF token and start variable
+  --tokens->size;
+  --variables->size;
+
+  fprintf(file, "}\n");
+}

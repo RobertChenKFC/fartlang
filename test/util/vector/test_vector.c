@@ -29,4 +29,13 @@ int main() {
   for (unsigned long long i = 0; i < vec->size; ++i)
     assert(vec->arr[i] == (void*)(i * 5 + 3));
   VectorDelete(vec);
+
+  // 4. Test vector with non-default capacity
+  vec = VectorNewWithCapacity(1);
+  for (unsigned long long i = 0; i < 16; ++i)
+    VectorAdd(vec, (void*)(i * 5 + 3));
+  assert(vec->size == 16);
+  for (unsigned long long i = 0; i < vec->size; ++i)
+    assert(vec->arr[i] == (void*)(i * 5 + 3));
+  VectorDelete(vec);
 }

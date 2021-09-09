@@ -1,0 +1,440 @@
+\documentclass[titlepage]{article}
+\usepackage{amssymb}
+\usepackage[
+	margin=1.5cm,
+	includefoot,
+	footskip=30pt,
+]{geometry}
+
+\usepackage{amsthm}
+\usepackage[open,openlevel=0]{bookmark}
+\usepackage{mathrsfs}
+\usepackage{dsfont}
+\usepackage{amsmath}
+\usepackage[dvipsnames]{xcolor}
+\usepackage{tikz}
+\usepackage{multirow}
+\usepackage{CJKutf8}
+\usepackage{enumerate}
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{wasysym}
+\usepackage{enumerate}
+\usepackage[RPvoltages]{circuitikz}
+\usepackage{soul}
+\usepackage{karnaugh-map}
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\newcommand{\pushcode}[1][1]{\hskip\dimexpr#1\algorithmicindent\relax}
+\newcommand{\MyComment}[2][.5] {\Comment{\parbox[t]{#1\linewidth}{#2}}}
+\makeatletter
+
+\newenvironment{breakablealgorithm}
+  {% \begin{breakablealgorithm}
+   \begin{center}
+     \refstepcounter{algorithm}% New algorithm
+     \hrule height.8pt depth0pt \kern2pt% \@fs@pre for \@fs@ruled
+     \renewcommand{\caption}[2][\relax]{% Make a new \caption
+       {\raggedright\textbf{\ALG@name~\thealgorithm} ##2\par}%
+       \ifx\relax##1\relax % #1 is \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##2}%
+       \else % #1 is not \relax
+         \addcontentsline{loa}{algorithm}{\protect\numberline{\thealgorithm}##1}%
+       \fi
+       \kern2pt\hrule\kern2pt
+     }
+  }{% \end{breakablealgorithm}
+     \kern2pt\hrule\relax% \@fs@post for \@fs@ruled
+   \end{center}
+  }
+\makeatother
+
+\usetikzlibrary{arrows, shapes.gates.logic.US, calc, positioning}
+
+\theoremstyle{plain}
+\newtheorem*{axiom}{Axiom}
+\newtheorem*{theorem}{Theorem}
+\newtheorem*{observation}{Observation}
+\newtheorem*{exercise}{Exercise}
+
+\theoremstyle{definition}
+\newtheorem*{definition}{Definition}
+
+\theoremstyle{remark}
+\newtheorem*{solution}{Solution}
+\newtheorem*{remark}{Remark}
+
+\DeclareMathOperator{\dom}{dom}
+
+\title{Syntax Analysis}
+\author{Robert Chen}
+
+\begin{document}
+
+\maketitle
+
+\newpage
+\tableofcontents
+
+\newpage
+\section{Context Free Grammar}
+The following is the definition of a \textit{context free grammar}:
+\begin{definition}
+  A \textit{context free grammar} (\textit{CFG} for short) is a 4-tuple
+  $\mathcal{G}=(\Sigma,V,R,S)$ where
+  \begin{itemize}
+    \item $\Sigma$ is a finite alphabet.
+    \item $V$ is a set of variables.
+    \item $R$ is a set of rules, where each rule $r$ is in the form $r: A
+      \rightarrow w$, with $A\in V$ and $w\in {(V\cup\Sigma)}^*$.
+
+      We denote $A$ as the \textit{left-hand-side} (\textit{LHS}) and $w$ as the
+      \textit{right-hand-side} (\textit{RHS}).
+    \item $S\in V$: the starting variable.
+  \end{itemize}
+\end{definition}
+A CFG also defines a language. First let's see the definition of a
+\textit{derivation}:
+\begin{definition}
+  Let $\mathcal{G}=(\Sigma,V,R,S)$ be a CFG, $u=u_1Au_2$ where
+  $u_1,u_2\in{(V\cup\Sigma)}^*$ and $A\in V$, and $r$ be a rule
+  $r: A\rightarrow w$ in $R$. A \textit{derivation} on $u$ is denoted as
+  \[
+    u_1Au_2\xrightarrow{r}u_1wu_2
+  \]
+  which represents changing a variable in $u$ to the RHS of rule $r$.
+\end{definition}
+Then the definition of the language of a CFG follows:
+\begin{definition}
+  Let $\mathcal{G}=(\Sigma,V,R,S)$ be a CFG and $L(\mathcal{G})$ denote the
+  language that $\mathcal{G}$ accepts, then
+  \[
+    L(\mathcal{G})=\{w\in\Sigma^*:\exists\text{ a finite sequence of derivations
+    from }S\text{ to }w\}
+  \]
+\end{definition}
+
+\section{Determinism and Ambiguity}
+\begin{remark}
+  This section is mainly to provide some context, so most of the content is
+  not complete. Many interesting
+  theoretical results are not included, as they are not the focus of this
+  documentation.
+\end{remark}
+Similar to regexes, CFGs also have a class of machines that accept the languages
+of CFGs, called the \textit{push down automaton} (\textit{PDA} for short).
+Similar to finite automata, PDAs also have non-deterministic and deterministic
+(denoted as \textit{DPDA}) variants. Unfortunately, DPDAs are not as powerful as
+general PDAs, meaning there are CFGs that cannot be parsed by DPDAs but can be
+parsed by PDAs. Thus, the notion of \textit{deterministic CFGs} come in:
+\begin{definition}
+  A CFG $\mathcal{G}$ is \textit{deterministic} there is a corresponding DPDA
+  that derives $\mathcal{G}$.
+\end{definition}
+Deterministic CFGs (DCFG for short) are often preferred because the DPDAs that
+derive them yields better run-time performance (similar idea to DFA).
+Another property of CFG is its \textit{ambiguity}. For any CFG $\mathcal{G}
+=(\Sigma,V,R,S)$, every $w\in L(\mathcal{G})$ can be obtained from a finite
+sequence of derivations on $S$. Even if we limit the sequence of derivations to
+derive the leftmost variable first, the language $L(\mathcal{G})$ is still
+unchanged. This kind of derivation is called a \textit{leftmost-derivation}. The
+definition of the \textit{ambiguity} of a CFG follows:
+\begin{definition}
+  A CFG $\mathcal{G}=(\Sigma,V,R,S)$ is \textit{ambiguous} if there is a $w\in
+  L(\mathcal{G})$ that can obtained from two different finite sequences of
+  leftmost derivations on $S$.
+\end{definition}
+Ambiguous CFGs are also something we want to avoid, since it may result in a
+program that can be parsed in two different ways, and thus how the program
+should be executed becomes unclear. Fortunately, DCFGs are always
+unambiguous (however, the converse is not true), thus if we restrict the CFGs
+to be deterministic, we don't have to worry about ambiguity.
+
+Therefore, we now focus solely on how to parse DCFGs. We introduce the LR$(1)$
+and LALR$(1)$ parsing tables, which are driven by the parsing algorithm to produce
+parsers. The LR$(1)$ parser comes from a family of LR$(k)$ parsers, which are
+a set of DPDAs. Theoretical results show that the family of LR$(k)$ parsers
+are actually \textbf{exactly} the set of DPDAs, and that all LR$(k)$ parsers
+can be transformed into LR$(1)$ parsers. In other words, LR$(1)$ parsers can parse all
+DCFGs. LALR$(1)$ is a method to reduce the number of states produced by LR$(1)$
+parsers.
+
+\section{LR$(1)$ Parsers}
+Before getting into the definition of a LR$(1)$ parser, we have to first look
+at a few definitions. The following definition all uses the DCFG $\mathcal{G}
+=(\Sigma,V,R,S)$.
+\begin{definition}
+  An \textit{LR$(1)$ item} is a 3-tuple $w'=(r,i,z)$ where
+  \begin{itemize}
+    \item $r$ is a rule in $R$.
+    \item $w\in{(\Sigma\cup V\cup\{\cdot\})}^*$ comes from the RHS of $r$
+      with a $\cdot$ inserted at any position.
+    \item $z\subseteq\Sigma$ is a set of lookahead symbols.
+  \end{itemize}
+\end{definition}
+\begin{definition}
+  For any variable $A\in V$, $A$ is called \textit{nullable} if one of the
+  following is satisfied:
+  \begin{itemize}
+    \item There is a rule $A\rightarrow\varepsilon$ in $R$.
+    \item There is a rule $A\rightarrow A_1A_2\cdots A_n$ in $R$, and for every
+      $i=1,\ldots,n$, $A_i\in V$ and $A_i$ is nullable.
+  \end{itemize}
+\end{definition}
+\begin{definition}
+  The \textit{first-set} of a string $w\in{(\Sigma\cup V)}^*$, denoted by
+  $\text{first}(w)$, is a set $z\subseteq\Sigma$ constructed as follows:
+  \begin{itemize}
+    \item If $w=aw_1$ where $a\in\Sigma$ and $w_1\in{(\Sigma\cup V)}^*$, then
+      $a\in z$.
+    \item If $w=Aw_1$ where $A\in V$ and $w_1\in{(\Sigma\cup V)}^*$, then
+      for every rule $r: A\rightarrow x$, we have $\text{first}(x)\subseteq
+      z$.
+    \item If $w=Aw_1$ where $A\in V$ and $w_1\in{(\Sigma\cup V)}^*$ and $A$
+        is nullable, then $\text{first}(w_1)\subseteq z$.
+    \item If $w=\varepsilon$, then $z=\varnothing$.
+  \end{itemize}
+\end{definition}
+\begin{definition}
+  Given $w\in{(\Sigma\cup V)}^*$ and $z\subseteq\Sigma$, the
+  \textit{follow-set} of $w$ and $z$, denoted by $\text{follow}(w,z)$, is
+  defined as
+  \[
+    \text{follow}(w,z)=\begin{cases}
+      z & \text{if }w=\varepsilon \\
+      \text{first}(w)\cup z & \text{if }w=Aw_1\text{ where }A\in V\text{ and }
+      A\text{ is nullable} \\
+      \text{first}(w) & \text{otherwise}
+    \end{cases}
+  \]
+\end{definition}
+\begin{definition}
+  A \textit{closure} of an LR$(1)$ item $w'$, denoted by $\text{closure}(w')$,
+  is a set $q'$ of LR$(1)$ items where a set $q$ is first constructed as
+  follows:
+  \begin{itemize}
+    \item $w'\in q$.
+    \item If $(r,w_1\cdot Bw_2,z)\in q$, where $w_1,w_2\in{(\Sigma\cup
+      V)}^*$ and $B\in V$, then for every rule $(s:B\rightarrow x)\in R$, we
+      have
+      \[
+        (s,\cdot x,\text{follow}(w_2,z))\in q
+      \]
+  \end{itemize}
+  Then, the final set $q'$ is constructed from $q$ with the following:
+  \[
+    q'=\left\{(r,w,z):(r,w,z_1),\ldots,(r,w,z_n)\in q\text{ and }
+    z=\bigcup_{i=1}^n z_i\right\}
+  \]
+\end{definition}
+With these definitions, we can construct the \textit{LR$(1)$ state transition
+graph} using the following algorithm:
+\begin{breakablealgorithm}
+  \caption{\textproc{LR$(1)$-State-Transiton-Graph}}
+  \begin{algorithmic}[1]
+    \Function{LR$(1)$-State-Transition-Graph}{}
+      \State{$\Sigma\leftarrow\Sigma\cup\{\$\}$}
+     \MyComment{$\$$ represents the end-of-string symbol}
+      \State{$V\leftarrow V\cup\{S'\}$}
+      \State{$r\leftarrow(S'\rightarrow S)$}
+      \State{$R\leftarrow R\cup\{r\}$}
+      \State{$q_0\leftarrow\text{closure}((r,\cdot S,\$))$}
+      \MyComment{The initial state $q_0$ represents the state where it is
+        expecting to derive $S$, followed by lookahead symbol $\$$}
+      \State{$Q\leftarrow\{q_0\}$}
+      \State{$\delta\leftarrow\varnothing$}
+      \For{$p\in Q$}
+        \For{$x\in\Sigma\cup V$}
+          \State{$q\leftarrow\varnothing$}
+          \For{$(r,w_1\cdot w_2,z)\in p$}
+            \If{$w_2=xw_3$}
+              \State{$q\leftarrow\text{closure}((r,w_1x\cdot w_3,z))$}
+            \EndIf{}
+          \EndFor{}
+          \State{$Q\leftarrow Q\cup\{q\}$}
+          \State{$\delta\leftarrow\delta\cup\{((p,x),q)\}$}
+        \EndFor{}
+      \EndFor{}
+      \State{\Return{$(Q,q_0,\delta)$}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+After constructing the state-transition graph, we can use it to construct the
+\textit{LR$(1)$ state table} using the following algorithm:
+\begin{breakablealgorithm}
+  \caption{\textproc{LR$(1)$-State-Table}}
+  \begin{algorithmic}[1]
+    \Function{LR$(1)$-State-Table}{$Q,q_0,\delta$}
+      \State{$T\leftarrow $ a two-dimensional array, all initialized to
+             error}
+      \For{$((p,x),q)\in\delta$}
+        \If{$x\in\Sigma$}
+          \State{$T[p][x]\leftarrow\text{shift}(q)$}
+          \MyComment{Represents a \textit{shift} action}
+        \Else{}
+          \State{$T[p][x]\leftarrow\text{goto}(q)$}
+          \MyComment{Represents a \textit{goto} action}
+        \EndIf{}
+      \EndFor{}
+      \For{$p\in Q$}
+        \For{$(r,w_1\cdot w_2,z)\in p$}
+          \If{$w_2=\varepsilon$}
+            \For{$a\in z$}
+              \If{$T[p][a]\neq\text{error}$ and $T[p][a]\neq\text{reduce}(r)$}
+                \If{$T[p][a]$ is a shift action}
+                  \State{\textbf{print}("shift-reduce conflict on state $p$")} % chktex 18 chktex 36
+                \ElsIf{$T[p][a]$ is a reduce action}
+                  \State{\textbf{print}("reduce-reduce conflict on state $p$")} % chktex 18 chktex 36
+                \EndIf{}
+                \State{\Return{\textbf{null}}}
+              \Else{}
+                \State{$T[p][a]\leftarrow\text{reduce}(r)$}
+                \MyComment{Represents a \textit{reduce} action}
+              \EndIf{}
+            \EndFor{}
+          \EndIf{}
+        \EndFor{}
+      \EndFor{}
+      \State{\Return{$(q_0,T)$}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+Note that we introduced the concept of \textit{conflicts} --- states where
+different actions can be taken. If conflicts exist, then it is not possible to
+build an LR$(1)$ parser using the above algorithm.
+
+With the LR$(1)$ state table constructed, we can finally run the parsing
+algorithm on any word $s\in\Sigma^*$:
+\begin{breakablealgorithm}
+  \caption{\textproc{Parsing Algorithm}}
+  \begin{algorithmic}[1]
+    \Function{Parsing-Algorithm}{$q_0,T,s$}
+      \State{$s\leftarrow s\$$}
+      \State{$Z\leftarrow$ an empty stack}
+      \State{$Z$.push($q_0$)} % chktex 36
+      \State{$p\leftarrow q_0$}
+      \For{each character $a$ of $s$ in order}
+        \State{$\text{action}\leftarrow T[p][a]$}
+        \If{$\text{action}=\text{error}$}
+          \State{\textbf{print}("Syntax error")} % chktex 18 chktex 36
+          \State{\Return{\textbf{false}}}
+        \ElsIf{$\text{action}=\text{shift}(q)$ for some $q\in Q$}
+          \State{$Z$.push($a$)} % chktex 36
+          \State{$Z$.push($q$)} % chktex 36
+          \State{$p\leftarrow q$}
+        \ElsIf{$\text{action}=\text{reduce}(r)$ for some $r\in R$}
+          \State{$n\leftarrow$ the length of the RHS of $r$}
+          \For{$2n$ times}
+            \State{$Z$.pop()} % chktex 36
+          \EndFor{}
+          \State{$p\leftarrow Z$.top()} % chktex 36
+          \State{$A\leftarrow$ LHS of $r$}
+          \State{$q\leftarrow T[p][A]$} % chktex 36
+          \State{$Z$.push($a$)} % chktex 36
+          \State{$Z$.push($q$)} % chktex 36
+          \State{$p\leftarrow q$}
+        \EndIf{}
+      \EndFor{}
+      \State{\Return{\textbf{true}}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+
+\section{LALR$(1)$ Parsers}
+LALR$(1)$ parsers are exactly the same as LR$(1)$ parsers except for the
+construction of the state table. The following algorithm shows how to construct
+an LALR$(1)$ state table from an LR$(1)$ state table:
+\begin{breakablealgorithm}
+  \caption{\textproc{LALR$(1)$ State Table}}
+  \begin{algorithmic}[1]
+    \Function{LALR$(1)$-State-Table}{$q_0,T$}
+      \State{$\text{newItems}\leftarrow\text{an empty dictionary}$}
+      \For{$q\in Q$}
+        \State{$W\leftarrow\varnothing$}
+        \For{$(w,z)\in q$}
+          \State{$W\leftarrow W\cup\{w\}$}
+        \EndFor{}
+        \If{$q=q_0$}
+          \State{$W_0\leftarrow W$}
+        \EndIf{}
+        \If{$\text{newItems}[W]$ exists}
+          \State{$\text{newItems}[W]\leftarrow\text{newItems}[W]\cup\{q\}$}
+        \Else{}
+          \State{$\text{newItems}[W]\leftarrow\{q\}$}
+        \EndIf{}
+      \EndFor{}
+      \State{Find $q_0'$ such that $q_0\in\text{newItems}[q_0']$}
+      \State{$T'\leftarrow$ a two-dimensional array, all initialized to
+             error}
+      \For{$p'\in\text{newItems.values}$}
+        \For{$p\in p'$}
+          \For{$x\in\Sigma\cup V$}
+            \State{$\text{action}_\text{new}\leftarrow T[p][x]$}
+            \If{$\text{action}_\text{new}=\text{shift}(q)$ for some $q\in Q$}
+              \State{Find $q'$ such that $q\in\text{newItems}[q']$}
+              \State{$\text{action}_\text{new}\leftarrow\text{shift}(q')$}
+            \ElsIf{$\text{action}_\text{new}=\text{goto}(q)$ for some $q\in Q$}
+              \State{Find $q'$ such that $q\in\text{newItems}[q']$}
+              \State{$\text{action}_\text{new}\leftarrow\text{goto}(q')$}
+            \EndIf{}
+            \If{$T'[p'][x]\neq\text{error}$ and
+                $\text{action}_\text{new}\neq\text{error}$ and
+                $T'[p'][x]\neq\text{action}_\text{new}$}
+              \If{$\text{action}_\text{new}$ is a shift action}
+                \State{\textbf{print}("shift-reduce conflict on state $p'$")} % chktex 18 chktex 36
+              \ElsIf{$\text{action}_\text{new}$ is a reduce action}
+                \State{\textbf{print}("reduce-reduce conflict on state $p'$")} % chktex 18 chktex 36
+              \EndIf{}
+              \State{\Return{\textbf{null}}}
+            \EndIf{}
+            \State{$T'[p'][x]\leftarrow\text{action}_\text{new}$}
+          \EndFor{}
+        \EndFor{}
+      \EndFor{}
+      \State{\Return{$(q_0',T')$}}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+Note that the construction of the LALR$(1)$ parsing table may introduce new
+conflicts, which means that even if a CFG can be used to construct an LR$(1)$
+parser, the same CFG may not necessarily be able to be used to construct an
+LALR$(1)$ parser.
+
+\section{Empty Productions}
+The algorithms above only work when all rules in the CFG are not empty productions;
+in other words, all $r:A\rightarrow x$ in $R$ satisfies $x\neq\varepsilon$.
+However, having empty productions (i.e. $r:A\rightarrow\varepsilon$) can be
+very helpful in constructing the CFG for various programming language
+constructs. Therefore, here we show how to remove empty productions from a
+given CFG\@:
+\begin{breakablealgorithm}
+  \caption{\textproc{Empty Production Removal}}
+  \begin{algorithmic}[1]
+    \Function{Empty-Production-Removal}{$\mathcal{G}=(\Sigma,V,R,S)$}
+      \State{$\text{changed}\leftarrow\textbf{true}$}
+      \While{changed}
+        \State{$\text{changed}\leftarrow\textbf{false}$}
+        \For{$(r:A\rightarrow x)\in R$}
+          \If{$x=\varepsilon$}
+            \For{$(s:B\rightarrow y)\in R$}
+              \State{$n\leftarrow$ the number of occurences of $A$ in $y$}
+              \If{$n>0$}
+                \For{$m=0,1,\ldots,2^n-1$}
+                  \State{$y'\leftarrow y$ with the $i$-th occurrence of $A$
+                    removed if the $i$-th bit of $m$ is 1}
+                  \State{$R\leftarrow R\cup\{B\rightarrow y'\}$}
+                  \State{$\text{changed}\leftarrow\textbf{true}$}
+                \EndFor{}
+              \EndIf{}
+            \EndFor{}
+          \EndIf{}
+        \EndFor{}
+      \EndWhile{}
+    \EndFunction{}
+  \end{algorithmic}
+\end{breakablealgorithm}
+
+\end{document}

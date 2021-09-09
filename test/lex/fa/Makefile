@@ -22,9 +22,9 @@ test: all
 
 visualize: all
 	$(BIN)/test_fa
-	$(DOT) $(DOT_FLAGS) -o 1.png 1.out
-	$(DOT) $(DOT_FLAGS) -o 2.png 2.out
-	$(DOT) $(DOT_FLAGS) -o 3.png 3.out
+	$(DOT) $(DOT_FLAGS) -o 1.svg 1.out
+	$(DOT) $(DOT_FLAGS) -o 2.svg 2.out
+	$(DOT) $(DOT_FLAGS) -o 3.svg 3.out
 
 clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_fa

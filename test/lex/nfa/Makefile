@@ -31,14 +31,14 @@ test: all
 
 visualize: all
 	$(BIN)/test_nfa
-	$(DOT) $(DOT_FLAGS) -o 1.png 1.out
-	$(DOT) $(DOT_FLAGS) -o 2.png 2.out
-	$(DOT) $(DOT_FLAGS) -o 3.png 3.out
-	$(DOT) $(DOT_FLAGS) -o 4.png 4.out
-	$(DOT) $(DOT_FLAGS) -o 5.png 5.out
-	$(DOT) $(DOT_FLAGS) -o 6.png 6.out
-	$(DOT) $(DOT_FLAGS) -o 7.png 7.out
-	$(DOT) $(DOT_FLAGS) -o 8.png 8.out
+	$(DOT) $(DOT_FLAGS) -o 1.svg 1.out
+	$(DOT) $(DOT_FLAGS) -o 2.svg 2.out
+	$(DOT) $(DOT_FLAGS) -o 3.svg 3.out
+	$(DOT) $(DOT_FLAGS) -o 4.svg 4.out
+	$(DOT) $(DOT_FLAGS) -o 5.svg 5.out
+	$(DOT) $(DOT_FLAGS) -o 6.svg 6.out
+	$(DOT) $(DOT_FLAGS) -o 7.svg 7.out
+	$(DOT) $(DOT_FLAGS) -o 8.svg 8.out
 
 clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_nfa

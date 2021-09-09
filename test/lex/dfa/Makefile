@@ -44,22 +44,22 @@ test: all
 
 visualize: all
 	$(BIN)/test_dfa
-	$(DOT) $(DOT_FLAGS) -o 1.png 1.out
-	$(DOT) $(DOT_FLAGS) -o 2.png 2.out
-	$(DOT) $(DOT_FLAGS) -o 3.png 3.out
-	$(DOT) $(DOT_FLAGS) -o 4.png 4.out
-	$(DOT) $(DOT_FLAGS) -o 5.png 5.out
-	$(DOT) $(DOT_FLAGS) -o 6.png 6.out
-	$(DOT) $(DOT_FLAGS) -o 7.png 7.out
-	$(DOT) $(DOT_FLAGS) -o 8.png 8.out
-	$(DOT) $(DOT_FLAGS) -o 9.png 9.out
-	$(DOT) $(DOT_FLAGS) -o 10.png 10.out
-	$(DOT) $(DOT_FLAGS) -o 11.png 11.out
-	$(DOT) $(DOT_FLAGS) -o 12.png 12.out
-	$(DOT) $(DOT_FLAGS) -o 13.png 13.out
-	$(DOT) $(DOT_FLAGS) -o 14.png 14.out
-	$(DOT) $(DOT_FLAGS) -o 15.png 15.out
-	$(DOT) $(DOT_FLAGS) -o 16.png 16.out
+	$(DOT) $(DOT_FLAGS) -o 1.svg 1.out
+	$(DOT) $(DOT_FLAGS) -o 2.svg 2.out
+	$(DOT) $(DOT_FLAGS) -o 3.svg 3.out
+	$(DOT) $(DOT_FLAGS) -o 4.svg 4.out
+	$(DOT) $(DOT_FLAGS) -o 5.svg 5.out
+	$(DOT) $(DOT_FLAGS) -o 6.svg 6.out
+	$(DOT) $(DOT_FLAGS) -o 7.svg 7.out
+	$(DOT) $(DOT_FLAGS) -o 8.svg 8.out
+	$(DOT) $(DOT_FLAGS) -o 9.svg 9.out
+	$(DOT) $(DOT_FLAGS) -o 10.svg 10.out
+	$(DOT) $(DOT_FLAGS) -o 11.svg 11.out
+	$(DOT) $(DOT_FLAGS) -o 12.svg 12.out
+	$(DOT) $(DOT_FLAGS) -o 13.svg 13.out
+	$(DOT) $(DOT_FLAGS) -o 14.svg 14.out
+	$(DOT) $(DOT_FLAGS) -o 15.svg 15.out
+	$(DOT) $(DOT_FLAGS) -o 16.svg 16.out
 
 clean: $(addsuffix .clean,$(SRC_DEPS))
 	rm -rf $(BIN)/test_dfa

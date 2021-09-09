@@ -2,6 +2,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define M 78885403583278429
 #define N 1000
@@ -12,6 +13,12 @@ char *RandStr() {
   for (int i = 0; i < N - 1; ++i)
     str[i] = (rand() % 128) + 1;
   str[N - 1] = 0;
+  return str;
+}
+
+char *IntToStr(int n) {
+  char *str = malloc(sizeof(char) * 10);
+  sprintf(str, "%d", n);
   return str;
 }
 
@@ -100,6 +107,36 @@ int main() {
   HashTableEntryDelete(table, entry);
   entry = HashTableEntryRetrieve(table, "Robert");
   assert(!entry);
+
+  // 7. Removing all entries
+  int tableSize = table->size;
+  for (HashTableEntry *entry = table->head, *nextEntry; entry;
+       entry = nextEntry) {
+    nextEntry = entry->nextInTable;
+    HashTableEntryDelete(table, entry);
+    assert(table->size == --tableSize);
+  }
+
+  // 8. Adding entries and traversing the table simultaneously through multiple
+  //    resizes
+  curCapacity = table->capacity;
+  HashTableEntryAdd(table, IntToStr(0), (void*)(long long)0);
+  int resizeCnt = 0, totalResizeCnt = 10;
+  int curIdx = 0;
+  for (HashTableEntry *entry = table->head; entry && resizeCnt < totalResizeCnt;
+       entry = entry->nextInTable) {
+    char correctKey[10];
+    sprintf(correctKey, "%d", curIdx);
+    assert(strcmp(entry->key, correctKey) == 0);
+    assert(entry->value == (void*)(long long)curIdx);
+    ++curIdx;
+    HashTableEntryAdd(table, IntToStr(curIdx), (void*)(long long)curIdx);
+    if (table->capacity != curCapacity) {
+      curCapacity = table->capacity;
+      ++resizeCnt;
+    }
+  }
+  assert(resizeCnt == totalResizeCnt);
 
   HashTableDelete(table);
 }

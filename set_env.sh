@@ -14,6 +14,7 @@ export DOT=dot
 
 # flags
 export CFLAGS="-g -O0 -Wall -Wpedantic -I$SRC_ROOT"
+export PROFILE_CFLAGS="$CFLAGS -pg"
 export VALGRIND_FLAGS="--error-exitcode=1 --leak-check=full -q"
 export CMP_FLAGS="-s"
-export DOT_FLAGS="-Tpng"
+export DOT_FLAGS="-Tsvg"
