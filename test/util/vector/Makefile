@@ -1,20 +1,26 @@
-BIN=$(BIN_ROOT)/util/vector
+BIN = $(BIN_ROOT)/util/vector/test_vector
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/util/vector
-LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
+DEPS += /util/vector
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_vector $(CFLAGS) $(LIB_DEPS) test_vector.c
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+.PHONY: $(ALL_DEPS) test clean $(CLEAN_DEPS)
+
+$(BIN): test_vector.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_vector
+test: $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_vector
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN)
 
-%.clean:
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

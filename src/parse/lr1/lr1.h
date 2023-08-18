@@ -14,14 +14,16 @@ typedef struct LR1StateGraph LR1StateGraph;
 typedef struct LR1Table LR1Table;
 
 // An LR(1) symbol string, which is a string consisting of token and variable
-// IDs
+// IDs, and an index to store where the dot is
 struct LR1SymbolString {
   CFGRule *rule;
   int dot;
 };
 
 // An LR(1) state, which consists of a set of LR(1) items and a list of
-// transitions
+// transitions. An LR(1) item is an entry in the hash table "items", where the
+// key is an LR1SymbolString, and the value is its lookahead tokens stored in a
+// Vector
 struct LR1State {
   HashTable *items;
   LR1Transition *transition;
@@ -45,18 +47,22 @@ struct LR1StateGraph {
 
 // Constructs a LR(1) state graph from "cfg"; note that because this function
 // calls CFGFinalize, CFGFinalize should not be called on "cfg" before or after
-// this function is called; note that this function adds a new varaiable S',
-// a new rule S' -> (start variable of "cfg") $, and makes S' the new start
-// variable
+// this function is called; note that this function adds a new varaiable
+// $accept, a new rule $accept -> (start variable of "cfg") $end, and makes
+// $accept the new start variable
 LR1StateGraph *LR1StateGraphFromCFG(CFG *cfg);
-// Deletes an LR(1) state "graph" created with LR1StateGraphNew
+// Deletes an LR(1) state "graph" created with LR1StateGraphFromCFG
 void LR1StateGraphDelete(LR1StateGraph *graph);
-// Prints a LR(1) state "graph" of "cfg" to "file", replacing each token (with
-// ascending order in token ID) with a string in "tokens", and each variable
-// (with ascending order in variable ID) with a string in "variables"; note that
-// the start variable is printed as S', and the end of file token is printed
-// as $
+// Prints a LR(1) state "graph" of "cfg" to "file" in the dot language,
+// replacing each token (with ascending order in token ID) with a string in
+// "tokens", and each variable (with ascending order in variable ID) with a
+// string in "variables"; note that the start variable is printed as $accept,
+// and the end of file token is printed as $end
 void LR1StateGraphPrint(
+    CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
+    FILE *file);
+// Same as LR1StateGraphPrint but in XML format
+void LR1StateGraphPrintXML(
     CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
     FILE *file);
 

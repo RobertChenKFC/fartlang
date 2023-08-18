@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/parse/lr1
+BIN = $(BIN_ROOT)/parse/lr1/lr1.o
 
-all: lr1.c
-	$(CC) -c -o $(BIN)/lr1.o $(CFLAGS) lr1.c
+.PHONY: clean
+
+$(BIN): lr1.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/lr1.o
+	rm -rf $(BIN)

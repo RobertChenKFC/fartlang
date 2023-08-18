@@ -46,7 +46,7 @@ typedef struct {
   Regex *regex;
 } RegexStar;
 
-// Polymorphic type regex
+// Polymorphic type regex; an optional "name" can also be stored
 typedef enum {
   REGEX_NULL,
   REGEX_LETTER,
@@ -62,16 +62,17 @@ struct Regex {
     RegexStar regexStar;
   };
   RegexType type;
+  char *name;
 };
 
 // The regex that accepts only the empty string
-Regex *REGEX_EMPTY_STRING;
+extern Regex *REGEX_EMPTY_STRING;
 // The regex that accepts any character
-Regex *REGEX_ANY;
+extern Regex *REGEX_ANY;
 // The regex that accepts digits 0-9
-Regex *REGEX_DIGITS;
+extern Regex *REGEX_DIGITS;
 // The regex that accepts upper case letters A-Z and lower case letters a-z
-Regex *REGEX_LETTERS;
+extern Regex *REGEX_LETTERS;
 
 // Initializes all constant regexes
 void RegexInit();

@@ -1,6 +1,7 @@
 #include "parse/cfg/cfg.h"
 #include <stdlib.h>
 #include <stdarg.h>
+#include <assert.h>
 
 // Helper function
 // Deletes "rule" created from CFGRuleNew
@@ -41,6 +42,7 @@ int CFGAddVariable(CFG *cfg) {
 
 CFGRule *CFGAddRule(CFG *cfg, int lhs, int n, ...) {
   CFGRule *rule = malloc(sizeof(CFGRule));
+  assert(cfg->numTokens < lhs && lhs <= cfg->numTokens + cfg->numVariables);
   rule->lhs = lhs;
   if (n > 0)
     rule->rhs = malloc(sizeof(int) * n);
@@ -49,8 +51,11 @@ CFGRule *CFGAddRule(CFG *cfg, int lhs, int n, ...) {
   rule->numRHS = n;
   va_list list;
   va_start(list, n);
-  for (int i = 0; i < n; ++i)
-    rule->rhs[i] = va_arg(list, int);
+  for (int i = 0; i < n; ++i) {
+    int x = va_arg(list, int);
+    assert(0 <= x && x <= cfg->numTokens + cfg->numVariables);
+    rule->rhs[i] = x;
+  }
   va_end(list);
   VectorAdd(cfg->rules, rule);
   return rule;

@@ -1,41 +1,67 @@
-BIN=$(BIN_ROOT)/parse/lr1
+BIN = $(BIN_ROOT)/parse/lr1/test_lr1
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/parse/cfg
-LIB_DEPS += $(BIN_ROOT)/parse/cfg/cfg.o
-SRC_DEPS += $(SRC_ROOT)/parse/lr1
-LIB_DEPS += $(BIN_ROOT)/parse/lr1/lr1.o
-SRC_DEPS += $(SRC_ROOT)/util/hashtable
-LIB_DEPS += $(BIN_ROOT)/util/hashtable/hashtable.o
-SRC_DEPS += $(SRC_ROOT)/util/vector
-LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
+DEPS += /parse/cfg
+DEPS += /parse/lr1
+DEPS += /util/hashtable
+DEPS += /util/vector
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_lr1 $(CFLAGS) $(LIB_DEPS) test_lr1.c
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
-%.all:
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
+
+TESTS = $(shell seq 6)
+TEST_DEPS = $(addsuffix .test, $(TESTS))
+BISON_OPT_FILES = $(addsuffix _opt.yy, $(TESTS))
+BISON_FLAGS = -x
+BISON_XML_FILES = $(addsuffix _opt.xml, $(TESTS))
+BISON_CC_FILES = $(addsuffix _opt.tab.cc, $(TESTS))
+TEST_FILES = $(addsuffix .h, $(TESTS))
+XML_FILES = $(addsuffix .xml, $(TESTS))
+SVG_FILES = $(addsuffix .svg, $(TESTS))
+PROFILE_FILES = gmon.out
+
+.PHONY: $(ALL_DEPS) test $(TEST_DEPS) visualize profile clean $(CLEAN_DEPS)
+
+$(BIN): test_lr1.c $(ALL_DEPS) $(BISON_XML_FILES) $(TEST_FILES)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_lr1
+$(BISON_XML_FILES): %_opt.xml: %_opt.yy
+	$(BISON) $(BISON_FLAGS) $<
 
-visualize: all
-	$(BIN)/test_lr1
-	$(DOT) $(DOT_FLAGS) -o 1.svg 1.out
-	$(DOT) $(DOT_FLAGS) -o 2.svg 2.out
-	$(DOT) $(DOT_FLAGS) -o 3.svg 3.out
-	$(DOT) $(DOT_FLAGS) -o 4.svg 4.out
-	$(DOT) $(DOT_FLAGS) -o 5.svg 5.out
-	$(DOT) $(DOT_FLAGS) -o 6.svg 6.out
+$(BISON_OPT_FILES): %_opt.yy: cfg_convert.py %.yy
+	$(CURDIR)/$< $*.yy $* --bison > $*_opt.yy
 
-profile_all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_lr1 $(PROFILE_CFLAGS) $(LIB_DEPS) test_lr1.c
+$(TEST_FILES): %.h: cfg_convert.py %.yy
+	$(CURDIR)/$< $*.yy $* --fart > $*.h
 
-profile: profile_all
-	$(BIN)/test_lr1
+test: $(TEST_DEPS)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_lr1
+$(TEST_DEPS): %.test: $(BISON_XML_FILES) $(XML_FILES)
+	./check_isomorphism.py $*.xml $*_opt.xml
 
-%.clean:
+visualize: $(SVG_FILES)
+
+$(SVG_FILES): %.svg: %.out
+	$(DOT) $(DOT_FLAGS) -o $*.svg $*.out
+
+$(XML_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
+
+profile: $(PROFILE_FILES)
+	$(GPROF) $(BIN) $(PROFILE_FILES)
+
+$(PROFILE_FILES): test_lr1.c $(ALL_DEPS) $(TEST_FILES)
+	$(CC) -o $(BIN) $(PROFILE_CFLAGS) $(LIB_DEPS) $<
+	$(BIN)
+
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN) $(BISON_OPT_FILES) $(XML_FILES) $(BISON_XML_FILES) $(BISON_CC_FILES) $(TEST_FILES) $(SVG_FILES) $(PROFILE_FILES)
+
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

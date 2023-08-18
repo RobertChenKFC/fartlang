@@ -14,44 +14,45 @@ LexerToken *LEXER_TOKEN_EOF = &LEXER_TOKEN_EOF_INSTANCE;
 
 LexerConfig *LexerConfigNew() {
   LexerConfig *config = malloc(sizeof(LexerConfig));
-  config->regexes = VectorNew();
-  config->ignoreRegex = NULL;
+  config->nfas = VectorNew();
+  config->ignoreNfa = NULL;
   return config;
 }
 
 void LexerConfigDelete(LexerConfig *config) {
-  VectorDelete(config->regexes);
+  Vector *nfas = config->nfas;
+  int numNfas = nfas->size;
+  FA *ignoreNfa = config->ignoreNfa;
+  for (int i = 0; i < numNfas; ++i) {
+    FA *nfa = nfas->arr[i];
+    if (nfa != ignoreNfa)
+      FADelete(nfa);
+  }
+  if (ignoreNfa)
+    FADelete(ignoreNfa);
+  VectorDelete(config->nfas);
   free(config);
 }
 
-int LexerConfigAddRegex(LexerConfig *config, Regex *regex) {
-  int id = config->regexes->size;
-  VectorAdd(config->regexes, regex);
+int LexerConfigAddRegexImpl(
+    LexerConfig *config, Regex *regex, char *regexName) {
+  Vector *nfas = config->nfas;
+  int id = nfas->size;
+  FA *nfa = NFAFromRegex(regex);
+  nfa->name = regexName;
+  VectorAdd(config->nfas, nfa);
   return id;
-}
-
-void LexerConfigSetIgnoreRegex(LexerConfig *config, Regex *regex) {
-  config->ignoreRegex = regex;
 }
 
 Lexer *LexerFromConfig(LexerConfig *config) {
   // Obtain minimal DFA from regexes
-  Vector *nfas = VectorNew();
-  Vector *regexes = config->regexes;
-  if (config->ignoreRegex)
-    VectorAdd(regexes, config->ignoreRegex);
-  int numRegexes = regexes->size;
-  for (int i = 0; i < numRegexes; ++i) {
-    Regex *regex = regexes->arr[i];
-    VectorAdd(nfas, NFAFromRegex(regex));
-  }
+  Vector *nfas = config->nfas;
+  FA *ignoreNfa = config->ignoreNfa;
+  if (ignoreNfa)
+    VectorAdd(nfas, ignoreNfa);
+  int numNfas = nfas->size;
   FA *dfa = DFAFromNFAs(nfas);
   FA *minDFA = DFAMinimize(dfa);
-  for (int i = 0; i < numRegexes; ++i) {
-    FA *nfa = nfas->arr[i];
-    FADelete(nfa);
-  }
-  VectorDelete(nfas);
   FADelete(dfa);
   dfa = minDFA;
 
@@ -107,7 +108,7 @@ Lexer *LexerFromConfig(LexerConfig *config) {
     int curFreePos = freePos - minA;
     if (curFreePos < 0)
       curFreePos = 0;
-    for (curFreePos = freePos; true; ++curFreePos) {
+    for (; true; ++curFreePos) {
       bool posIsFree = true;
       // A position is considered free all the non-NONE "to" states will occupy
       // entires in "transitionStateTos" that aren't already filled with
@@ -172,8 +173,8 @@ Lexer *LexerFromConfig(LexerConfig *config) {
   lexer->numStates = numStates;
   lexer->transitionOffsets = transitionOffsets;
   lexer->stateTokenIDs = stateTokenIDs;
-  lexer->ignoreTokenID = config->ignoreRegex ? numRegexes - 1
-                                             : LEXER_TOKEN_ID_NONE;
+  lexer->ignoreTokenID = config->ignoreNfa ? numNfas - 1
+                                           : LEXER_TOKEN_ID_NONE;
   lexer->traversedTokenIDs = VectorNew();
   lexer->traversedPoints = VectorNew();
   lexer->filename = NULL;

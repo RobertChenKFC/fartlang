@@ -1,23 +1,35 @@
-BIN=$(BIN_ROOT)/parse/cfg
-
+BIN = $(BIN_ROOT)/parse/cfg/test_cfg
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/parse/cfg
-LIB_DEPS += $(BIN_ROOT)/parse/cfg/cfg.o
-SRC_DEPS += $(SRC_ROOT)/util/vector
-LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
+DEPS += /parse/cfg
+DEPS += /util/vector
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_cfg $(CFLAGS) $(LIB_DEPS) test_cfg.c
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+TESTS = $(shell seq 1)
+TEST_DEPS = $(addsuffix .test, $(TESTS))
+OUT_FILES = $(addsuffix .out, $(TESTS))
+
+.PHONY: $(ALL_DEPS) test $(TEST_DEPS) clean $(CLEAN_DEPS)
+
+$(BIN): test_cfg.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_cfg
-	$(CMP) $(CMP_FLAGS) 1.out 1.ref
+test: $(TEST_DEPS)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_cfg
+$(TEST_DEPS): %.test: $(OUT_FILES)
+	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
-%.clean:
+$(OUT_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
+
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN) $(OUT_FILES)
+
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

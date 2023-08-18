@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/lex/fa
+BIN = $(BIN_ROOT)/lex/fa/fa.o
 
-all: fa.c
-	$(CC) -c -o $(BIN)/fa.o $(CFLAGS) fa.c
+.PHONY: clean
+
+$(BIN): fa.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/fa.o
+	rm -rf $(BIN)

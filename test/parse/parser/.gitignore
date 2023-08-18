@@ -1,0 +1,7 @@
+__pycache__/
+*.txt
+*.out
+*.output
+*.tab.cc
+7-*.yy
+7-*.ref

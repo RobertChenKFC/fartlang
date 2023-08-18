@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/lex/regex
+BIN = $(BIN_ROOT)/lex/regex/regex.o
 
-all: regex.c
-	$(CC) -c -o $(BIN)/regex.o $(CFLAGS) regex.c
+.PHONY: clean
+
+$(BIN): regex.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/regex.o
+	rm -rf $(BIN)

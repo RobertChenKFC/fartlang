@@ -2,6 +2,8 @@
 #define LEXER_H
 
 #include "lex/regex/regex.h"
+#include "lex/fa/fa.h"
+#include "lex/nfa/nfa.h"
 #include "util/source/source.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -14,13 +16,13 @@ typedef struct LexerToken LexerToken;
 typedef struct Lexer Lexer;
 
 // Constants
-LexerToken *LEXER_TOKEN_EOF;
+extern LexerToken *LEXER_TOKEN_EOF;
 
-// A struct that contains a vector of regexes, which corresponds to each token,
-// and one regex that corresponds to patterns to ignore
+// A struct that contains a vector of NFAs, which corresponds to each token,
+// and one NFA that corresponds to patterns to ignore.
 struct LexerConfig {
-  Vector *regexes;
-  Regex *ignoreRegex;
+  Vector *nfas;
+  FA *ignoreNfa;
 };
 
 // A token type that stores the starting pointer of the token, the length of
@@ -52,14 +54,25 @@ struct Lexer {
   SourcePoint point;
 };
 
+// Add "regex" to "config", and returns the token ID corresponding to "regex"
+#define LexerConfigAddRegex(config, regex) \
+  LexerConfigAddRegexImpl(config, regex, #regex)
+// Set ignore regex of "config" to "regex"
+#define LexerConfigSetIgnoreRegex(config, regex) \
+  do { \
+    FA *nfa = NFAFromRegex(regex); \
+    nfa->name = #regex; \
+    config->ignoreNfa = nfa; \
+  } while (0);
+
 // Constructs a lexer config with no regexes and no ignore regex
 LexerConfig *LexerConfigNew();
 // Delete a "config" created with LexerConfigNew
 void LexerConfigDelete(LexerConfig *config);
-// Add "regex" to "config", and returns the token ID corresponding to "regex"
-int LexerConfigAddRegex(LexerConfig *config, Regex *regex);
-// Set ignore regex of "config" to "regex"
-void LexerConfigSetIgnoreRegex(LexerConfig *config, Regex *regex);
+// Implementation of LexerConfigAddRegex with extra parameter "regexName"
+// inferred from the macro argument "regex"
+int LexerConfigAddRegexImpl(
+    LexerConfig *config, Regex *regex, char *regexName);
 // Construct a lexer from "config"
 Lexer *LexerFromConfig(LexerConfig *config);
 // Store the contents of "lexer" into "file"

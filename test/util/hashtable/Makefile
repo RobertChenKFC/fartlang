@@ -1,20 +1,26 @@
-BIN=$(BIN_ROOT)/util/hashtable
+BIN = $(BIN_ROOT)/util/hashtable/test_hashtable
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/util/hashtable
-LIB_DEPS += $(BIN_ROOT)/util/hashtable/hashtable.o
+DEPS += /util/hashtable
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_hashtable $(CFLAGS) $(LIB_DEPS) test_hashtable.c
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+.PHONY: $(ALL_DEPS) test clean $(CLEAN_DEPS)
+
+$(BIN): test_hashtable.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_hashtable
+test: $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_hashtable
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN)
 
-%.clean:
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

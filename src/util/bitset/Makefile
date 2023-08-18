@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/util/bitset
+BIN = $(BIN_ROOT)/util/bitset/bitset.o
 
-all: bitset.c
-	$(CC) -c -o $(BIN)/bitset.o $(CFLAGS) bitset.c
+.PHONY: clean
+
+$(BIN): bitset.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/bitset.o
+	rm -rf $(BIN)

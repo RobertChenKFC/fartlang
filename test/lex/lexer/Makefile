@@ -1,47 +1,46 @@
-BIN=$(BIN_ROOT)/lex/lexer
+BIN = $(BIN_ROOT)/lex/lexer/test_lexer
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/lex/regex
-LIB_DEPS += $(BIN_ROOT)/lex/regex/regex.o
-SRC_DEPS += $(SRC_ROOT)/lex/fa
-LIB_DEPS += $(BIN_ROOT)/lex/fa/fa.o
-SRC_DEPS += $(SRC_ROOT)/lex/nfa
-LIB_DEPS += $(BIN_ROOT)/lex/nfa/nfa.o
-SRC_DEPS += $(SRC_ROOT)/lex/dfa
-LIB_DEPS += $(BIN_ROOT)/lex/dfa/dfa.o
-SRC_DEPS += $(SRC_ROOT)/lex/lexer
-LIB_DEPS += $(BIN_ROOT)/lex/lexer/lexer.o
-SRC_DEPS += $(SRC_ROOT)/util/bitset
-LIB_DEPS += $(BIN_ROOT)/util/bitset/bitset.o
-SRC_DEPS += $(SRC_ROOT)/util/hashtable
-LIB_DEPS += $(BIN_ROOT)/util/hashtable/hashtable.o
-SRC_DEPS += $(SRC_ROOT)/util/source
-LIB_DEPS += $(BIN_ROOT)/util/source/source.o
-SRC_DEPS += $(SRC_ROOT)/util/vector
-LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
+DEPS += /lex/regex
+DEPS += /lex/fa
+DEPS += /lex/nfa
+DEPS += /lex/dfa
+DEPS += /lex/lexer
+DEPS += /util/bitset
+DEPS += /util/hashtable
+DEPS += /util/source
+DEPS += /util/vector
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
 # modify valgrind flags to redirect program output
 VALGRIND_FLAGS += --log-fd=9
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_lexer $(CFLAGS) $(LIB_DEPS) test_lexer.c
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+TESTS = $(shell seq 8)
+TEST_DEPS = $(addsuffix .test, $(TESTS))
+OUT_FILES = $(addsuffix .out, $(TESTS))
+
+.PHONY: $(ALL_DEPS) test $(TEST_DEPS) clean $(CLEAN_DEPS)
+
+$(BIN): test_lexer.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_lexer 9>&2 2>8.out
-	$(CMP) $(CMP_FLAGS) 1.out 1.ref
-	$(CMP) $(CMP_FLAGS) 2.out 2.ref
-	$(CMP) $(CMP_FLAGS) 3.out 3.ref
-	$(CMP) $(CMP_FLAGS) 4.out 4.ref
-	$(CMP) $(CMP_FLAGS) 5.out 5.ref
-	$(CMP) $(CMP_FLAGS) 6.out 6.ref
-	$(CMP) $(CMP_FLAGS) 7.out 7.ref
-	$(CMP) $(CMP_FLAGS) 8.out 8.ref
+test: $(TEST_DEPS)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_lexer
+$(TEST_DEPS): %.test: $(OUT_FILES)
+	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
-%.clean:
+$(OUT_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) 9>&2 2>8.out
+
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN) $(OUT_FILES)
+
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

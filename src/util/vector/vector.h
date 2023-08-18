@@ -17,5 +17,7 @@ Vector *VectorNewWithCapacity(int capacity);
 void VectorDelete(Vector *vec);
 // Adds "elem" to the end of "vec"
 void VectorAdd(Vector *vec, void *elem);
+// Modify "vec" so that it at least has "capacity"
+void VectorReserve(Vector *vec, int capacity);
 
 #endif // VECTOR_H

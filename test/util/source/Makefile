@@ -1,26 +1,39 @@
-BIN=$(BIN_ROOT)/util/source
+BIN = $(BIN_ROOT)/util/source/test_source
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/util/vector
-LIB_DEPS += $(BIN_ROOT)/util/vector/vector.o
-SRC_DEPS += $(SRC_ROOT)/util/source
-LIB_DEPS += $(BIN_ROOT)/util/source/source.o
+DEPS += /util/vector
+DEPS += /util/source
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
+
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
+
+TESTS = $(shell seq 1)
+TEST_DEPS = $(addsuffix .test, $(TESTS))
+OUT_FILES = $(addsuffix .out, $(TESTS))
+
+.PHONY: $(ALL_DEPS) test $(TEST_DEPS) clean $(CLEAN_DEPS)
 
 # modify valgrind flags to redirect program output
 VALGRIND_FLAGS += --log-fd=9
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_source $(CFLAGS) $(LIB_DEPS) test_source.c
+$(BIN): test_source.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
 
-%.all:
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_source 9>&2 2>1.out
-	$(CMP) $(CMP_FLAGS) 1.out 1.ref
+test: $(TEST_DEPS)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_source
+$(TEST_DEPS): %.test: $(OUT_FILES)
+	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
-%.clean:
+$(OUT_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) 9>&2 2>1.out
+
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN)
+
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

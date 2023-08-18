@@ -11,9 +11,12 @@ typedef struct FAState FAState;
 typedef struct FATransition FATransition;
 
 // An finite automaton structure which cantains the FA's initial state as well
-// as the last state added to the FA
+// as the last state added to the FA; the lexer can optionally store the name
+// of the regex that is used to generate this automaton in "name", so that its
+// name (instead of ID) can be printed when a conflict occurs
 struct FA {
   FAState *init, *last;
+  char *name;
 };
 
 // A state in an FA, which contains all transitions to other states, what kind

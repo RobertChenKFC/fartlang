@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/lex/lexer
+BIN = $(BIN_ROOT)/lex/lexer/lexer.o
 
-all: lexer.c
-	$(CC) -c -o $(BIN)/lexer.o $(CFLAGS) lexer.c
+.PHONY: clean
+
+$(BIN): lexer.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/lexer.o
+	rm -rf $(BIN)

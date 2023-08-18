@@ -74,10 +74,20 @@ void DFAEpsilonClosureFromNFAStateImpl(
 Bitset *DFAEpsilonClosureFromBitset(
     Bitset *bitset, FAState **nfaStates, HashTable *table);
 // Add DFA state, which is a set of states from "nfaStates" represented by
-// "bitset", into "table" if it doesn't exist yet; returns true if and only if
-// a new state is added to "table"
+// "bitset", into "table" if it doesn't exist yet. Either returns a newly
+// created state or an existing state corresponding to "bitset".
+// Note that if there is already a corresponding state, then the two states
+// are combined, which means that if they are both accepting states, then only
+// one can be chosen. In case this happens, the NFA that was listed first
+// will be the one chosen, and the names of the regex stored in "regexNames",
+// which is used to generate these NFAs, are printed
 FAState *DFAAddBitsetStateToTable(
-    Bitset *bitset, FAState **nfaStates, HashTable *table);
+    Bitset *bitset, FAState **nfaStates, HashTable *table,
+    Vector *regexNames);
+// See DFAFromNFA for general information on this function. An extra vector
+// of strings is stored in "regexNames" that contains the names of the regexes
+// used to generate the NFAs that are combined to create "nfa"
+FA *DFAFromNFAImpl(FA *nfa, Vector *regexNames);
 // Create a new DFA state from "state" that doesn't belong to any set and with
 // property "init"
 DFAState *DFAStateNew(FAState *state, bool init);
@@ -173,7 +183,8 @@ Bitset *DFAEpsilonClosureFromBitset(
 }
 
 FAState *DFAAddBitsetStateToTable(
-    Bitset *bitset, FAState **nfaStates, HashTable *table) {
+    Bitset *bitset, FAState **nfaStates, HashTable *table,
+    Vector *regexNames) {
   HashTableEntry *entry = HashTableEntryRetrieve(table, bitset);
   FAState *dfaState;
   if (entry) {
@@ -190,11 +201,18 @@ FAState *DFAAddBitsetStateToTable(
           int chosenAccepting = accepting < state->accepting ?
                                 accepting : state->accepting;
           if (accepting != state->accepting) {
-            // TODO: change this warning message later
-            fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET
-                    " Regex for token #%d and #%d are not disjoint, choosing "
-                    "token #%d.\n",
-                    state->accepting, accepting, chosenAccepting);
+            if (regexNames) {
+              fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET
+                      " Regex %s and %s are not disjoint, choosing regex %s.\n",
+                      (char*)regexNames->arr[state->accepting],
+                      (char*)regexNames->arr[accepting],
+                      (char*)regexNames->arr[chosenAccepting]);
+            } else {
+              fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET
+                      " Token ID %d and %d are not disjoint,"
+                      " choosing token %d.\n",
+                      state->accepting, accepting, chosenAccepting);
+            }
           }
           accepting = chosenAccepting;
         }
@@ -206,7 +224,7 @@ FAState *DFAAddBitsetStateToTable(
   return dfaState;
 }
 
-FA *DFAFromNFA(FA *nfa) {
+FA *DFAFromNFAImpl(FA *nfa, Vector *regexNames) {
   // Construct a hashtable to convert from NFA states to indices, and an array
   // to convert from indices back to NFA states
   HashTable *nfaStateToIdx = HashTableNew(
@@ -224,7 +242,8 @@ FA *DFAFromNFA(FA *nfa) {
   for (FAState *state = nfa->init; state; state = state->next) {
     Bitset *bitset = DFAEpsilonClosureFromNFAState(
         state, nfaStateToIdx, numNFAStates);
-    DFAAddBitsetStateToTable(bitset, idxToNFAState, bitsetToDFAState);
+    DFAAddBitsetStateToTable(
+        bitset, idxToNFAState, bitsetToDFAState, regexNames);
   }
 
   // Iterate through all DFA states "dfaStateFrom", each of which is a set of
@@ -267,7 +286,8 @@ FA *DFAFromNFA(FA *nfa) {
           dfaBitsetTo, idxToNFAState, nfaStateToIdx);
       BitsetDelete(dfaBitsetTo);
       FAState *dfaStateTo = DFAAddBitsetStateToTable(
-          dfaBitsetEpsilonClosureTo, idxToNFAState, bitsetToDFAState);
+          dfaBitsetEpsilonClosureTo, idxToNFAState, bitsetToDFAState,
+          regexNames);
       FAStateAddTransition(dfaStateFrom, a, dfaStateTo);
     }
   }
@@ -279,11 +299,16 @@ FA *DFAFromNFA(FA *nfa) {
   return dfa;
 }
 
+FA *DFAFromNFA(FA *nfa) {
+  return DFAFromNFAImpl(nfa, NULL);
+}
+
 FA *DFAFromNFAs(Vector *nfas) {
   FAState *init = FAStateNew(FA_ACCEPT_NONE);
   FA *combinedNFA = FANew();
   FAAddState(combinedNFA, init);
   int numNFAs = nfas->size;
+  bool containNames = true;
   for (int i = 0; i < numNFAs; ++i) {
     FA *nfa = nfas->arr[i];
     FAAddStates(combinedNFA, nfa);
@@ -292,8 +317,26 @@ FA *DFAFromNFAs(Vector *nfas) {
       if (state->accepting != FA_ACCEPT_NONE)
         state->accepting = i;
     }
+    if (!nfa->name)
+      containNames = false;
   }
-  FA *dfa = DFAFromNFA(combinedNFA);
+
+  // The lexer will store the names of the regexes used to generated the NFAs
+  // in each NFA. We use the names only if all of the NFAs are assigned a name.
+  Vector *regexNames = NULL;
+  if (containNames) {
+    regexNames = VectorNew();
+    VectorReserve(regexNames, numNFAs);
+    for (int i = 0; i < numNFAs; ++i) {
+      FA *nfa = nfas->arr[i];
+      VectorAdd(regexNames, nfa->name);
+    }
+  }
+
+  FA *dfa = DFAFromNFAImpl(combinedNFA, regexNames);
+
+  if (regexNames)
+    VectorDelete(regexNames);
 
   // To make sure that the NFAs that are passed in this function are not
   // deleted, we only delete the initial state as well as the transitions we

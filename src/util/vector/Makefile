@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/util/vector
+BIN = $(BIN_ROOT)/util/vector/vector.o
 
-all: vector.c
-	$(CC) -c -o $(BIN)/vector.o $(CFLAGS) vector.c
+.PHONY: clean
+
+$(BIN): vector.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/vector.o
+	rm -rf $(BIN)

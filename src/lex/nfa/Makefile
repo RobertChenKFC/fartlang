@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/lex/nfa
+BIN = $(BIN_ROOT)/lex/nfa/nfa.o
 
-all: nfa.c
-	$(CC) -c -o $(BIN)/nfa.o $(CFLAGS) nfa.c
+.PHONY: clean
+
+$(BIN): nfa.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/nfa.o
+	rm -rf $(BIN)

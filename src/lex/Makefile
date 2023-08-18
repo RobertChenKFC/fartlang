@@ -1,14 +1,19 @@
-SRC=$(SRC_ROOT)/lex
+SRC = $(SRC_ROOT)/lex
 
 # dependencies
-SRC_DEPS=$(filter-out $(SRC)/Makefile,$(wildcard $(SRC)/*))
+SRC_DEPS = $(filter-out $(SRC)/Makefile, $(wildcard $(SRC)/*))
 
-all: $(addsuffix .all,$(SRC_DEPS))
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+.PHONY: all $(ALL_DEPS) clean $(CLEAN_DEPS)
+
+all: $(ALL_DEPS)
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
+clean: $(CLEAN_DEPS)
 
-%.clean:
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

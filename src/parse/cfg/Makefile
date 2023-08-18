@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/parse/cfg
+BIN = $(BIN_ROOT)/parse/cfg/cfg.o
 
-all: cfg.c
-	$(CC) -c -o $(BIN)/cfg.o $(CFLAGS) cfg.c
+.PHONY: clean
+
+$(BIN): cfg.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/cfg.o
+	rm -rf $(BIN)

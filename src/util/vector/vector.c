@@ -1,9 +1,6 @@
 #include "util/vector/vector.h"
 #include <stdlib.h>
 
-// DEBUG
-#include <stdio.h>
-
 Vector *VectorNew() {
   return VectorNewWithCapacity(VECTOR_DEFAULT_CAPACITY);
 }
@@ -26,17 +23,14 @@ void VectorAdd(Vector *vec, void *elem) {
   if (vec->capacity == vec->size) {
     vec->capacity *= 2;
     vec->arr = realloc(vec->arr, sizeof(void*) * vec->capacity);
-
-    // DEBUG
-    if (!vec->arr) {
-      printf("Realloc to capacity %d is not allowed\n", vec->capacity);
-      getchar();
-    }
   }
-
-  // DEBUG
-  if (vec->size < 0 || vec->size >= vec->capacity)
-    printf("YO WTF???\n");
-
   vec->arr[vec->size++] = elem;
 }
+
+void VectorReserve(Vector *vec, int capacity) {
+  if (vec->capacity < capacity) {
+    vec->capacity = capacity;
+    vec->arr = realloc(vec->arr, sizeof(void*) * vec->capacity);
+  }
+}
+

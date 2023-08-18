@@ -1,19 +1,25 @@
-SRC=$(TEST_ROOT)/parse
+SRC = $(TEST_ROOT)/parse
 
 # dependencies
-SRC_DEPS=$(filter-out $(SRC)/Makefile,$(wildcard $(SRC)/*))
+SRC_DEPS = $(filter-out $(SRC)/Makefile, $(wildcard $(SRC)/*))
 
-all: $(addsuffix .all,$(SRC_DEPS))
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+TEST_DEPS = $(addsuffix .test, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+.PHONY: all $(ALL_DEPS) test $(TEST_DEPS) clean $(CLEAN_DEPS)
+
+all: $(ALL_DEPS)
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: $(addsuffix .test,$(SRC_DEPS))
+test: $(TEST_DEPS)
 
-%.test:
+$(TEST_DEPS): %.test:
 	$(MAKE) -C $* test
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
+clean: $(CLEAN_DEPS)
 
-%.clean:
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

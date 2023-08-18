@@ -1,0 +1,23 @@
+float add(int a, int b, float c) {
+    if (a == b && c < 13.7) {
+        return a + b * c;
+    } else if (a > b || a >= c) {
+        c = (b * b - 4 * a * c) / 2 * a;
+        while (c[a] != 0 && a < c) {
+            c[a * a + b * b] = (c + 7) / 2;
+            a = a + 1;
+        }
+    } else if (b / 2 <= a) {
+        {
+            a[b] = 5;
+        }
+        return a[b]
+    } else {
+        return 123.456;
+    }
+    return;
+}
+
+int xor(int x, int y) {
+    return x && !y || !x && y;
+}

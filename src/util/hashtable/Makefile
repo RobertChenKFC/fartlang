@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/util/hashtable
+BIN = $(BIN_ROOT)/util/hashtable/hashtable.o
 
-all: hashtable.c
-	$(CC) -c -o $(BIN)/hashtable.o $(CFLAGS) hashtable.c
+.PHONY: clean
+
+$(BIN): hashtable.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/hashtable.o
+	rm -rf $(BIN)

@@ -1,22 +1,27 @@
-BIN=$(BIN_ROOT)/util/bitset
+BIN = $(BIN_ROOT)/util/bitset/test_bitset
 
 # dependencies
-SRC_DEPS += $(SRC_ROOT)/util/hashtable
-LIB_DEPS += $(BIN_ROOT)/util/hashtable/hashtable.o
-SRC_DEPS += $(SRC_ROOT)/util/bitset
-LIB_DEPS += $(BIN_ROOT)/util/bitset/bitset.o
+DEPS += /util/hashtable
+DEPS += /util/bitset
+SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
+LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
 
-all: $(addsuffix .all,$(SRC_DEPS))
-	$(CC) -o $(BIN)/test_bitset $(CFLAGS) $(LIB_DEPS) test_bitset.c
+ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
+CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-%.all:
+.PHONY: $(ALL_DEPS) test clean $(CLEAN_DEPS)
+
+$(BIN): test_bitset.c $(ALL_DEPS)
+	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+
+$(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
-test: all
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)/test_bitset
+test: $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
 
-clean: $(addsuffix .clean,$(SRC_DEPS))
-	rm -rf $(BIN)/test_bitset
+clean: $(CLEAN_DEPS)
+	rm -rf $(BIN)
 
-%.clean:
+$(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

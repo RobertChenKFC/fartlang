@@ -84,6 +84,13 @@ bool LR1ItemEqual(
 uint64_t LR1StateHash(void *a);
 // An equal function for a LR1States "a" and "b"; used in hash tables
 bool LR1StateEqual(void *a, void *b);
+// A hash function for a pointer "a"; used in hash tables
+uint64_t LR1PtrHash(void *a);
+// An equal function for pointers "a" and "b"; used in hash tables
+bool LR1PtrEqual(void *a, void *b);
+// Add auxiliary symbols: $end for EOF token to "tokens" and $accept for start
+// variable to "variables"
+void LR1AddAuxiliarySymbols(Vector *tokens, Vector *variables);
 
 LR1SymbolString *LR1SymbolStringNew(CFGRule *rule, int dot) {
   LR1SymbolString *string = malloc(sizeof(LR1SymbolString));
@@ -119,11 +126,6 @@ bool *LR1Nullable(CFG *cfg) {
     CFGRule *rule = rules->arr[i];
     if (rule->numRHS == 0) {
       nullable[CFG_VARIABLE_ID_TO_IDX(cfg, rule->lhs)] = true;
-
-      // DEBUG
-      printf("Variable %d is initially nullable\n",
-             CFG_VARIABLE_ID_TO_IDX(cfg, rule->lhs));
-
       changed = true;
     }
   }
@@ -216,13 +218,19 @@ Vector *LR1FollowSet(
   }
 
   Vector *newSet = LR1FirstSet(cfg, nullable, string);
-  if (!CFG_IS_TOKEN_ID(cfg, w[i])) {
-    int idx = CFG_VARIABLE_ID_TO_IDX(cfg, w[i]);
-    if (nullable[idx]) {
-      int numLookahead = set->size;
-      for (int i = 0; i < numLookahead; ++i)
-        VectorAdd(newSet, set->arr[i]);
+  bool remainingStringNullable = true;
+  for (int j = i; j < n; ++j) {
+    int id = w[j];
+    if (CFG_IS_TOKEN_ID(cfg, id) ||
+        !nullable[CFG_VARIABLE_ID_TO_IDX(cfg, id)]) {
+      remainingStringNullable = false;
+      break;
     }
+  }
+  if (remainingStringNullable) {
+    int numLookahead = set->size;
+    for (int j = 0; j < numLookahead; ++j)
+      VectorAdd(newSet, set->arr[j]);
   }
 
   qsort(newSet->arr, newSet->size, sizeof(newSet->arr[0]), LR1IDCmp);
@@ -235,12 +243,6 @@ Vector *LR1FollowSet(
       newSet->arr[j++] = newSet->arr[i];
   }
   newSet->size = j;
-
-  // DEBUG
-  // printf("before follow\n");
-  for (int i = 1; i < newSet->size; ++i)
-    assert(newSet->arr[i - 1] < newSet->arr[i]);
-  // printf("done follow\n");
 
   return newSet;
 }
@@ -268,12 +270,6 @@ LR1State *LR1ItemClosure(
     changed = false;
     for (HashTableEntry *entry = items->head; entry;
          entry = entry->nextInTable) {
-      // DEBUG
-      if (items->size > 500) {
-        printf("Too many items\n");
-        break;
-      }
-
       LR1SymbolString *string = entry->key;
       Vector *lookahead = entry->value;
       CFGRule *rule = string->rule;
@@ -322,14 +318,6 @@ bool LR1StateAddItem(
     int numLookahead = lookahead->size;
     for (int i = 0; i < numLookahead; ++i) {
       void *id = lookahead->arr[i];
-
-      // DEBUG
-      // printf("before\n");
-      /*
-      for (int k = 1; k < curNumLookahead; ++k)
-        assert(curLookahead->arr[k - 1] < curLookahead->arr[k]);
-      */
-
       int j;
       for (j = 0; j < curNumLookahead; ++j) {
         if (curLookahead->arr[j] >= id)
@@ -344,14 +332,6 @@ bool LR1StateAddItem(
         ++curNumLookahead;
         changed = true;
       }
-
-      // DEBUG
-      // printf("after\n");
-      /*
-      for (int k = 1; k < curNumLookahead; ++k)
-        assert(curLookahead->arr[k - 1] < curLookahead->arr[k]);
-      */
-      // printf("done\n");
     }
     LR1SymbolStringDelete(string);
     VectorDelete(lookahead);
@@ -503,19 +483,11 @@ LR1StateGraph *LR1StateGraphFromCFG(CFG *cfg) {
   int startVariable = CFGAddVariable(cfg);
   int eofTokenID = cfg->eofTokenID;
   CFGRule *initRule = CFGAddRule(
-      cfg, startVariable, 1, cfg->startVariable);
+      cfg, startVariable, 2, cfg->startVariable, eofTokenID);
   cfg->startVariable = startVariable;
   CFGFinalize(cfg);
 
   bool *nullable = LR1Nullable(cfg);
-
-  // DEBUG
-  printf("\n\nNullable varaibles:");
-  for (int i = 0; i < cfg->numVariables; ++i) {
-    if (nullable[i])
-      printf(" %d", i);
-  }
-  printf("\n");
 
   LR1SymbolString *initString = LR1SymbolStringNew(initRule, 0);
   Vector *initLookahead = VectorNewWithCapacity(1);
@@ -529,13 +501,6 @@ LR1StateGraph *LR1StateGraphFromCFG(CFG *cfg) {
   Vector *sortedStrings = VectorNew();
   for (HashTableEntry *stateEntry = states->head; stateEntry;
        stateEntry = stateEntry->nextInTable) {
-    // DEBUG
-    printf("%d states\n", states->size);
-    if (states->size > 3000) {
-      printf("Too many states\n");
-      break;
-    }
-
     LR1State *state = stateEntry->key;
     HashTable *items = state->items;
     sortedStrings->size = 0;
@@ -594,6 +559,21 @@ void LR1StateGraphDelete(LR1StateGraph *graph) {
   free(graph);
 }
 
+uint64_t LR1PtrHash(void *a) {
+  return (uint64_t)a;
+}
+
+bool LR1PtrEqual(void *a, void *b) {
+  return a == b;
+}
+
+void LR1AddAuxiliarySymbols(Vector *tokens, Vector *variables) {
+  // Need to add extra token and variable strings, since a new EOF token and
+  // start variable were added to the CFG when constructing the LR(1) graph
+  VectorAdd(tokens, "$end");
+  VectorAdd(variables, "$accept");
+}
+
 void LR1StateGraphPrint(
     CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
     FILE *file) {
@@ -607,10 +587,7 @@ void LR1StateGraphPrint(
   fprintf(file, "  rankdir=LR;\n");
   fprintf(file, "  node[shape=box];\n");
 
-  // Need to add extra token and variable strings, since a new EOF token and
-  // start variable were added to the CFG when constructing the LR(1) graph
-  VectorAdd(tokens, "$");
-  VectorAdd(variables, "S'");
+  LR1AddAuxiliarySymbols(tokens, variables);
 
   for (HashTableEntry *entry = states->head; entry;
        entry = entry->nextInTable) {
@@ -654,11 +631,6 @@ void LR1StateGraphPrint(
         int tokenID = (int)(long long)lookahead->arr[i];
         if (i != 0)
           fprintf(file, "/");
-
-        // DEBUG
-        if (tokenID < 0 || tokenID >= tokens->size)
-          printf("Strange token %d\n", tokenID);
-
         fprintf(file, "%s", (char*)tokens->arr[tokenID]);
       }
       fprintf(file, "\\l");
@@ -696,4 +668,152 @@ void LR1StateGraphPrint(
   --variables->size;
 
   fprintf(file, "}\n");
+}
+
+void LR1StateGraphPrintXML(
+    CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
+    FILE *file) {
+  LR1AddAuxiliarySymbols(tokens, variables);
+
+  Vector *rules = cfg->rules;
+  HashTable *rulesToIdx = HashTableNew(LR1PtrHash, LR1PtrEqual, NULL, NULL);
+
+  fprintf(file, "<?xml version=\"1.0\"?>\n");
+  fprintf(file, "<lr1-state-graph>\n");
+  fprintf(file, "  <grammar>\n");
+
+  fprintf(file, "    <rules>\n");
+  int numRules = rules->size;
+  for (int i = 0; i < numRules; ++i) {
+    CFGRule *rule = rules->arr[i];
+    HashTableEntryAdd(rulesToIdx, rule, (void*)((int64_t)i));
+    fprintf(file, "      <rule number=\"%d\">\n", i);
+    fprintf(file, "        <lhs>%s</lhs>\n",
+            (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, rule->lhs)]);
+    fprintf(file, "        <rhs>\n");
+    int *rhs = rule->rhs;
+    int numRHS = rule->numRHS;
+    for (int j = 0; j < numRHS; ++j) {
+      int id = rhs[j];
+      char *idStr;
+      if (CFG_IS_TOKEN_ID(cfg, id))
+        idStr = (char*)tokens->arr[id];
+      else
+        idStr = (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)];
+      fprintf(file, "          <symbol>%s</symbol>\n", idStr);
+    }
+    fprintf(file, "        </rhs>\n");
+    fprintf(file, "      </rule>\n");
+  }
+  fprintf(file, "    </rules>\n");
+  fprintf(file, "  </grammar>\n");
+
+  fprintf(file, "  <automaton>\n");
+  HashTable *states = graph->states;
+
+  // Since the graph stores the states in the hash table simply as a set, only
+  // the keys of the hash table are used, while the values are unused. We use
+  // the values temporarily here to store a unique index for each state.
+  int stateIdx = 0;
+  for (HashTableEntry *entry = states->head; entry;
+       entry = entry->nextInTable, ++stateIdx)
+    entry->value = (void*)(int64_t)stateIdx;
+
+  stateIdx = 0;
+  for (HashTableEntry *entry = states->head; entry;
+       entry = entry->nextInTable, ++stateIdx) {
+    fprintf(file, "\n");
+    fprintf(file, "    <state number=\"%d\">\n", stateIdx);
+    fprintf(file, "      <itemset>\n");
+    LR1State *state = entry->key;
+    HashTable *items = state->items;
+    for (HashTableEntry *entryItem = items->head; entryItem;
+         entryItem = entryItem->nextInTable) {
+      LR1SymbolString *string = entryItem->key;
+      Vector *lookaheads = entryItem->value;
+      CFGRule *rule = string->rule;
+      HashTableEntry *ruleEntry = HashTableEntryRetrieve(rulesToIdx, rule);
+      assert(ruleEntry);
+      int ruleNo = (int)(int64_t)ruleEntry->value;
+      int dot = string->dot;
+      fprintf(file, "        <item rule-number=\"%d\" dot=\"%d\"",
+              ruleNo, dot);
+      // Note: bison only prints lookaheads in LR(1) items whose dot is at the
+      // end of the rule (i.e. a reduction can be performed). This is most
+      // likely because lookaheads are only useful for identifying whether a
+      // reduction can be performed or not, even though different states may
+      // look identical if only these lookaheads are printed.
+      // Also, bison doesn't print the lookahead for the auxiliary rule
+      // $accept -> start_variable $end (lookahead should be $end), so we also
+      // don't print the lookahead in this case. We identify this rule by
+      // checking if the RHS contains two symbols, and the last symbol is $end
+      // (this auxiliary rule is the only rule in the CFG that contains $end
+      // on its RHS)
+      if (dot == rule->numRHS &&
+          !(rule->numRHS == 2 && rule->rhs[1] == cfg->eofTokenID)) {
+        fprintf(file, ">\n");
+        fprintf(file, "          <lookaheads>\n");
+        for (int i = 0; i < lookaheads->size; ++i) {
+          int tokenId = (int)(int64_t)lookaheads->arr[i];
+          fprintf(file, "            <symbol>%s</symbol>\n",
+                  (char*)tokens->arr[tokenId]);
+        }
+        fprintf(file, "          </lookaheads>\n");
+        fprintf(file, "        </item>\n");
+      } else {
+        fprintf(file, "/>\n");
+      }
+    }
+    fprintf(file, "      </itemset>\n");
+
+    fprintf(file, "      <actions>\n");
+    fprintf(file, "        <transitions>\n");
+    for (LR1Transition *transition = state->transition; transition;
+         transition = transition->next) {
+      int id = transition->id;
+      LR1State *otherState = transition->state;
+      HashTableEntry *otherStateEntry = HashTableEntryRetrieve(
+          states, otherState);
+      assert(otherStateEntry);
+      int otherStateIdx = (int)(int64_t)otherStateEntry->value;
+      if (CFG_IS_TOKEN_ID(cfg, id)) {
+        fprintf(file, "          <transition type=\"shift\" symbol=\"%s\" "
+                      "state=\"%d\"/>\n",
+                (char*)tokens->arr[id], otherStateIdx);
+      } else {
+        fprintf(file, "          <transition type=\"goto\" symbol=\"%s\" "
+                      "state=\"%d\"/>\n",
+                (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)],
+                otherStateIdx);
+      }
+    }
+    fprintf(file, "        </transitions>\n");
+
+    fprintf(file, "        <reductions>\n");
+    for (HashTableEntry *entryItem = items->head; entryItem;
+         entryItem = entryItem->nextInTable) {
+      LR1SymbolString *string = entryItem->key;
+      Vector *lookaheads = entryItem->value;
+      CFGRule *rule = string->rule;
+      HashTableEntry *ruleEntry = HashTableEntryRetrieve(rulesToIdx, rule);
+      assert(ruleEntry);
+      int ruleNo = (int)(int64_t)ruleEntry->value;
+      int dot = string->dot;
+      if (dot == rule->numRHS) {
+        for (int i = 0; i < lookaheads->size; ++i) {
+          int lookaheadId = (int)(int64_t)lookaheads->arr[i];
+          fprintf(file, "          <reduction symbol=\"%s\" rule=\"%d\"/>\n",
+                  (char*)tokens->arr[lookaheadId], ruleNo);
+        }
+      }
+    }
+    fprintf(file, "        </reductions>\n");
+    fprintf(file, "      </actions>\n");
+    fprintf(file, "    </state>\n");
+  }
+  fprintf(file, "  </automaton>\n");
+
+  fprintf(file, "</lr1-state-graph>\n");
+
+  HashTableDelete(rulesToIdx);
 }

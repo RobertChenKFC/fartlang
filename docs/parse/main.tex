@@ -185,6 +185,11 @@ at a few definitions. The following definition all uses the DCFG $\mathcal{G}
   \end{itemize}
 \end{definition}
 \begin{definition}
+	For any string $w\in(\Sigma\cup V)^*$, $w$ is called \textit{nullable} if
+	$w=V_1V_2\ldots V_n$, and for every $i=1,\ldots,n$, $A_i\in V$ and $A_i$ is 
+	nullable.
+\end{definition}
+\begin{definition}
   The \textit{first-set} of a string $w\in{(\Sigma\cup V)}^*$, denoted by
   $\text{first}(w)$, is a set $z\subseteq\Sigma$ constructed as follows:
   \begin{itemize}
@@ -247,15 +252,12 @@ graph} using the following algorithm:
       \State{$Q\leftarrow\{q_0\}$}
       \State{$\delta\leftarrow\varnothing$}
       \For{$p\in Q$}
-        \For{$x\in\Sigma\cup V$}
-          \State{$q\leftarrow\varnothing$}
-          \For{$(r,w_1\cdot w_2,z)\in p$}
-            \If{$w_2=xw_3$}
-              \State{$q\leftarrow\text{closure}((r,w_1x\cdot w_3,z))$}
-            \EndIf{}
-          \EndFor{}
-          \State{$Q\leftarrow Q\cup\{q\}$}
-          \State{$\delta\leftarrow\delta\cup\{((p,x),q)\}$}
+        \For{$(r,w_1\cdot w_2,z)\in p$}
+          \If{$w_2=xw_3$}
+            \State{$q\leftarrow\text{closure}((r,w_1x\cdot w_3,z))$}
+            \State{$Q\leftarrow Q\cup\{q\}$}
+            \State{$\delta\leftarrow\delta\cup\{((p,x),q)\}$}
+          \EndIf{}
         \EndFor{}
       \EndFor{}
       \State{\Return{$(Q,q_0,\delta)$}}
@@ -316,7 +318,9 @@ algorithm on any word $s\in\Sigma^*$:
       \State{$Z\leftarrow$ an empty stack}
       \State{$Z$.push($q_0$)} % chktex 36
       \State{$p\leftarrow q_0$}
-      \For{each character $a$ of $s$ in order}
+      \State{$i\leftarrow 1$}
+      \While{$i\leq |s|$}
+        \State{$a\leftarrow s_i$}
         \State{$\text{action}\leftarrow T[p][a]$}
         \If{$\text{action}=\text{error}$}
           \State{\textbf{print}("Syntax error")} % chktex 18 chktex 36
@@ -325,6 +329,7 @@ algorithm on any word $s\in\Sigma^*$:
           \State{$Z$.push($a$)} % chktex 36
           \State{$Z$.push($q$)} % chktex 36
           \State{$p\leftarrow q$}
+          \State{$i\leftarrow i+1$}
         \ElsIf{$\text{action}=\text{reduce}(r)$ for some $r\in R$}
           \State{$n\leftarrow$ the length of the RHS of $r$}
           \For{$2n$ times}
@@ -337,7 +342,7 @@ algorithm on any word $s\in\Sigma^*$:
           \State{$Z$.push($q$)} % chktex 36
           \State{$p\leftarrow q$}
         \EndIf{}
-      \EndFor{}
+      \EndWhile{}
       \State{\Return{\textbf{true}}}
     \EndFunction{}
   \end{algorithmic}
@@ -402,39 +407,5 @@ Note that the construction of the LALR$(1)$ parsing table may introduce new
 conflicts, which means that even if a CFG can be used to construct an LR$(1)$
 parser, the same CFG may not necessarily be able to be used to construct an
 LALR$(1)$ parser.
-
-\section{Empty Productions}
-The algorithms above only work when all rules in the CFG are not empty productions;
-in other words, all $r:A\rightarrow x$ in $R$ satisfies $x\neq\varepsilon$.
-However, having empty productions (i.e. $r:A\rightarrow\varepsilon$) can be
-very helpful in constructing the CFG for various programming language
-constructs. Therefore, here we show how to remove empty productions from a
-given CFG\@:
-\begin{breakablealgorithm}
-  \caption{\textproc{Empty Production Removal}}
-  \begin{algorithmic}[1]
-    \Function{Empty-Production-Removal}{$\mathcal{G}=(\Sigma,V,R,S)$}
-      \State{$\text{changed}\leftarrow\textbf{true}$}
-      \While{changed}
-        \State{$\text{changed}\leftarrow\textbf{false}$}
-        \For{$(r:A\rightarrow x)\in R$}
-          \If{$x=\varepsilon$}
-            \For{$(s:B\rightarrow y)\in R$}
-              \State{$n\leftarrow$ the number of occurences of $A$ in $y$}
-              \If{$n>0$}
-                \For{$m=0,1,\ldots,2^n-1$}
-                  \State{$y'\leftarrow y$ with the $i$-th occurrence of $A$
-                    removed if the $i$-th bit of $m$ is 1}
-                  \State{$R\leftarrow R\cup\{B\rightarrow y'\}$}
-                  \State{$\text{changed}\leftarrow\textbf{true}$}
-                \EndFor{}
-              \EndIf{}
-            \EndFor{}
-          \EndIf{}
-        \EndFor{}
-      \EndWhile{}
-    \EndFunction{}
-  \end{algorithmic}
-\end{breakablealgorithm}
 
 \end{document}

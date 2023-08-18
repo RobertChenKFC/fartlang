@@ -1,7 +1,9 @@
-BIN=$(BIN_ROOT)/util/source
+BIN = $(BIN_ROOT)/util/source/source.o
 
-all: source.c
-	$(CC) -c -o $(BIN)/source.o $(CFLAGS) source.c
+.PHONY: clean
+
+$(BIN): source.c
+	$(CC) -c -o $@ $(CFLAGS) $<
 
 clean:
-	rm -rf $(BIN)/source.o
+	rm -rf $(BIN)
