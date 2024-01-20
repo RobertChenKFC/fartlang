@@ -1,0 +1,8 @@
+[31;1m[Error][0m 2.in:3: Unexpected character '[31;1ml[0m'.
+    3 | hello   [32;1mHell[0m[31;1ml[0mo
+[31;1m[Error][0m 3.in:3: Unexpected end of file.
+    2 | helloHello[32;1mhel[0m
+[31;1m[Error][0m 6.in:2: Unexpected character '[31;1m.[0m'.
+    2 | 123.456.789.012  9.8.7.6.qwerty.com.tw@gmail.com[32;1m[0m[31;1m.[0mtw unreachable.edu.tw
+[31;1m[Error][0m 7.in:4: Unexpected end of file.
+    3 | [32;1m9.10.11.[0m

@@ -19,7 +19,7 @@ VALGRIND_FLAGS += --log-fd=9
 ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
 CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-TESTS = $(shell seq 8)
+TESTS = $(shell seq 8) error
 TEST_DEPS = $(addsuffix .test, $(TESTS))
 OUT_FILES = $(addsuffix .out, $(TESTS))
 
@@ -37,7 +37,7 @@ $(TEST_DEPS): %.test: $(OUT_FILES)
 	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
 $(OUT_FILES): $(BIN)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) 9>&2 2>8.out
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) 9>&2 2>error.out
 
 clean: $(CLEAN_DEPS)
 	rm -rf $(BIN) $(OUT_FILES)

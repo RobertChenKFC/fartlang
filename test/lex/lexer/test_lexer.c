@@ -96,7 +96,6 @@ int main() {
   fclose(file);
   assert(noErrors);
   RegexDelete(all);
-  RegexDelete(whitespace);
   LexerConfigDelete(config);
 
   // 5. Lexer save and load
@@ -132,7 +131,27 @@ int main() {
   noErrors = ReadTokenUntilEOF(lexer, file);
   fclose(file);
   assert(!noErrors);
+  LexerDelete(lexer);
 
+  // 8. Test multiple tokens with non-empty intersection
+  config = LexerConfigNew();
+  Regex *lt = RegexFromLetter('<');
+  Regex *sl = RegexFromString("<<");
+  LexerConfigAddRegex(config, lt);
+  LexerConfigAddRegex(config, sl);
+  LexerConfigSetIgnoreRegex(config, whitespace);
+  lexer = LexerFromConfig(config);
+  file = fopen("8.in", "r");
+  LexerSetInputFile(lexer, file, "8.in");
+  fclose(file);
+  file = fopen("8.out", "w");
+  noErrors = ReadTokenUntilEOF(lexer, file);
+  assert(noErrors);
+  fclose(file);
+  RegexDelete(lt);
+  RegexDelete(sl);
+  RegexDelete(whitespace);
+  LexerConfigDelete(config);
   LexerDelete(lexer);
 }
 
