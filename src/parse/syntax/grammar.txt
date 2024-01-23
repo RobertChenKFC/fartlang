@@ -1,0 +1,224 @@
+<module>
+    ::= <import-decls> <class-decls>
+
+<import-decls>
+    ::= "import" <module-path> <import-namespace> ";"
+
+<module-path>
+    ::= <module-path> "." <identifier>
+      | <identifier>
+
+<import-namespace>
+    ::= "as" <identifier>
+      |
+
+<class-decls>
+    ::= <class-decls> <class-decl>
+      |
+
+<class-decl>
+    ::= "class" <identifier> "{" <class-var-decl-stmts> <method-decls> "}"
+
+<class-var-decl-stmts>
+    ::= <class-var-decl-stmts> <class-var-decl-stmt>
+      | <class-var-decl-stmt>
+
+<class-var-decl-stmt>
+    ::= <class-var-decl-modifiers> <var-decl-stmt>
+
+<class-var-decl-modifiers>
+    ::= "static"
+      |
+
+<var-decl-stmt>
+    ::= <var-decl> ";"
+
+<var-decl>
+    ::= <var-decl-modifiers> <type-or-var> <var-init-list>
+
+<var-decl-modifiers>
+    ::= "const"
+      |
+
+<type-or-var>
+    ::= <type>
+      | "var"
+
+<type>
+    ::= <primitive-types>
+      | <identifier>
+      | <type> "[" "]"
+      | <type-or-void> "(" <type-list> ")"
+
+<primitive-types>
+    ::= "i64" | "u64" | "i32" | "u32" | "i16" | "u16" | "i8" | "u8" |
+      | "f64" | "f32"
+      | "bool" | "any"
+
+<type-or-void>
+    ::= <type>
+      | "void"
+
+<type-list>
+    ::= <type-list-nonempty>
+      |
+
+<type-list-nonempty>
+    ::= <type-list-nonempty> "," <type>
+      | <type>
+
+<var-init-list>
+    ::= <var-init-list> "," <var-init>
+      | <var-init>
+
+<var-init>
+    ::= <identifier> "=" <expr>
+      | <identifier>
+
+<expr>
+    ::= <expr-ternary>
+
+<expr-ternary>
+    ::= <expr-logic-or> "if" <expr-logic-or> "else" <expr-logic-or>
+      | <expr-logic-or>
+
+<expr-logic-or>
+    ::= <expr-logic-or> "or" <expr-logic-and>
+      | <expr-logic-and>
+
+<expr-logic-and>
+    ::= <expr-logic-and> "and" <expr-bit-or>
+      | <expr-bit-or>
+
+<expr-bit-or>
+    ::= <expr-bit-or> "|" <expr-bit-xor>
+      | <expr-bit-xor>
+
+<expr-bit-xor>
+    ::= <expr-bit-xor> "^" <expr-bit-and>
+      | <expr-bit-and>
+
+<expr-bit-and>
+    ::= <expr-bit-and> "&" <expr-rel>
+      | <expr-rel>
+      
+<expr-rel>
+    ::= <expr-rel> <op-rel> <expr-shift>
+      | <expr-shift>
+
+<op-rel>
+    ::= "<" | "<= " | "==" | "!=" | ">" | ">="
+
+<expr-shift>
+    ::= <expr-add> <op-shift> <expr-add>
+      | <expr-add>
+
+<op-shift>
+    ::= "<<"
+      | ">>"
+
+<expr-add>
+    ::= <expr-add> <op-add> <expr-mul>
+      | <expr-mul>
+
+<op-add>
+    ::= "+"
+      | "-"
+
+<expr-mul>
+    ::= <expr-mul> <op-mul> <expr-unary-op>
+      | <expr-unary-op>
+
+<op-mul>
+    ::= "*"
+      | "/"
+      | "%"
+
+<expr-unary-op>
+    ::= <unary-op> <expr-access>
+
+<unary-op>
+    ::= "-"
+      | "!"
+      | "~"
+      | <cast-op>
+
+<cast-op>
+    ::= "(" type ")"
+
+<expr-access>
+    ::= <expr-access> "(" <expr-list> ")"
+      | <expr-access> "[" <expr> "]"
+      | <expr-access> "." <identifier>
+      | <term>
+
+<term>
+    ::= <integer-literal>
+      | <float-literal>
+      | <identifier>
+      | <string-literals>
+      | <char-literal>
+      | "(" <expr> ")"
+
+<method-decls>
+    ::= <method-decls> <method-decl>
+      |
+
+<method-decl>
+    ::= <identifier> "(" <param-list> ")" "{" <stmts> "}"
+      | <method-decl-modifiers> <type-or-void> <identifier> "(" <param-list> ")"  "{" <stmts> "}"
+
+<param-list>
+    ::= <param-list-nonempty>
+      |
+
+<param-list-nonempty>
+    ::= <param-list-nonempty> "," <type> <identifier>
+      | <type> <identifier>
+
+<stmts>
+    ::= <stmts> <stmt>
+      |
+
+<stmt>
+    ::= <var-decl-stmt>
+      | <expr-stmt>
+      | <assign-stmt>
+      | <if-stmt>
+      | <switch-stmt>
+      | <for-stmt>
+      | <while-stmt>
+      | <return-stmt>
+
+<expr-stmt>
+    ::= <expr> ";"
+
+<assign-stmt>
+    ::= <assign> ";"
+
+<assign>
+    ::= <assign> "=" <expr>
+      | <expr> "=" <expr>;
+
+<if-stmt>
+    ::= "if" <expr> "{" <stmts> "}" <else-if-bodies> <else-body>
+
+<else-if-bodies>
+    ::= <else-if-bodies> "else" "if" <expr> "{" <stmts> "}"
+      |
+
+<else-body>
+    ::= <else> "{" <stmts> "}"
+      |
+
+<switch-stmt>
+    ::= "switch" <expr> "{" <cases> "}"
+
+# TODO: continue here; write example of fart code using switch case and define
+#       this syntax
+<cases>
+    ::= 
+
+<method-decl-modifiers>
+    ::= "static"
+      |

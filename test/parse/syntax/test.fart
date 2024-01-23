@@ -1,0 +1,134 @@
+import std.dbg.Dbg;
+
+class Array {
+    const u64 DEFUALT_CAPACITY = 1;
+    any[] _arr;
+    u64 _size, _capacity;
+
+    Array() {
+        _arr = new any[DEFAULT_CAPACITY];
+        _size = 0;
+        _capacity = DEFAULT_CAPACITY;
+    }
+
+    any get(u64 i) {
+        assert(0 <= i < _size);
+        return _arr[i];
+    }
+
+    void set(u64 i, any val) {
+        assert(0 <= i < _size);
+        _arr[i] = val;
+    }
+
+    void push(any val) {
+        if _size == _capacity {
+            _capacity *= 2;
+            var arr = new any[_capacity];
+            for var i = 0; i < _size; ++i {
+                arr[i] = _arr[i];
+            }
+            _arr = arr;
+        }
+        arr[_size] = val;
+        ++_size;
+    }
+
+    any pop() {
+        assert(_size > 0);
+        --_size;
+        return _arr[_size];
+    }
+
+    u64 size() {
+        return _size;
+    }
+
+    void clear() {
+        _size = 0;
+    }
+}
+
+class Algorithm {
+    type LessThan = bool(any, any);
+
+    static void sort(Array arr, LessThan lt) {
+        var buf = Array();
+        _sort(arr, 0, arr.size(), buf, lt);
+    }
+
+    static void _sort(Array arr, u64 from, u64 to, Array buf, LessThan lt) {
+        ##
+        Classic merge sort implementation:
+
+        Recursive and not in-place; buffer is allocated by caller
+        ##
+
+        # Edge case
+        if from + 1 == to {
+            return;
+        }
+
+        # Recursive calls
+        u64 mid = from + (to - from) / 2;
+        _sort(from, mid);
+        _sort(mid, to);
+
+        # Merge two partitions to buf
+        u64 i = from, j = mid;
+        buf.clear();
+        while i < mid and j < to {
+            if lt(arr.get(i), arr.get(j)) {
+                buf.push(arr.get(i));
+                ++i;
+            } else {
+                buf.push(arr.get(j));
+            }
+        }
+        while i < mid {
+            buf.push(arr.get(i));
+            ++i;
+        }
+        while j < mid {
+            buf.push(arr.get(j));
+            ++j;
+        }
+
+        # Copy buf to arr
+        for i = 0; i < buf.size(); ++i {
+            arr.set(from + i, buf.get(i));
+        }
+    }
+}
+
+class String {
+    const u64 DEFAULT_CAPACITY = 8;
+    u8[] _arr;
+    u64 _size, _capacity;
+
+    String() {
+        _arr = new u8[DEFAULT_CAPACITY];
+        _arr[0] = '\0';
+        _size = 1;
+        _capacity = DEFAULT_CAPACITY;
+    }
+
+    void push(u8 char) {
+        _arr[_size - 1] = char;
+        if (_size == _capacity) {
+            _capacity *= 2;
+            var arr = new u8[_capacity];
+            for var i = 0; i < _size; ++i {
+                arr[i] = _arr[i];
+            }
+            _arr = arr;
+        }
+        _arr[_size] = '\0';
+        ++_size;
+    }
+}
+
+class Calculator {
+    void calc(String expr) {
+    }
+}

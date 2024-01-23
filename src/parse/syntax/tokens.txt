@@ -1,0 +1,69 @@
+<identifier> ::= [_A-Za-z][_A-Za-z0-9]*
+"import"
+"as"
+"."
+"class"
+"{"
+"}"
+"static"
+";"
+"const"
+"var"
+"["
+"]"
+"("
+")"
+"i64"
+"u64"
+"i32"
+"u32"
+"i16"
+"u16"
+"i8"
+"u8"
+"f64"
+"f32"
+"bool"
+"any"
+"void"
+","
+"="
+"if"
+"else"
+"or"
+"and"
+"|"
+"^"
+"&"
+"=="
+"!="
+"<"
+"<="
+"<<"
+">>"
+"+"
+"-"
+"*"
+"/"
+"%"
+"!"
+"~"
+<integer-literal-base10> ::= [1-9][0-9]* 
+<integer-literal-base16> ::= 0x[0-9a-fA-F]+ 
+<integer-literal-base2> ::= 0b[0-1]+
+<integer-literal>
+    ::= <integer-literal-base10>
+      | <integer-literal-base16>
+      | <integer-literal-base2>
+<decimal-literal> ::= [0-9]*[1-9]
+<float-literal-base>
+    ::= <integer-literal-base10>(\.<decimal-literal>?)?
+      | 0\.<decimal-literal>
+<float-literal>
+    ::= <float-literal-base>e(-)?<integer-literal-base10>
+<string-literal>
+    ::= \"([^\"\\]|(\\.))*\"
+<char-literal>
+    ::= '[^'\\]|(\\.)'
+"switch"
+"case"
