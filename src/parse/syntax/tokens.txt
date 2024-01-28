@@ -67,3 +67,10 @@
     ::= '[^'\\]|(\\.)'
 "switch"
 "case"
+"default"
+"true"
+"false"
+"this"
+"for"
+"#"
+"##"

@@ -1,4 +1,4 @@
-import std.dbg.Dbg;
+import std.dbg.Dbg.*;
 
 class Array {
     const u64 DEFUALT_CAPACITY = 1;
@@ -115,7 +115,7 @@ class String {
 
     void push(u8 char) {
         _arr[_size - 1] = char;
-        if (_size == _capacity) {
+        if _size == _capacity {
             _capacity *= 2;
             var arr = new u8[_capacity];
             for var i = 0; i < _size; ++i {
@@ -126,9 +126,77 @@ class String {
         _arr[_size] = '\0';
         ++_size;
     }
+
+	u64 length() {
+		return _size;
+	} 
+
+	u64 toUnsigned() {
+		return StringView(_arr).toUnsigned();
+	}
+
+	u8 get(u64 i) {
+		assert(0 <= i < _size);
+		return _arr[i];
+	}
+
+	StringView view(u64 l, u64 r) {
+		assert(0 <= l <= r <= _size);
+		return StringView(_arr, l, r);
+	}
 }
 
-class Calculator {
-    void calc(String expr) {
+class StringView {
+	u8[] _arr;
+	u64 _l, _r;
+
+	static StringView(u8[] arr) {
+		u64 len = 0;
+		for ; arr[len] != '\0'; ++len {}
+		return StringView(arr, 0, len);
+	}
+
+	StringView(u8[] arr, u64 l, u64 r) {
+		_arr = arr;
+		_l = l;
+		_r = r;
+	}
+
+	u64 length() {
+		return _size;
+	}
+
+	u64 toUnsigned() {
+		u64 unsigned = 0;
+		for var i = _l; i < _r; ++i {
+			assert('0' <= _arr[i] <= '9');
+			unsigned = unsigned * 10 + _arr[i] - '0';
+		}
+		return unsigned;
+	}
+}
+
+class Utility {
+    u64 getExactFileSize(String fileSize) {
+		var len = fileSize.length();
+		assert(len >= 3);
+		assert(fileSize.get(len - 1) == 'B');
+		var digitsLen = len - 3 if fileSize.get(len - 2) == 'i' else len - 2;
+		var exactSize = fileSize.view(0, digitsLen).toUnsigned();
+		switch fileSize[len - 3] {
+			case 'T' {
+				exactSize *= 1e12;
+			}
+			case 'G' {
+				exactSize *= 1e9;
+			}
+			case 'M' {
+				exactSize *= 1e6;
+			}
+			case 'K' {
+				exactSize *= 1e3;
+			}
+		}
+		return exactSize;
     }
 }

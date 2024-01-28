@@ -2,15 +2,13 @@
     ::= <import-decls> <class-decls>
 
 <import-decls>
-    ::= "import" <module-path> <import-namespace> ";"
+    ::= "import" <module-path> ";"
 
 <module-path>
     ::= <module-path> "." <identifier>
       | <identifier>
-
-<import-namespace>
-    ::= "as" <identifier>
-      |
+	  | <identifier> "as" <identifier>
+	  | "*"
 
 <class-decls>
     ::= <class-decls> <class-decl>
@@ -152,9 +150,19 @@
       | <expr-access> "." <identifier>
       | <term>
 
+<expr-list>
+	::= <expr-list-nonempty>
+	  |
+
+<expr-list-nonempty>
+	::= <expr-list-nonempty> "," <expr>
+	  | <expr>
+
 <term>
     ::= <integer-literal>
       | <float-literal>
+	  | "true" | "false"
+	  | "this" | "null"
       | <identifier>
       | <string-literals>
       | <char-literal>
@@ -188,6 +196,7 @@
       | <switch-stmt>
       | <for-stmt>
       | <while-stmt>
+	  | <break-stmt>
       | <return-stmt>
 
 <expr-stmt>
@@ -214,10 +223,42 @@
 <switch-stmt>
     ::= "switch" <expr> "{" <cases> "}"
 
-# TODO: continue here; write example of fart code using switch case and define
-#       this syntax
 <cases>
-    ::= 
+    ::= <cases> <case-cond> "{" <stmts> "}"
+	  | 
+
+<case-cond>
+	::= "case" <expr-list-nonempty>
+	  | "default"
+
+<for-stmt>
+	::= "for" <for-init> ";" <for-cond> ";" <for-iter> "{" <stmts> "}"
+
+<for-init>
+	::= <var-decl>
+ 	  | <expr>
+	  | <assign>
+	  |
+
+<for-cond>
+	::= <expr>
+	  |
+
+<for-iter>
+	::= <expr>
+	  | <assign>
+	  |
+
+<while-stmt>
+	::= "while" <expr> "{" <stmts> "}"
+
+<break-stmt>
+	::= "break" ";"
+	  | "break" <integer-literal> ";"
+
+<return-stmt>
+	::= "return" ";"
+	  | "return" <expr> ";"
 
 <method-decl-modifiers>
     ::= "static"
