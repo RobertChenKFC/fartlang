@@ -47,11 +47,13 @@ typedef void (*ParserObjectDestructor)(void *object);
 // a "lexer", a "cfg", a vector of "handlers" for each rule, a "useLALR1"
 // variable to indicate whether to consturct a LR(1) table ("useLALR1 = false")
 // or a LALR(1) table ("useLALR1 = true"), a destructor to delete user-created
-// custom objects, vectors of the LHS and RHS of each CFG rule in string form
-// for printing relavent information when conflict occurs during the
-// construction of the parser, and a vector "conflictResolution" of integers,
-// where the i-th integer corresponds to the action to choose for the i-th
-// conflict.
+// custom objects (for use when an error occurs; since the parser stack needs
+// to be cleared without passing objects to the users handlers, the objects
+// still on the stack are deleted using the destructor), vectors of the LHS and
+// RHS of each CFG rule in string form for printing relavent information when
+// conflict occurs during the construction of the parser, and a vector
+// "conflictResolution" of integers, where the i-th integer corresponds to the
+// action to choose for the i-th conflict
 struct ParserConfig {
   Lexer *lexer;
   CFG *cfg;

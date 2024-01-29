@@ -2,13 +2,20 @@
     ::= <import-decls> <class-decls>
 
 <import-decls>
-    ::= "import" <module-path> ";"
+    ::= <import-decls> <import-decl>
+      |
+
+<import-decl>
+    ::= "import" <module-path> <module-path-ext> ";"
 
 <module-path>
     ::= <module-path> "." <identifier>
       | <identifier>
-	  | <identifier> "as" <identifier>
-	  | "*"
+
+<module-path-ext>
+	  | "as" <identifier>
+	  | "." "*"
+      |
 
 <class-decls>
     ::= <class-decls> <class-decl>
@@ -148,6 +155,8 @@
     ::= <expr-access> "(" <expr-list> ")"
       | <expr-access> "[" <expr> "]"
       | <expr-access> "." <identifier>
+      | <expr-access> "++"
+      | <expr-access> "--"
       | <term>
 
 <expr-list>
@@ -206,8 +215,15 @@
     ::= <assign> ";"
 
 <assign>
-    ::= <assign> "=" <expr>
-      | <expr> "=" <expr>;
+    ::= <assign-eq>
+      | <expr> <op-assign> <expr>
+
+<assign-eq>
+    ::= <assign-eq> "=" <expr>
+      | <expr> "=" <expr>
+
+<op-assign>
+    ::= "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
 
 <if-stmt>
     ::= "if" <expr> "{" <stmts> "}" <else-if-bodies> <else-body>

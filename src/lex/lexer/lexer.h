@@ -54,7 +54,11 @@ struct Lexer {
   SourcePoint point;
 };
 
-// Add "regex" to "config", and returns the token ID corresponding to "regex"
+// Add "regex" to "config", and returns the token ID corresponding to "regex".
+// The returned token ID is expected to be the number of times
+// LexerConfigAddRegex has been called on this particular "config". In other
+// words, the first call returns 0, second call returns 1, third call returns
+// 2, ... etc
 #define LexerConfigAddRegex(config, regex) \
   LexerConfigAddRegexImpl(config, regex, #regex)
 // Set ignore regex of "config" to "regex"

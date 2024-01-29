@@ -1,4 +1,15 @@
-<identifier> ::= [_A-Za-z][_A-Za-z0-9]*
+"++"
+"--"
+"+="
+"-="
+"*="
+"/="
+"%="
+"<<="
+">>="
+"&="
+"^="
+"|="
 "import"
 "as"
 "."
@@ -39,6 +50,8 @@
 "!="
 "<"
 "<="
+">"
+">="
 "<<"
 ">>"
 "+"
@@ -48,7 +61,7 @@
 "%"
 "!"
 "~"
-<integer-literal-base10> ::= [1-9][0-9]* 
+<integer-literal-base10> ::= [1-9][0-9]* | 0
 <integer-literal-base16> ::= 0x[0-9a-fA-F]+ 
 <integer-literal-base2> ::= 0b[0-1]+
 <integer-literal>
@@ -58,9 +71,9 @@
 <decimal-literal> ::= [0-9]*[1-9]
 <float-literal-base>
     ::= <integer-literal-base10>(\.<decimal-literal>?)?
-      | 0\.<decimal-literal>
+      | \.<decimal-literal>
 <float-literal>
-    ::= <float-literal-base>e(-)?<integer-literal-base10>
+    ::= <float-literal-base>(e(-)?<integer-literal-base10>)?
 <string-literal>
     ::= \"([^\"\\]|(\\.))*\"
 <char-literal>
@@ -72,5 +85,7 @@
 "false"
 "this"
 "for"
-"#"
-"##"
+<comment>
+    ::= #[^\n]*\n
+      | ##([^#]|#[^#])*##
+<identifier> ::= [_A-Za-z][_A-Za-z0-9]*
