@@ -590,6 +590,12 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           MODULE_PATH, 3, MODULE_PATH, DOT, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModulePath,
           MODULE_PATH, 1, IDENTIFIER);
+      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH, 2, AS, IDENTIFIER);
+      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH, 2, DOT, MUL);
+      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH, 0);
 
       // Create parser
       parser = ParserFromConfig(parserConfig);

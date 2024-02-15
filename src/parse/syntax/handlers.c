@@ -71,24 +71,69 @@ ParserDeclareHandler(SyntaxHandlerImportDecl, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerModulePath, rhs) {
+  SyntaxAST *node;
   if (rhs->size == 3) {
     ParserObject *rhs0 = rhs->arr[0], *rhs1 = rhs->arr[1], *rhs2 = rhs->arr[2];
-    assert(rhs0 && rhs0->type == PARSER_OBJECT_TOKEN);
-    assert(rhs1->type == PARSER_OBJECT_TOKEN);
-    LexerToken *identifier = rhs0->object;
-    LexerToken *token = rhs->token;
-    assert(identifier);
-    assert(token);
-    if (token->tokenID == DOT) {
-      assert(rhs2->type == PARSER_OBJECT_OBJECT);
-      SyntaxAST *modulePath = rhs2->object;
-      assert(modulePath);
+    assert(rhs0 && rhs0->type == PARSER_OBJECT_OBJECT);
+    SyntaxAST *modulePath = rhs0->object;
+    assert(rhs1 && rhs1->type == PARSER_OBJECT_TOKEN);
+    LexerToken *token = rhs1->token;
+    assert(token && token->tokenID == DOT);
+    assert(rhs2 && rhs2->type == PARSER_OBJECT_TOKEN);
+    LexerToken *identifier = rhs2->token;
+    assert(identifier && identifier->tokenID == IDENTIFIER);
 
-      SyntaxASTAppend(modulePath, SyntaxTokenToAST(identifier));
-    } else {
-      assert(token->tokenID == AS);
-    }
+    SyntaxASTAppend(modulePath, SyntaxTokenToAST(identifier));
+    node = modulePath;
+  } else {
+    assert(rhs->size == 1);
+    ParserObject *rhs0 = rhs->arr[0];
+    assert(rhs0 && rhs0->type == PARSER_OBJECT_TOKEN);
+    Token *identifier = rhs0->token;
+    assert(identifier && identifier->tokenID == IDENTIFIER);
+
+    SyntaxASTNode *child = SyntaxTokenToAST(identifier);
+    node = SyntaxASTNew(child, child, NULL, SYNTAX_AST_KIND_MODULE_PATH);
   }
+  return node;
+}
+
+ParserDeclareHandler(SyntaxHandlerModulePathExt, rhs) {
+  SyntaxAST *node = SyntaxASTNew(NULL, NULL, NULL, SYNTAX_AST_KIND_IMPORT_DECL);
+  if (rhs->size == 2) {
+    ParserObject *rhs0 = rhs->arr[0], *rhs1 = rhs->arr[1];
+    assert(rhs0 && rhs0->type == PARSER_OBJECT_TOKEN);
+    Token *token = rhs0->token;
+    if (token->tokenID == AS) {
+    } else {
+      assert(token->tokenID == DOT);
+      LexerTokenDelete()
+    }
+
+    // TODO: continue here: finish the implementation for ModulePathExt, which
+    // is supposed to return an importDecl AST node so that this node can be
+    // updated by the importDecl handler to contain the modulePath in its child;
+    // HOWEVER, before doing this, there seems to be a HUGE problem with
+    // ParserObject, and the parser test seem to be wrong, since it does not
+    // delete the ParserObject created by ParserParse, even though it should.
+    // Furthermore, the handlers should be returning ParserObject so that the
+    // ParserParse function can distinguish between tokens and user objects
+    // and can call destructors correctly in the event of a syntax error, but
+    // this is not what is done here, nor is it done properly in the parser
+    // test. Therefore, I think the best way to handle this is to just scratch
+    // ParserObject entirely, and have ParserParse handle the object deletion
+    // in another way, so do this before continuing here.
+    
+      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH, 2, AS, IDENTIFIER);
+      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH, 2, DOT, MUL);
+  } else {
+    assert(rhs->size == 0);
+    node->import.alias = NULL;
+    node->import.isWildcard = false;
+  }
+  return node;
 }
 
 SyntaxAST *SyntaxASTNew(

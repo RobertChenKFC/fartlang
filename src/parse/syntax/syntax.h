@@ -30,7 +30,11 @@ struct SyntaxAST {
   SourceLocation loc;
   // TODO: fill this in later
   union {
-    char *string;
+    char *string; // SYNTAX_AST_KIND_IDENTIFIER
+    struct {
+      char *alias;
+      bool isWildcard;
+    } import;
   };
 };
 
