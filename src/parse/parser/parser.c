@@ -692,8 +692,12 @@ Parser *ParserFromFileImpl(
     fscanf(file, "%s", handlerName);
     HashTableEntry *entry = HashTableEntryRetrieve(handlerTable, handlerName);
 
-    // TODO: change this to output error message if handler is not found
-    assert(entry);
+    if (!entry) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                      " parser handler %s not found\n", handlerName);
+      abort();
+    }
+    
     ParserHandler *handler = entry->value;
     VectorAdd(handlers, handler);
     VectorAdd(handlerNames, handlerName);
@@ -844,16 +848,24 @@ void *ParserParse(Parser *parser) {
       int numRHS = numRHSes[ruleNo];
       currentRHS->size = numRHS;
       VectorReserve(currentRHS, numRHS);
-      for (int i = numRHS - 1, j = stack->size - 2; i >= 0; --i, j -= 2)
-        currentRHS->arr[i] = stack->arr[j];
+      for (int i = numRHS - 1, j = stack->size - 2; i >= 0; --i, j -= 2) {
+        ParserObject *parserObj = stack->arr[j];
+        switch (parserObj->type) {
+          case PARSER_OBJECT_TOKEN:
+            currentRHS->arr[i] = parserObj->token;
+            break;
+          case PARSER_OBJECT_OBJECT:
+            currentRHS->arr[i] = parserObj->object;
+            break;
+        }
+        free(parserObj);
+      }
       stack->size -= numRHS * 2;
       currentState = (int)(long long)stack->arr[stack->size - 1];
 
       ParserHandler handler = handlersArr[ruleNo];
       void *obj = handler(currentRHS);
       ParserObject *parserObj = ParserObjectFromObject(obj);
-      for (int i = 0; i < numRHS; ++i)
-        free(currentRHS->arr[i]);
       pos = transitionOffsets[currentState] + lhs;
 
       if (pos >= numTransitions ||

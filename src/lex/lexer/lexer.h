@@ -28,7 +28,7 @@ struct LexerConfig {
 // A token type that stores the starting pointer of the token, the length of
 // the token, the token ID, and the source location it was lexed from
 struct LexerToken {
-  unsigned char *str;
+  char *str;
   int length;
   int tokenID;
   SourceLocation loc;

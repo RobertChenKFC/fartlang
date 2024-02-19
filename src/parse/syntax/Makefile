@@ -3,7 +3,7 @@ BIN_DIR = $(dir $(BIN))
 
 .PHONY: clean
 
-$(BIN): syntax.c | $(BIN_DIR)
+$(BIN): syntax.c handlers.c | $(BIN_DIR)
 	$(CC) -c -o $@ $(CFLAGS) $<
 
 $(BIN_DIR):

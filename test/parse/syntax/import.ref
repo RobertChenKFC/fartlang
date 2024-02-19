@@ -1,0 +1,25 @@
+SYNTAX_AST_KIND_MODULE: 1:1~4:55: 
+    SYNTAX_AST_KIND_IMPORT_DECLS: 1:1~4:55: 
+        SYNTAX_AST_KIND_IMPORT_DECL: 1:1~1:13: 
+            SYNTAX_AST_KIND_MODULE_PATH: 1:8~1:12: 
+                SYNTAX_AST_KIND_IDENTIFIER: 1:8~1:12: hello: 
+        SYNTAX_AST_KIND_IMPORT_DECL: 2:1~2:27: 
+            SYNTAX_AST_KIND_MODULE_PATH: 2:8~2:26: 
+                SYNTAX_AST_KIND_IDENTIFIER: 2:8~2:12: hello: 
+                SYNTAX_AST_KIND_IDENTIFIER: 2:14~2:18: world: 
+                SYNTAX_AST_KIND_IDENTIFIER: 2:20~2:26: package: 
+        SYNTAX_AST_KIND_IMPORT_DECL: 3:1~3:31: wildcard: 
+            SYNTAX_AST_KIND_MODULE_PATH: 3:8~3:28: 
+                SYNTAX_AST_KIND_IDENTIFIER: 3:8~3:11: long: 
+                SYNTAX_AST_KIND_IDENTIFIER: 3:13~3:18: module: 
+                SYNTAX_AST_KIND_IDENTIFIER: 3:20~3:23: path: 
+                SYNTAX_AST_KIND_IDENTIFIER: 3:25~3:28: test: 
+        SYNTAX_AST_KIND_IMPORT_DECL: 4:1~4:55: under namespace "fartlang": 
+            SYNTAX_AST_KIND_MODULE_PATH: 4:8~4:42: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:8~4:10: hey: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:12~4:19: fartlang: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:21~4:23: the: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:25~4:28: best: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:30~4:37: language: 
+                SYNTAX_AST_KIND_IDENTIFIER: 4:39~4:42: ever: 
+    SYNTAX_AST_KIND_CLASS_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 

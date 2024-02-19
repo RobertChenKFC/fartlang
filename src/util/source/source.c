@@ -103,3 +103,14 @@ void SourceLocationPrint(Source *source, int n, ...) {
   va_end(list);
 }
 
+SourcePoint SourcePointMax(SourcePoint *p1, SourcePoint *p2) {
+  if (p1->lineNo == p2->lineNo)
+    return p1->charNo > p2->charNo ? *p1 : *p2;
+  return p1->lineNo > p2->lineNo ? *p1 : *p2;
+}
+
+SourcePoint SourcePointMin(SourcePoint *p1, SourcePoint *p2) {
+  if (p1->lineNo == p2->lineNo)
+    return p1->charNo < p2->charNo ? *p1 : *p2;
+  return p1->lineNo < p2->lineNo ? *p1 : *p2;
+}

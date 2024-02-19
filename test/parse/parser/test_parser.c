@@ -11,10 +11,6 @@
 void NullDestructor(void *obj) {
 }
 
-void ParserObjTokDelete(ParserObject *obj) {
-  LexerTokenDelete(obj->token);
-}
-
 int ParserObjToInt(ParserObject *obj) {
   LexerToken *token;
   char c;
@@ -38,51 +34,62 @@ int ParserObjToInt(ParserObject *obj) {
 ParserDeclareHandler(NullHandler, rhs) {
   int numRHS = rhs->size;
   for (int i = 0; i < numRHS; ++i) {
-    ParserObject *obj = rhs->arr[i];
-    if (obj->type == PARSER_OBJECT_TOKEN)
-      LexerTokenDelete(obj->token);
+    LexerToken *token = rhs->arr[i];
+    if (token)
+      LexerTokenDelete(token);
   }
   return NULL;
 }
 
 ParserDeclareHandler(AddHandler, rhs) {
   assert(rhs->size == 3);
-  ParserObjTokDelete(rhs->arr[1]);
-  return (void*)(long long)(
-      ParserObjToInt(rhs->arr[0]) + ParserObjToInt(rhs->arr[2]));
+  LexerTokenDelete(rhs->arr[1]);
+  return (void*)(
+      (long long)rhs->arr[0] + (long long)rhs->arr[2]);
 }
 
 ParserDeclareHandler(SubHandler, rhs) {
   assert(rhs->size == 3);
-  ParserObjTokDelete(rhs->arr[1]);
-  return (void*)(long long)(
-      ParserObjToInt(rhs->arr[0]) - ParserObjToInt(rhs->arr[2]));
+  LexerTokenDelete(rhs->arr[1]);
+  return (void*)(
+      (long long)rhs->arr[0] - (long long)rhs->arr[2]);
 }
 
 ParserDeclareHandler(MulHandler, rhs) {
   assert(rhs->size == 3);
-  ParserObjTokDelete(rhs->arr[1]);
-  return (void*)(long long)(
-      ParserObjToInt(rhs->arr[0]) * ParserObjToInt(rhs->arr[2]));
+  LexerTokenDelete(rhs->arr[1]);
+  return (void*)(
+      (long long)rhs->arr[0] * (long long)rhs->arr[2]);
 }
 
 ParserDeclareHandler(DivHandler, rhs) {
   assert(rhs->size == 3);
-  ParserObjTokDelete(rhs->arr[1]);
-  return (void*)(long long)(
-      ParserObjToInt(rhs->arr[0]) / ParserObjToInt(rhs->arr[2]));
+  LexerTokenDelete(rhs->arr[1]);
+  return (void*)(
+      (long long)rhs->arr[0] / (long long)rhs->arr[2]);
 }
 
 ParserDeclareHandler(MoveHandler, rhs) {
   assert(rhs->size == 1);
-  return (void*)(long long)ParserObjToInt(rhs->arr[0]);
+  return rhs->arr[0];
 }
 
 ParserDeclareHandler(ParenHandler, rhs) {
   assert(rhs->size == 3);
-  ParserObjTokDelete(rhs->arr[0]);
-  ParserObjTokDelete(rhs->arr[2]);
-  return (void*)(long long)ParserObjToInt(rhs->arr[1]);
+  LexerTokenDelete(rhs->arr[0]);
+  LexerTokenDelete(rhs->arr[2]);
+  return rhs->arr[1];
+}
+
+ParserDeclareHandler(StrToIntHandler, rhs) {
+  assert(rhs->size == 1);
+  LexerToken *token = rhs->arr[0];
+  char c = token->str[token->length];
+  token->str[token->length] = '\0';
+  void *ret = (void*)atoll((const char*)token->str);
+  token->str[token->length] = c;
+  LexerTokenDelete(token);
+  return ret;
 }
 
 void test1() {
@@ -182,7 +189,7 @@ void test2() {
   ParserAddRuleAndHandler(
       parserConfig, ParenHandler, term, 3, tokLParen, addExpr, tokRParen);
   ParserAddRuleAndHandler(
-      parserConfig, MoveHandler, term, 1, tokNum);
+      parserConfig, StrToIntHandler, term, 1, tokNum);
   Parser *parser = ParserFromConfig(parserConfig);
 
   // 3. Parse file without error

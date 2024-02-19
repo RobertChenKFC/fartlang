@@ -1,0 +1,4 @@
+import hello;
+import hello.world.package;
+import long.module.path.test.*;
+import hey.fartlang.the.best.language.ever as fartlang;

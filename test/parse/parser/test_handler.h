@@ -7,3 +7,4 @@ ParserDeclareHandler(MulHandler, rhs);
 ParserDeclareHandler(DivHandler, rhs);
 ParserDeclareHandler(MoveHandler, rhs);
 ParserDeclareHandler(ParenHandler, rhs);
+ParserDeclareHandler(StrToIntHandler, rhs);

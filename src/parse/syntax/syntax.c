@@ -14,6 +14,9 @@
 // Constants
 const char *SYNTAX_LEXER_FILENAME = "lexer.txt";
 const char *SYNTAX_PARSER_FILENAME = "parser.txt";
+const char *SYNTAX_AST_KIND_STRS[] = {
+  SYNTAX_AST_FOREACH_KIND(SYNTAX_GEN_STR)
+};
 // Token ID's
 enum {
   ADD_ADD,
@@ -91,26 +94,26 @@ enum {
   THIS,
   FOR,
   IDENTIFIER,
-  NUM_TOKENS
+  NUM_TOKENS,
+  TOKEN_EOF = NUM_TOKENS
 };
 // CFG Variables
 enum {
-  MODULE,
+  MODULE = NUM_TOKENS + 1,
   IMPORT_DECLS,
   IMPORT_DECL,
   MODULE_PATH,
   MODULE_PATH_EXT,
   CLASS_DECLS,
   CLASS_DECL,
-  CLASS_VAR_DECL_STMTS,
-  CLASS_VAR_DECL_STMT,
-  CLASS_VAR_DECL_MODIFIERS,
+  VAR_DECL_STMTS,
   VAR_DECL_STMT,
   VAR_DECL,
   VAR_DECL_MODIFIERS,
+  VAR_DECL_MODIFIER,
   TYPE_OR_VAR,
   TYPE,
-  PRIMITIVE_TYPES,
+  PRIMITIVE_TYPE,
   TYPE_OR_VOID,
   TYPE_LIST,
   TYPE_LIST_NONEMPTY,
@@ -188,9 +191,6 @@ Lexer *SyntaxCreateLexer();
 // name SYNTAX_PARSER_FILENAME doesn't exist in the same directory as the
 // current executable, create one
 Parser *SyntaxCreateParser(Lexer *lexer);
-// A destructor for a single AST "node"; in other words, doesn't delete any
-// other node in the AST other than "node"; for use in Parser
-void SyntaxASTDestructor(void *node);
 
 char *SyntaxGetFilePath(const char *filename) {
   char *path = malloc(PATH_MAX);
@@ -486,6 +486,7 @@ Lexer *SyntaxCreateLexer() {
 
     // Cleanup
     RegexDelete(chain);
+    LexerConfigDelete(lexerConfig);
   } else {
     // Read lexer directly from file
     FILE *lexerFile = fopen(lexerFilePath, "r");
@@ -513,15 +514,14 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == MODULE_PATH_EXT);
       assert(CFGAddVariable(cfg) == CLASS_DECLS);
       assert(CFGAddVariable(cfg) == CLASS_DECL);
-      assert(CFGAddVariable(cfg) == CLASS_VAR_DECL_STMTS);
-      assert(CFGAddVariable(cfg) == CLASS_VAR_DECL_STMT);
-      assert(CFGAddVariable(cfg) == CLASS_VAR_DECL_MODIFIERS);
+      assert(CFGAddVariable(cfg) == VAR_DECL_STMTS);
       assert(CFGAddVariable(cfg) == VAR_DECL_STMT);
       assert(CFGAddVariable(cfg) == VAR_DECL);
       assert(CFGAddVariable(cfg) == VAR_DECL_MODIFIERS);
+      assert(CFGAddVariable(cfg) == VAR_DECL_MODIFIER);
       assert(CFGAddVariable(cfg) == TYPE_OR_VAR);
       assert(CFGAddVariable(cfg) == TYPE);
-      assert(CFGAddVariable(cfg) == PRIMITIVE_TYPES);
+      assert(CFGAddVariable(cfg) == PRIMITIVE_TYPE);
       assert(CFGAddVariable(cfg) == TYPE_OR_VOID);
       assert(CFGAddVariable(cfg) == TYPE_LIST);
       assert(CFGAddVariable(cfg) == TYPE_LIST_NONEMPTY);
@@ -577,7 +577,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
 
       // Add all CFG rules
       ParserConfig *parserConfig = ParserConfigNew(
-          lexer, cfg, true, SyntaxASTDestructor);
+          lexer, cfg, true, SyntaxASTDelete);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModule,
           MODULE, 2, IMPORT_DECLS, CLASS_DECLS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerImportDecls,
@@ -590,12 +590,187 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           MODULE_PATH, 3, MODULE_PATH, DOT, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModulePath,
           MODULE_PATH, 1, IDENTIFIER);
-      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
-          MODULE_PATH, 2, AS, IDENTIFIER);
-      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
-          MODULE_PATH, 2, DOT, MUL);
-      ParserAddRuleAndHander(parserConfig, SyntaxHandlerModulePathExt,
-          MODULE_PATH, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH_EXT, 2, AS, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH_EXT, 2, DOT, MUL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModulePathExt,
+          MODULE_PATH_EXT, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerClassDecls,
+          CLASS_DECLS, 2, CLASS_DECLS, CLASS_DECL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerClassDecls,
+          CLASS_DECLS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerClassDecl,
+          CLASS_DECL, 6, CLASS, IDENTIFIER, LBRACE,
+          VAR_DECL_STMTS, METHOD_DECLS, RBRACE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclStmts,
+          VAR_DECL_STMTS, 2, VAR_DECL_STMTS, VAR_DECL_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclStmts,
+          VAR_DECL_STMTS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclStmt,
+          VAR_DECL_STMT, 2, VAR_DECL, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDecl,
+          VAR_DECL, 3, VAR_DECL_MODIFIERS, TYPE_OR_VAR, VAR_INIT_LIST);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
+          VAR_DECL_MODIFIERS, 2, VAR_DECL_MODIFIERS, VAR_DECL_MODIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
+          VAR_DECL_MODIFIERS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          VAR_DECL_MODIFIER, 1, STATIC);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          VAR_DECL_MODIFIER, 1, CONST);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
+          TYPE, 1, PRIMITIVE_TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
+          TYPE, 1, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
+          TYPE, 3, TYPE, LBRACK, RBRACK);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
+          TYPE, 4, TYPE_OR_VOID, LPAREN, TYPE_LIST, RPAREN);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, I64);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, U64);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, I32);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, U32);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, I16);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, U16);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, I8);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, U8);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, F64);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, F32);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, BOOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          PRIMITIVE_TYPE, 1, ANY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_OR_VOID, 1, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
+          TYPE_OR_VOID, 1, VOID);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_LIST, 1, TYPE_LIST_NONEMPTY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTypeList,
+          TYPE_LIST, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTypeList,
+          TYPE_LIST_NONEMPTY, 3, TYPE_LIST_NONEMPTY, COMMA, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTypeList,
+          TYPE_LIST_NONEMPTY, 1, TYPE);
+      // TODO: continue here
+
+      /*
+<var-init-list>
+    ::= <var-init-list> "," <var-init>
+      | <var-init>
+
+<var-init>
+    ::= <identifier> "=" <expr>
+      | <identifier>
+
+<expr>
+    ::= <expr-ternary>
+
+<expr-ternary>
+    ::= <expr-logic-or> "if" <expr-logic-or> "else" <expr-logic-or>
+      | <expr-logic-or>
+
+<expr-logic-or>
+    ::= <expr-logic-or> "or" <expr-logic-and>
+      | <expr-logic-and>
+
+<expr-logic-and>
+    ::= <expr-logic-and> "and" <expr-bit-or>
+      | <expr-bit-or>
+
+<expr-bit-or>
+    ::= <expr-bit-or> "|" <expr-bit-xor>
+      | <expr-bit-xor>
+
+<expr-bit-xor>
+    ::= <expr-bit-xor> "^" <expr-bit-and>
+      | <expr-bit-and>
+
+<expr-bit-and>
+    ::= <expr-bit-and> "&" <expr-rel>
+      | <expr-rel>
+      
+<expr-rel>
+    ::= <expr-rel> <op-rel> <expr-shift>
+      | <expr-shift>
+
+<op-rel>
+    ::= "<" | "<= " | "==" | "!=" | ">" | ">="
+
+<expr-shift>
+    ::= <expr-add> <op-shift> <expr-add>
+      | <expr-add>
+
+<op-shift>
+    ::= "<<"
+      | ">>"
+
+<expr-add>
+    ::= <expr-add> <op-add> <expr-mul>
+      | <expr-mul>
+
+<op-add>
+    ::= "+"
+      | "-"
+
+<expr-mul>
+    ::= <expr-mul> <op-mul> <expr-unary-op>
+      | <expr-unary-op>
+
+<op-mul>
+    ::= "*"
+      | "/"
+      | "%"
+
+<expr-unary-op>
+    ::= <unary-op> <expr-access>
+
+<unary-op>
+    ::= "-"
+      | "!"
+      | "~"
+      | <cast-op>
+
+<cast-op>
+    ::= "(" type ")"
+
+<expr-access>
+    ::= <expr-access> "(" <expr-list> ")"
+      | <expr-access> "[" <expr> "]"
+      | <expr-access> "." <identifier>
+      | <expr-access> "++"
+      | <expr-access> "--"
+      | <term>
+
+<expr-list>
+	::= <expr-list-nonempty>
+	  |
+
+<expr-list-nonempty>
+	::= <expr-list-nonempty> "," <expr>
+	  | <expr>
+
+<term>
+    ::= <integer-literal>
+      | <float-literal>
+	  | "true" | "false"
+	  | "this" | "null"
+      | <identifier>
+      | <string-literals>
+      | <char-literal>
+      | "(" <expr> ")"
+      */
 
       // Create parser
       parser = ParserFromConfig(parserConfig);
@@ -608,7 +783,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
    } else {
      // Read parser directly from file
      FILE *parserFile = fopen(parserFilePath, "r");
-     parser = ParserFromFile(parserFile, lexer, SyntaxASTDestructor);
+     parser = ParserFromFile(parserFile, lexer, SyntaxASTDelete);
      fclose(parserFile);
    }
    free(parserFilePath);
@@ -617,43 +792,33 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
 
 SyntaxAST *SyntaxParseFile(FILE *file, const char *filename) {
   Lexer *lexer = SyntaxCreateLexer();
+  Parser *parser = SyntaxCreateParser(lexer);
 
-  // DEBUG
   LexerSetInputFile(lexer, file, filename);
-  while (true) {
-    LexerToken *token = LexerNextToken(lexer);
-    if (token == LEXER_TOKEN_EOF)
-      break;
-    printf("tokenID: %d, location: %d:%d ~ %d:%d, length: %d, token: ",
-           token->tokenID,
-           token->loc.from.lineNo + 1, token->loc.from.charNo + 1,
-           token->loc.to.lineNo + 1, token->loc.to.charNo + 1,
-           token->length);
-    for (int i = 0; i < token->length; ++i)
-      putchar(token->str[i]);
-    printf("\n");
-    LexerTokenDelete(token);
-  }
+  SyntaxAST *node = ParserParse(parser);
 
   LexerDelete(lexer);
-  return NULL;
+  ParserDelete(parser);
+  return node;
 }
 
-void SyntaxASTDestructor(void *node) {
+void SyntaxASTDelete(void *p) {
+  if (!p)
+    return;
+
+  SyntaxAST *node = p;
+  SyntaxASTDelete(node->firstChild);
+  SyntaxASTDelete(node->sibling);
+
   switch (node->kind) {
     case SYNTAX_AST_KIND_IDENTIFIER:
       free(node->string);
       break;
+    case SYNTAX_AST_KIND_IMPORT_DECL:
+      free(node->import.namespace);
+      break;
   }
   free(node);
-}
-
-void SyntaxASTDelete(SyntaxAST *node) {
-  if (!node)
-    return;
-  SyntaxASTDelete(node->child);
-  SyntaxASTDelete(node->sibling);
-  SyntaxASTDestructor(node);
 }
 
 #include "parse/syntax/handlers.c"

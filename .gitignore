@@ -7,3 +7,4 @@ main.toc
 bin/
 *.out
 *.svg
+*.swp

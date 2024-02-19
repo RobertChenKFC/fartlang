@@ -21,21 +21,35 @@ LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .
 ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
 CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 
-.PHONY: $(ALL_DEPS) test clean $(CLEAN_DEPS)
-
-OUTPUT_FILES = $(dir $(BIN))lexer.txt
-
-test: $(BIN)
-	$(BIN)
+SAVE_FILES = $(dir $(BIN))lexer.txt $(dir $(BIN))parser.txt
+REF_FILES = $(wildcard *.ref)
+OUT_FILES = $(REF_FILES:.ref=.out)
+TESTS = $(REF_FILES:.ref=.test)
+OUTPUT_FILES = $(SAVE_FILES) $(OUT_FILES)
 
 $(BIN): test_syntax.c $(ALL_DEPS)
 	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
+	rm -rf $(SAVE_FILES)
 
+.PHONY: test
+test: $(TESTS)
+
+$(TESTS): %.test: %.out %.ref
+	$(CMP) $(CMP_FLAGS) $*.out $*.ref
+
+$(OUT_FILES): $(BIN)
+	# DEBUG
+	# $(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
+	$(BIN)
+
+.PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:
 	$(MAKE) -C $*
 
+.PHONY: clean
 clean: $(CLEAN_DEPS)
 	rm -rf $(BIN) $(OUTPUT_FILES)
 
+.PHONY: $(CLEAN_DEPS)
 $(CLEAN_DEPS): %.clean:
 	$(MAKE) -C $* clean

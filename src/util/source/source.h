@@ -55,5 +55,9 @@ unsigned char SourceGetFromPoint(Source *source, SourcePoint *point);
 // color, then a pointer to a SourceLocation; this function prints the "n"
 // locations in different colors
 void SourceLocationPrint(Source *source, int n, ...);
+// Get the max of two source points (later point in the file) "p1" and "p2"
+SourcePoint SourcePointMax(SourcePoint *p1, SourcePoint *p2);
+// Get the min of two source points (earlier point in the file) "p1" and "p2"
+SourcePoint SourcePointMin(SourcePoint *p1, SourcePoint *p2);
 
 #endif // SOURCE_H

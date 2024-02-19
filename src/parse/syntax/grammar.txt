@@ -22,17 +22,10 @@
       |
 
 <class-decl>
-    ::= "class" <identifier> "{" <class-var-decl-stmts> <method-decls> "}"
+    ::= "class" <identifier> "{" <var-decl-stmts> <method-decls> "}"
 
-<class-var-decl-stmts>
-    ::= <class-var-decl-stmts> <class-var-decl-stmt>
-      | <class-var-decl-stmt>
-
-<class-var-decl-stmt>
-    ::= <class-var-decl-modifiers> <var-decl-stmt>
-
-<class-var-decl-modifiers>
-    ::= "static"
+<var-decl-stmts>
+    ::= <var-decl-stmts> <var-decl-stmt>
       |
 
 <var-decl-stmt>
@@ -42,6 +35,13 @@
     ::= <var-decl-modifiers> <type-or-var> <var-init-list>
 
 <var-decl-modifiers>
+    ::= <var-decl-static-modifier> <var-decl-const-modifier>
+
+<var-decl-static-modifier>
+    ::= "static"
+      |
+
+<var-decl-const-modifier>
     ::= "const"
       |
 
