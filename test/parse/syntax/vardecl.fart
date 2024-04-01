@@ -1,0 +1,32 @@
+class VarDecl {
+  # No modifiers
+  u8 c1;
+  # Static variable
+  static i8 c2;
+  # Constant variable
+  static u16 s1;
+  # Static and constant variable
+  static const i16 s2;
+  const static u32 i1;
+
+  # All primitive types
+  u64 x1;
+  i64 x1;
+  u32 x1;
+  i32 x1;
+  u16 x1;
+  i16 x1;
+  u8 x1;
+  i8 x1;
+  # Custom types
+  Vector v1;
+  Vector.Iterator it;
+  Vector.Iterator[] itArr;
+  bool (Math.Int, Math.Int) lt;
+  # Auto type deduction
+  var v2;
+}
+
+class VarDef {
+  
+}

@@ -17,6 +17,12 @@ const char *SYNTAX_PARSER_FILENAME = "parser.txt";
 const char *SYNTAX_AST_KIND_STRS[] = {
   SYNTAX_AST_FOREACH_KIND(SYNTAX_GEN_STR)
 };
+const char *SYNTAX_TYPE_STRS[] = {
+  SYNTAX_FOREACH_TYPE(SYNTAX_GEN_STR)
+};
+const char *SYNTAX_OP_STRS[] = {
+  SYNTAX_FOREACH_OP(SYNTAX_GEN_STR)
+};
 // Token ID's
 enum {
   ADD_ADD,
@@ -93,6 +99,7 @@ enum {
   FALSE,
   THIS,
   FOR,
+  NULL_LITERAL,
   IDENTIFIER,
   NUM_TOKENS,
   TOKEN_EOF = NUM_TOKENS
@@ -127,16 +134,10 @@ enum {
   EXPR_BIT_XOR,
   EXPR_BIT_AND,
   EXPR_REL,
-  OP_REL,
   EXPR_SHIFT,
-  OP_SHIFT,
   EXPR_ADD,
-  OP_ADD,
   EXPR_MUL,
-  OP_MUL,
   EXPR_UNARY_OP,
-  UNARY_OP,
-  CAST_OP,
   EXPR_ACCESS,
   EXPR_LIST,
   EXPR_LIST_NONEMPTY,
@@ -318,14 +319,15 @@ Lexer *SyntaxCreateLexer() {
             i64_, u64_, i32_, u32_, i16_, u16_, i8_, u8_))));
     ADD_REGEX_CHAIN(chain, decimals_, RegexFromConcat(2,
         RegexZeroOrMore(REGEX_DIGITS), digitsNo0_));
-    ADD_REGEX_CHAIN(chain, float_literal_, RegexFromConcat(2,
+    ADD_REGEX_CHAIN(chain, float_literal_, RegexFromConcat(3,
         RegexFromUnion(2,
             RegexFromConcat(2,
                 int_literal_dec_, RegexZeroOrOne(RegexFromConcat(2,
                     dot_, RegexZeroOrOne(decimals_)))),
             RegexFromConcat(2, dot_, decimals_)),
         RegexZeroOrOne(RegexFromConcat(3,
-            RegexFromLetter('e'), RegexZeroOrOne(sub_), int_literal_dec_))));
+            RegexFromLetter('e'), RegexZeroOrOne(sub_), int_literal_dec_)),
+        RegexZeroOrOne(RegexFromUnion(2, f64_, f32_))));
     RegexRange *quoteRange = RegexRangeFromLetter('"');
     RegexRange *tickRange = RegexRangeFromLetter('\'');
     RegexRange *backslashRange = RegexRangeFromLetter('\\');
@@ -366,6 +368,7 @@ Lexer *SyntaxCreateLexer() {
     ADD_REGEX_CHAIN(chain, false_, RegexFromString("false"));
     ADD_REGEX_CHAIN(chain, this_, RegexFromString("this"));
     ADD_REGEX_CHAIN(chain, for_, RegexFromString("for"));
+    ADD_REGEX_CHAIN(chain, null_literal_, RegexFromString("null"));
     RegexRange *newlineRange = RegexRangeFromLetter('\n');
     RegexCharacterClass *newlineClass = RegexCharacterClassFromRanges(1,
         newlineRange);
@@ -475,6 +478,7 @@ Lexer *SyntaxCreateLexer() {
     assert(LexerConfigAddRegex(lexerConfig, false_) == FALSE);
     assert(LexerConfigAddRegex(lexerConfig, this_) == THIS);
     assert(LexerConfigAddRegex(lexerConfig, for_) == FOR);
+    assert(LexerConfigAddRegex(lexerConfig, null_literal_) == NULL_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, identifier_) == IDENTIFIER);
     LexerConfigSetIgnoreRegex(lexerConfig, ignore_);
 
@@ -535,16 +539,10 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == EXPR_BIT_XOR);
       assert(CFGAddVariable(cfg) == EXPR_BIT_AND);
       assert(CFGAddVariable(cfg) == EXPR_REL);
-      assert(CFGAddVariable(cfg) == OP_REL);
       assert(CFGAddVariable(cfg) == EXPR_SHIFT);
-      assert(CFGAddVariable(cfg) == OP_SHIFT);
       assert(CFGAddVariable(cfg) == EXPR_ADD);
-      assert(CFGAddVariable(cfg) == OP_ADD);
       assert(CFGAddVariable(cfg) == EXPR_MUL);
-      assert(CFGAddVariable(cfg) == OP_MUL);
       assert(CFGAddVariable(cfg) == EXPR_UNARY_OP);
-      assert(CFGAddVariable(cfg) == UNARY_OP);
-      assert(CFGAddVariable(cfg) == CAST_OP);
       assert(CFGAddVariable(cfg) == EXPR_ACCESS);
       assert(CFGAddVariable(cfg) == EXPR_LIST);
       assert(CFGAddVariable(cfg) == EXPR_LIST_NONEMPTY);
@@ -622,7 +620,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
           TYPE, 1, PRIMITIVE_TYPE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
-          TYPE, 1, IDENTIFIER);
+          TYPE, 1, MODULE_PATH);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
           TYPE, 3, TYPE, LBRACK, RBRACK);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
@@ -663,114 +661,128 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           TYPE_LIST_NONEMPTY, 3, TYPE_LIST_NONEMPTY, COMMA, TYPE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTypeList,
           TYPE_LIST_NONEMPTY, 1, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInitList,
+          VAR_INIT_LIST, 3, VAR_INIT_LIST, COMMA, VAR_INIT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInitList,
+          VAR_INIT_LIST, 1, VAR_INIT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInit,
+          VAR_INIT, 3, IDENTIFIER, EQ, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInit,
+          VAR_INIT, 1, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR, 1, EXPR_TERNARY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprTernary,
+          EXPR_TERNARY, 5, EXPR_LOGIC_OR, IF, EXPR_LOGIC_OR,
+          ELSE, EXPR_LOGIC_OR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_TERNARY, 1, EXPR_LOGIC_OR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLogicOr,
+          EXPR_LOGIC_OR, 3, EXPR_LOGIC_OR, OR, EXPR_LOGIC_AND);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_LOGIC_OR, 1, EXPR_LOGIC_AND);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLogicOr,
+          EXPR_LOGIC_AND, 3, EXPR_LOGIC_AND, AND, EXPR_BIT_OR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_LOGIC_AND, 1, EXPR_BIT_OR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitOr,
+          EXPR_BIT_OR, 3, EXPR_BIT_OR, BIT_OR, EXPR_BIT_XOR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_BIT_OR, 1, EXPR_BIT_XOR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitXor,
+          EXPR_BIT_XOR, 3, EXPR_BIT_XOR, BIT_XOR, EXPR_BIT_AND);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_BIT_XOR, 1, EXPR_BIT_AND);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitXor,
+          EXPR_BIT_AND, 3, EXPR_BIT_AND, BIT_AND, EXPR_REL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_BIT_AND, 1, EXPR_REL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLt,
+          EXPR_REL, 3, EXPR_REL, LT, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLeq,
+          EXPR_REL, 3, EXPR_REL, LEQ, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprEq,
+          EXPR_REL, 3, EXPR_REL, EQEQ, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNeq,
+          EXPR_REL, 3, EXPR_REL, NEQ, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprGt,
+          EXPR_REL, 3, EXPR_REL, GT, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprGeq,
+          EXPR_REL, 3, EXPR_REL, GEQ, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_REL, 1, EXPR_SHIFT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLshift,
+          EXPR_SHIFT, 3, EXPR_SHIFT, LSHIFT, EXPR_ADD);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprRshift,
+          EXPR_SHIFT, 3, EXPR_SHIFT, RSHIFT, EXPR_ADD);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_SHIFT, 1, EXPR_ADD);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprAdd,
+          EXPR_ADD, 3, EXPR_ADD, ADD, EXPR_MUL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprSub,
+          EXPR_ADD, 3, EXPR_ADD, SUB, EXPR_MUL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_ADD, 1, EXPR_MUL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMul,
+          EXPR_MUL, 3, EXPR_MUL, MUL, EXPR_UNARY_OP);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprDiv,
+          EXPR_MUL, 3, EXPR_MUL, DIV, EXPR_UNARY_OP);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMod,
+          EXPR_MUL, 3, EXPR_MUL, MOD, EXPR_UNARY_OP);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_MUL, 1, EXPR_UNARY_OP);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNeg,
+          EXPR_UNARY_OP, 2, SUB, EXPR_ACCESS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNot,
+          EXPR_UNARY_OP, 2, NOT, EXPR_ACCESS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitNot,
+          EXPR_UNARY_OP, 2, BIT_NOT, EXPR_ACCESS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
+          EXPR_UNARY_OP, 4, LPAREN, TYPE, RPAREN, EXPR_ACCESS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_UNARY_OP, 1, EXPR_ACCESS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCall,
+          EXPR_ACCESS, 4, EXPR_ACCESS, LPAREN, EXPR_LIST, RPAREN);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprArrayAccess,
+          EXPR_ACCESS, 4, EXPR_ACCESS, LBRACK, EXPR, RBRACK);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprArrayType,
+          EXPR_ACCESS, 3, EXPR_ACCESS, LBRACK, RBRACK);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMemberAccess,
+          EXPR_ACCESS, 3, EXPR_ACCESS, DOT, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprInc,
+          EXPR_ACCESS, 2, EXPR_ACCESS, ADD_ADD);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprDec,
+          EXPR_ACCESS, 2, EXPR_ACCESS, SUB_SUB);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_ACCESS, 1, TERM);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_LIST, 1, EXPR_LIST_NONEMPTY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprList,
+          EXPR_LIST, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprList,
+          EXPR_LIST_NONEMPTY, 3, EXPR_LIST_NONEMPTY, COMMA, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprList,
+          EXPR_LIST_NONEMPTY, 1, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerIntLiteral,
+          TERM, 1, INT_LITERAL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerFloatLiteral,
+          TERM, 1, FLOAT_LITERAL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTrueLiteral,
+          TERM, 1, TRUE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerFalseLiteral,
+          TERM, 1, FALSE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerThisLiteral,
+          TERM, 1, THIS);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerNullLiteral,
+          TERM, 1, NULL_LITERAL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerStringLiteral,
+          TERM, 1, STRING_LITERAL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerCharLiteral,
+          TERM, 1, CHAR_LITERAL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TERM, 1, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenExpr,
+          TERM, 3, LPAREN, EXPR, RPAREN);
       // TODO: continue here
-
-      /*
-<var-init-list>
-    ::= <var-init-list> "," <var-init>
-      | <var-init>
-
-<var-init>
-    ::= <identifier> "=" <expr>
-      | <identifier>
-
-<expr>
-    ::= <expr-ternary>
-
-<expr-ternary>
-    ::= <expr-logic-or> "if" <expr-logic-or> "else" <expr-logic-or>
-      | <expr-logic-or>
-
-<expr-logic-or>
-    ::= <expr-logic-or> "or" <expr-logic-and>
-      | <expr-logic-and>
-
-<expr-logic-and>
-    ::= <expr-logic-and> "and" <expr-bit-or>
-      | <expr-bit-or>
-
-<expr-bit-or>
-    ::= <expr-bit-or> "|" <expr-bit-xor>
-      | <expr-bit-xor>
-
-<expr-bit-xor>
-    ::= <expr-bit-xor> "^" <expr-bit-and>
-      | <expr-bit-and>
-
-<expr-bit-and>
-    ::= <expr-bit-and> "&" <expr-rel>
-      | <expr-rel>
-      
-<expr-rel>
-    ::= <expr-rel> <op-rel> <expr-shift>
-      | <expr-shift>
-
-<op-rel>
-    ::= "<" | "<= " | "==" | "!=" | ">" | ">="
-
-<expr-shift>
-    ::= <expr-add> <op-shift> <expr-add>
-      | <expr-add>
-
-<op-shift>
-    ::= "<<"
-      | ">>"
-
-<expr-add>
-    ::= <expr-add> <op-add> <expr-mul>
-      | <expr-mul>
-
-<op-add>
-    ::= "+"
-      | "-"
-
-<expr-mul>
-    ::= <expr-mul> <op-mul> <expr-unary-op>
-      | <expr-unary-op>
-
-<op-mul>
-    ::= "*"
-      | "/"
-      | "%"
-
-<expr-unary-op>
-    ::= <unary-op> <expr-access>
-
-<unary-op>
-    ::= "-"
-      | "!"
-      | "~"
-      | <cast-op>
-
-<cast-op>
-    ::= "(" type ")"
-
-<expr-access>
-    ::= <expr-access> "(" <expr-list> ")"
-      | <expr-access> "[" <expr> "]"
-      | <expr-access> "." <identifier>
-      | <expr-access> "++"
-      | <expr-access> "--"
-      | <term>
-
-<expr-list>
-	::= <expr-list-nonempty>
-	  |
-
-<expr-list-nonempty>
-	::= <expr-list-nonempty> "," <expr>
-	  | <expr>
-
-<term>
-    ::= <integer-literal>
-      | <float-literal>
-	  | "true" | "false"
-	  | "this" | "null"
-      | <identifier>
-      | <string-literals>
-      | <char-literal>
-      | "(" <expr> ")"
-      */
 
       // Create parser
       parser = ParserFromConfig(parserConfig);

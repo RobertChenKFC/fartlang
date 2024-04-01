@@ -11,6 +11,7 @@
 typedef struct ParserObject ParserObject;
 typedef struct ParserConfig ParserConfig;
 typedef struct Parser Parser;
+typedef struct ParserRHS ParserRHS;
 
 // Constants
 extern void *PARSER_OBJECT_FAILURE;
@@ -33,12 +34,11 @@ struct ParserObject {
   ParserObjectType type;
 };
 
-// A function type that handles taking a list "rhs" of ParserObjects that are
-// parsed by the parser and return a new custom user object; note that if any
-// of the tokens or custom user objects in any ParserObject in "rhs" is not used
-// (will not be contained in the returned new custom object and deleted later),
-// it must be deleted
-typedef void *(*ParserHandler)(Vector *rhs);
+// A function type that handles taking a "rhs". More info on "rhs" can be read
+// in the description of ParserRHS. Note that if any of the objects in
+// "rhs->arr" is not used (will not be contained in the returned new custom
+// object and deleted later), it must be deleted
+typedef void *(*ParserHandler)(ParserRHS *rhs);
 
 // A function type that deletes the a user created custom "object"
 typedef void (*ParserObjectDestructor)(void *object);
@@ -86,6 +86,16 @@ struct Parser {
   Vector *handlers;
   Vector *handlerNames;
   ParserObjectDestructor destructor;
+};
+
+// A struct containing all the things that may be used by a parser handler,
+// including the "arr" of RHS terminals (LexerToken*) and non-terminals
+// (custom objects), the number of RHS stored in "size", and the "parser"
+// object itself just in case a warning/error needs to be reported
+struct ParserRHS {
+  void **arr;
+  int size;
+  Parser *parser;
 };
 
 // A wrapper to CFGAddRule, and includes extra arguments "config" and

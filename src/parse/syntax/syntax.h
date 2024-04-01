@@ -3,6 +3,7 @@
 
 #include "util/source/source.h"
 #include <stdio.h>
+#include <stdint.h>
 
 // Forward declarations
 typedef struct SyntaxAST SyntaxAST;
@@ -25,7 +26,12 @@ typedef struct SyntaxAST SyntaxAST;
   ENUM(SYNTAX_AST_KIND_STMTS) \
   ENUM(SYNTAX_AST_KIND_VAR_DECL) \
   ENUM(SYNTAX_AST_KIND_TYPE) \
-  ENUM(SYNTAX_AST_KIND_TYPE_LIST)
+  ENUM(SYNTAX_AST_KIND_TYPE_LIST) \
+  ENUM(SYNTAX_AST_KIND_VAR_INIT_LIST) \
+  ENUM(SYNTAX_AST_KIND_VAR_INIT) \
+  ENUM(SYNTAX_AST_KIND_OP) \
+  ENUM(SYNTAX_AST_KIND_EXPR_LIST) \
+  ENUM(SYNTAX_AST_KIND_LITERAL)
 typedef enum {
   SYNTAX_AST_FOREACH_KIND(SYNTAX_GEN_ENUM)
 } SyntaxASTKind;
@@ -38,22 +44,64 @@ enum {
 };
 
 // Types
+#define SYNTAX_FOREACH_TYPE(ENUM) \
+  ENUM(SYNTAX_TYPE_I64) \
+  ENUM(SYNTAX_TYPE_U64) \
+  ENUM(SYNTAX_TYPE_I32) \
+  ENUM(SYNTAX_TYPE_U32) \
+  ENUM(SYNTAX_TYPE_I16) \
+  ENUM(SYNTAX_TYPE_U16) \
+  ENUM(SYNTAX_TYPE_I8) \
+  ENUM(SYNTAX_TYPE_U8) \
+  ENUM(SYNTAX_TYPE_F64) \
+  ENUM(SYNTAX_TYPE_F32) \
+  ENUM(SYNTAX_TYPE_BOOL) \
+  ENUM(SYNTAX_TYPE_ANY) \
+  ENUM(SYNTAX_TYPE_THIS) \
+  ENUM(SYNTAX_TYPE_NULL) \
+  ENUM(SYNTAX_TYPE_STR) \
+  ENUM(SYNTAX_TYPE_VOID) \
+  ENUM(SYNTAX_TYPE_IDENTIFIER)
 typedef enum {
-  SYNTAX_TYPE_I64,
-  SYNTAX_TYPE_U64,
-  SYNTAX_TYPE_I32,
-  SYNTAX_TYPE_U32,
-  SYNTAX_TYPE_I16,
-  SYNTAX_TYPE_U16,
-  SYNTAX_TYPE_I8,
-  SYNTAX_TYPE_U8,
-  SYNTAX_TYPE_F64,
-  SYNTAX_TYPE_F32,
-  SYNTAX_TYPE_BOOL,
-  SYNTAX_TYPE_ANY,
-  SYNTAX_TYPE_VOID,
-  SYNTAX_TYPE_IDENTIFIER,
+  SYNTAX_FOREACH_TYPE(SYNTAX_GEN_ENUM)
 } SyntaxType;
+extern const char *SYNTAX_TYPE_STRS[];
+
+// Operators
+#define SYNTAX_FOREACH_OP(ENUM) \
+  ENUM(SYNTAX_OP_TERNARY) \
+  ENUM(SYNTAX_OP_LOGIC_OR) \
+  ENUM(SYNTAX_OP_LOGIC_AND) \
+  ENUM(SYNTAX_OP_BIT_OR) \
+  ENUM(SYNTAX_OP_BIT_XOR) \
+  ENUM(SYNTAX_OP_BIT_AND) \
+  ENUM(SYNTAX_OP_LT) \
+  ENUM(SYNTAX_OP_LE) \
+  ENUM(SYNTAX_OP_EQ) \
+  ENUM(SYNTAX_OP_NEQ) \
+  ENUM(SYNTAX_OP_GT) \
+  ENUM(SYNTAX_OP_GE) \
+  ENUM(SYNTAX_OP_LSHIFT) \
+  ENUM(SYNTAX_OP_RSHIFT) \
+  ENUM(SYNTAX_OP_ADD) \
+  ENUM(SYNTAX_OP_SUB) \
+  ENUM(SYNTAX_OP_MUL) \
+  ENUM(SYNTAX_OP_DIV) \
+  ENUM(SYNTAX_OP_MOD) \
+  ENUM(SYNTAX_OP_NEG) \
+  ENUM(SYNTAX_OP_NOT) \
+  ENUM(SYNTAX_OP_BIT_NOT) \
+  ENUM(SYNTAX_OP_CAST) \
+  ENUM(SYNTAX_OP_CALL) \
+  ENUM(SYNTAX_OP_ARRAY_ACCESS) \
+  ENUM(SYNTAX_OP_ARRAY_TYPE) \
+  ENUM(SYNTAX_OP_MEMBER_ACCESS) \
+  ENUM(SYNTAX_OP_INC) \
+  ENUM(SYNTAX_OP_DEC)
+typedef enum {
+  SYNTAX_FOREACH_OP(SYNTAX_GEN_ENUM)
+} SyntaxOp;
+extern const char *SYNTAX_OP_STRS[];
 
 // A structure to store the AST of a fartlang program. This structs stores
 // any node in the AST. A node has pointers "firstChild" and "lastChild" that
@@ -72,7 +120,8 @@ struct SyntaxAST {
   SourceLocation loc;
   // TODO: fill this in later
   union {
-    // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_CLASS_DECL
+    // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_CLASS_DECL,
+    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_OP (SYNTAX_OP_MEMBER_ACCESS)
     char *string; 
     // SYNTAX_AST_KIND_IMPORT_DECL
     struct {
@@ -86,6 +135,17 @@ struct SyntaxAST {
       SyntaxType baseType;
       int arrayLevels;
     } type;
+    // SYNTAX_AST_KIND_OP
+    SyntaxOp op;
+    // SYNTAX_AST_KIND_LITERAL
+    struct {
+      SyntaxType type;
+      uint64_t intVal;
+      double floatVal;
+      bool boolVal;
+      char *strVal;
+      int8_t charVal;
+    } literal;
   };
 };
 

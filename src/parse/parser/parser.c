@@ -751,7 +751,7 @@ void ParserSyntaxError(
     fprintf(stderr, "Unexpected end of file.\n");
   } else {
     fprintf(stderr, "Unexpected token '"SOURCE_COLOR_RED);
-    unsigned char *tokenString = token->str;
+    char *tokenString = token->str;
     int tokenLength = token->length;
     for (int i = 0; i < tokenLength; ++i)
       fputc(tokenString[i], stderr);
@@ -809,6 +809,8 @@ void *ParserParse(Parser *parser) {
   ParserObjectDestructor destructor = parser->destructor;
   Vector *currentRHS = VectorNew();
 
+  ParserRHS parserRHS;
+  parserRHS.parser = parser;
   int eofTokenID = parser->maxTokenID;
   LexerToken *token = LexerNextToken(lexer);
   if (!token)
@@ -864,7 +866,9 @@ void *ParserParse(Parser *parser) {
       currentState = (int)(long long)stack->arr[stack->size - 1];
 
       ParserHandler handler = handlersArr[ruleNo];
-      void *obj = handler(currentRHS);
+      parserRHS.arr = currentRHS->arr;
+      parserRHS.size = currentRHS->size;
+      void *obj = handler(&parserRHS);
       ParserObject *parserObj = ParserObjectFromObject(obj);
       pos = transitionOffsets[currentState] + lhs;
 

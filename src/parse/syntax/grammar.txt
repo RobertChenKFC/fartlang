@@ -51,7 +51,7 @@
 
 <type>
     ::= <primitive-types>
-      | <identifier>
+      | <module-path>
       | <type> "[" "]"
       | <type-or-void> "(" <type-list> ")"
 
@@ -154,6 +154,7 @@
 <expr-access>
     ::= <expr-access> "(" <expr-list> ")"
       | <expr-access> "[" <expr> "]"
+      | <expr-access> "[" "]"
       | <expr-access> "." <identifier>
       | <expr-access> "++"
       | <expr-access> "--"
@@ -170,8 +171,8 @@
 <term>
     ::= <integer-literal>
       | <float-literal>
-	  | "true" | "false"
-	  | "this" | "null"
+      | "true" | "false"
+      | "this" | "null"
       | <identifier>
       | <string-literals>
       | <char-literal>

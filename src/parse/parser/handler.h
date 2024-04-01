@@ -26,5 +26,5 @@
   } while (0)
 #else
 #define ParserDeclareHandler(handler, rhs) \
-  void *handler(Vector *rhs)
+  void *handler(ParserRHS *rhs)
 #endif
