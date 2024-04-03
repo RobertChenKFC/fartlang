@@ -153,10 +153,10 @@ ParserDeclareHandler(SyntaxHandlerClassDecl, rhs) {
   LexerToken *lbrace_ = rhs->arr[2];
   SyntaxAST *classVarDeclStmts = rhs->arr[3];
   SyntaxAST *methodDecls = rhs->arr[4];
-  LexerToken *rbrace_ = rhs->arr[4];
+  LexerToken *rbrace_ = rhs->arr[5];
   assert(class_ && class_->tokenID == CLASS);
   assert(identifier_ && identifier_->tokenID == IDENTIFIER);
-  assert(lbrace_ && identifier_->tokenID == LBRACE);
+  assert(lbrace_ && lbrace_->tokenID == LBRACE);
   assert(classVarDeclStmts);
   assert(methodDecls);
   assert(rbrace_ && rbrace_->tokenID == RBRACE);
@@ -239,11 +239,28 @@ ParserDeclareHandler(SyntaxHandlerMove, rhs) {
   return rhs->arr[0];
 }
 
+ParserDeclareHandler(SyntaxHandlerVar, rhs) {
+  assert(rhs->size == 1);
+  LexerToken *var_ = rhs->arr[0];
+
+  SyntaxAST *type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
+  type->type.baseType = SYNTAX_TYPE_VAR;
+  type->type.arrayLevels = 0;
+  type->loc = var_->loc;
+  LexerTokenDelete(var_);
+  return type;
+}
+
 ParserDeclareHandler(SyntaxHandlerType, rhs) {
   SyntaxAST *type;
   if (rhs->size == 1) {
-    type = rhs->arr[0];
-    assert(type);
+    SyntaxAST *modulePath = rhs->arr[0];
+    assert(modulePath);
+
+    type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
+    SyntaxASTAppend(type, modulePath);
+    type->type.baseType = SYNTAX_TYPE_MODULE_PATH;
+    type->type.arrayLevels = 0;
   } else if (rhs->size == 3) {
     type = rhs->arr[0];
     LexerToken *lbrack_ = rhs->arr[1];
@@ -251,26 +268,29 @@ ParserDeclareHandler(SyntaxHandlerType, rhs) {
     assert(lbrack_ && lbrack_->tokenID == LBRACK);
     assert(rbrack_ && rbrack_->tokenID == RBRACK);
     ++type->type.arrayLevels;
+    type->loc.to = rbrack_->loc.to;
 
     LexerTokenDelete(lbrack_);
     LexerTokenDelete(rbrack_);
   } else {
     assert(rhs->size == 4);
     SyntaxAST *retType = rhs->arr[0];
-    LexerToken *lbrace_ = rhs->arr[1];
+    LexerToken *lparen_ = rhs->arr[1];
     SyntaxAST *typeList = rhs->arr[2];
-    LexerToken *rbrace_ = rhs->arr[3];
+    LexerToken *rparen_ = rhs->arr[3];
     assert(retType);
-    assert(lbrace_ && lbrace_->tokenID == LBRACE);
+    assert(lparen_ && lparen_->tokenID == LPAREN);
     assert(typeList);
-    assert(rbrace_ && rbrace_->tokenID == RBRACE);
+    assert(rparen_ && rparen_->tokenID == RPAREN);
 
     type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
     SyntaxASTAppend(type, retType);
     SyntaxASTAppend(type, typeList);
-    type->loc.to = rbrace_->loc.to;
-    LexerTokenDelete(lbrace_);
-    LexerTokenDelete(rbrace_);
+    type->type.baseType = SYNTAX_TYPE_FUNC;
+    type->type.arrayLevels = 0;
+    type->loc.to = rparen_->loc.to;
+    LexerTokenDelete(lparen_);
+    LexerTokenDelete(rparen_);
   }
 
   return type;
@@ -470,23 +490,19 @@ ParserDeclareHandler(SyntaxHandlerExprBitNot, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerExprCast, rhs) {
-  assert(rhs->size == 4);
-  LexerToken *lParen_ = rhs->arr[0];
-  SyntaxAST *type = rhs->arr[1];
-  LexerToken *rParen_ = rhs->arr[2];
-  SyntaxAST *expr = rhs->arr[3];
-  assert(lParen_ && lParen_->tokenID == LPAREN);
-  assert(type);
-  assert(rParen_ && rParen_->tokenID == RPAREN);
+  assert(rhs->size == 3);
+  SyntaxAST *expr = rhs->arr[0];
+  LexerToken *as_ = rhs->arr[1];
+  SyntaxAST *type = rhs->arr[2];
   assert(expr);
+  assert(as_ && as_->tokenID == AS);
+  assert(type);
 
   SyntaxAST *op = SyntaxASTNew(SYNTAX_AST_KIND_OP);
-  op->loc.from = lParen_->loc.from;
   op->op = SYNTAX_OP_CAST;
-  SyntaxASTAppend(op, type);
   SyntaxASTAppend(op, expr);
-  LexerTokenDelete(lParen_);
-  LexerTokenDelete(rParen_);
+  SyntaxASTAppend(op, type);
+  LexerTokenDelete(as_);
   return op;
 }
 
@@ -661,8 +677,8 @@ ParserDeclareHandler(SyntaxHandlerIntLiteral, rhs) {
   }
 
   // Use the type postfix to determine the maximum value of this type
-  uint64_t maxVal;
-  SyntaxType type;
+  uint64_t maxVal = INT32_MAX;
+  SyntaxType type = SYNTAX_TYPE_I32;
   static const char *postfixes[] = {
     "i64", "u64", "i32", "u32", "i16", "u16", "i8", "u8", NULL
   };
@@ -681,6 +697,7 @@ ParserDeclareHandler(SyntaxHandlerIntLiteral, rhs) {
       break;
     }
   }
+  assert(maxVal != 0);
 
   if (outOfRange || val > maxVal) {
     // TODO: perhaps make this into an error, but would have to handle parser
@@ -736,7 +753,8 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     } else if (str[j] == '+') {
       ++j;
     }
-    for (; j < length; ++j) {
+
+    for (; j < length && '0' <= str[j] && str[j] <= '9'; ++j) {
       if (exponent > INT_MAX / 10) {
         exponentOutOfRange = true;
         exponent = 0;
@@ -749,6 +767,7 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
         exponent = 0;
         break;
       }
+      exponent += digit;
     }
     if (neg)
       exponent = -exponent;
@@ -758,7 +777,12 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   // dot, it is no longer in the base of the float literal, then we shift the
   // dot as far left/right as possible, and store the remaining difference in
   // "exponentDiff"
-  int shiftedDotPos = dotPos + exponent, exponentDiff = 0;
+  int shiftedDotPos;
+  if (exponent > 0)
+    shiftedDotPos = dotPos + exponent + 1;
+  else
+    shiftedDotPos = dotPos + exponent;
+  int exponentDiff = 0;
   if (shiftedDotPos < 0) {
     exponentDiff = shiftedDotPos;
     shiftedDotPos = 0;
@@ -799,7 +823,7 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   for (; exponentDiff < 0; ++exponentDiff)
     val *= 0.1;
 
-  // Extract the type postfix, default if f32 if empty
+  // Extract the type postfix, default is f32 if empty
   char postfix[4] = "f32";
   for (int i = expPos; i < length; ++i) {
     if (str[i] == 'f') {
@@ -812,8 +836,8 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   }
 
   // Use the type postfix to determine the maximum value of this type
-  double maxVal;
-  SyntaxType type;
+  double maxVal = FLT_MAX;
+  SyntaxType type = SYNTAX_TYPE_F32;
   static const char *postfixes[] = { "f32", "f64", NULL };
   static const double maxVals[] = { FLT_MAX, DBL_MAX };
   static const SyntaxType types[] = { SYNTAX_TYPE_F32, SYNTAX_TYPE_F64 };
@@ -852,13 +876,15 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerTrueLiteral, rhs) {
-  SyntaxAST *literal = SyntaxHandlerLiteral(rhs, TRUE, SYNTAX_TYPE_BOOL);
+  SyntaxAST *literal = SyntaxHandlerLiteral(
+      rhs, TRUE_LITERAL, SYNTAX_TYPE_BOOL);
   literal->literal.boolVal = true;
   return literal;
 }
 
 ParserDeclareHandler(SyntaxHandlerFalseLiteral, rhs) {
-  SyntaxAST *literal = SyntaxHandlerLiteral(rhs, TRUE, SYNTAX_TYPE_BOOL);
+  SyntaxAST *literal = SyntaxHandlerLiteral(
+      rhs, FALSE_LITERAL, SYNTAX_TYPE_BOOL);
   literal->literal.boolVal = false;
   return literal;
 }
@@ -878,7 +904,8 @@ ParserDeclareHandler(SyntaxHandlerStringLiteral, rhs) {
 
   char *str = strToken->str + 1;
   int length = strToken->length;
-  str[length - 1] = '\0';
+  assert(str[-1] == '"' && str[length - 2] == '"');
+  str[length - 2] = '\0';
   char *strVal = malloc(length + 1);
   int i = 0;
   bool isInvalid = false;
@@ -891,7 +918,7 @@ ParserDeclareHandler(SyntaxHandlerStringLiteral, rhs) {
       strVal[i++] = curChar;
     }
   }
-  str[length - 1] = '"';
+  strToken->str[length - 1] = '"';
 
   if (isInvalid) {
     // TODO: turn this into an error (similar to int literal); furthermore,
@@ -908,6 +935,8 @@ ParserDeclareHandler(SyntaxHandlerStringLiteral, rhs) {
 
   SyntaxAST *strLiteral = SyntaxASTNew(SYNTAX_AST_KIND_LITERAL);
   strLiteral->literal.type = SYNTAX_TYPE_STR;
+  strLiteral->literal.strVal = strVal;
+  strLiteral->loc = strToken->loc;
   LexerTokenDelete(strToken);
   return strLiteral;
 }
@@ -919,14 +948,15 @@ ParserDeclareHandler(SyntaxHandlerCharLiteral, rhs) {
 
   char *str = charToken->str + 1;
   int length = charToken->length;
-  str[length - 1] = '\0';
+  assert(str[-1] == '\'' && str[length - 2] == '\'');
+  str[length - 2] = '\0';
   bool isInvalid = false;
   char charVal = SyntaxNextCharacter(&str);
   if (charVal == -1) {
     isInvalid = true;
     charVal = '\0';
   }
-  str[length - 1] = '\'';
+  charToken->str[length - 1] = '\'';
 
   if (isInvalid) {
     // TODO: turn this into an error (similar to int literal); furthermore,
@@ -943,9 +973,17 @@ ParserDeclareHandler(SyntaxHandlerCharLiteral, rhs) {
 
   SyntaxAST *charLiteral = SyntaxASTNew(SYNTAX_AST_KIND_LITERAL);
   charLiteral->literal.type = SYNTAX_TYPE_I8;
-  charLiteral->literal.charVal = charVal;
+  charLiteral->literal.intVal = charVal;
+  charLiteral->loc = charToken->loc;
   LexerTokenDelete(charToken);
   return charLiteral;
+}
+
+ParserDeclareHandler(SyntaxHandlerVariable, rhs) {
+  assert(rhs->size == 1);
+  LexerToken *identifier_ = rhs->arr[0];
+  assert(identifier_->tokenID == IDENTIFIER);
+  return SyntaxTokenToAST(identifier_, SYNTAX_AST_KIND_IDENTIFIER);
 }
 
 ParserDeclareHandler(SyntaxHandlerParenExpr, rhs) {
@@ -982,13 +1020,12 @@ void SyntaxASTPrepend(SyntaxAST *node, SyntaxAST *child) {
 }
 
 void SyntaxASTAppend(SyntaxAST *node, SyntaxAST *child) {
-  if (node->lastChild) {
+  if (node->lastChild)
     node->lastChild->sibling = child;
-  } else {
+  else
     node->firstChild = child;
-    node->loc.from = SourcePointMin(&node->loc.from, &child->loc.from);
-  }
   node->lastChild = child;
+  node->loc.from = SourcePointMin(&node->loc.from, &child->loc.from);
   node->loc.to = SourcePointMax(&node->loc.to, &child->loc.to);
 }
 
@@ -1080,8 +1117,13 @@ SyntaxAST *SyntaxHandlerLiteral(
 
   SyntaxAST *literal = SyntaxASTNew(SYNTAX_AST_KIND_LITERAL);
   literal->literal.type = type;
+  literal->loc = literalToken->loc;
   LexerTokenDelete(literalToken);
   return literal;
+}
+
+ParserDeclareHandler(SyntaxHandlerMethodDecls, rhs) {
+  return SyntaxHandlerList(rhs, SYNTAX_AST_KIND_METHOD_DECLS);
 }
 
 char SyntaxNextCharacter(char **p) {

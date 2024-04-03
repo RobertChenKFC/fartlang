@@ -4,7 +4,7 @@ class VarDecl {
   # Static variable
   static i8 c2;
   # Constant variable
-  static u16 s1;
+  const u16 s1;
   # Static and constant variable
   static const i16 s2;
   const static u32 i1;
@@ -20,13 +20,10 @@ class VarDecl {
   i8 x1;
   # Custom types
   Vector v1;
-  Vector.Iterator it;
+  Vector.Iterator it1, it2, it3;
   Vector.Iterator[] itArr;
   bool (Math.Int, Math.Int) lt;
+  Vector (Vector, bool[] (List.Iterator, Queue.Iterator), i64[], u32)[][] messyType123456;
   # Auto type deduction
   var v2;
-}
-
-class VarDef {
-  
 }

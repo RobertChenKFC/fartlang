@@ -70,7 +70,7 @@ struct Lexer {
   } while (0);
 
 // Constructs a lexer config with no regexes and no ignore regex
-LexerConfig *LexerConfigNew();
+LexerConfig *LexerConfigNew(void);
 // Delete a "config" created with LexerConfigNew
 void LexerConfigDelete(LexerConfig *config);
 // Implementation of LexerConfigAddRegex with extra parameter "regexName"

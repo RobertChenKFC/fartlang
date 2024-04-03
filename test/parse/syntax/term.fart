@@ -1,0 +1,76 @@
+class Term {
+  # Integer literal base 10
+  var uvar1 = 123456789876543210u64;
+  # Integer literal base 16
+  var uvar2 = 0xdeadbeefu32;
+  # Integer literal base 2
+  var ivar1 = 0b01011010;
+  # Integer Primitive Types
+  var uvar = 123u64;
+  var ivar = 123i64;
+  var uvar = 123u32;
+  var ivar = 123i32;
+  var uvar = 123u16;
+  var ivar = 123i16;
+  var uvar = 123u8;
+  var ivar = 123i8;
+
+  # Float literal
+  var fvar1 = 123.;
+  var fvar2 = .456;
+  var fvar3 = 789.012;
+  var fvar4 = 6.023e+23;
+  var fvar5 = 6.62607015e-34;
+  var fvar6 = 12345f64;
+  var fvar7 = 12345.6789e+3;
+  var fvar8 = 12345.6789e-3;
+  # Float Primitive Types
+  var fvar = 8.99e9f64;
+  var fvar = 8.99e9f32;
+
+  # Other literals
+  bool flag = true;
+  bool other_flag = false;
+  Vector obj = this;
+  Vector other_obj = null;
+
+  # Identifier
+  var variable = _someMessyObject_with_mixed_cases_AND_someNumbers123456789_;
+
+  # String literal
+  var str1 = "Hello world";
+  var str2 = "This is a string mixed with newlines\n\n, carriage returns \r\r, tabs \t\t, and some \"quoted\" characters";
+  # String Escape Sequences
+  var str = "Hello \a";
+  var str = "Hello \b";
+  var str = "Hello \f";
+  var str = "Hello \n";
+  var str = "Hello \r";
+  var str = "Hello \t";
+  var str = "Hello \v";
+  var str = "Hello \\";
+  var str = "Hello \'";
+  var str = "Hello \"";
+  var str = "Hello \0";
+
+  # Character literal
+  var char1 = 'F';
+  var char2 = 'A';
+  var char3 = 'R';
+  var char4 = 'T';
+  # Character Escape Sequences
+  var char = '\a';
+  var char = '\b';
+  var char = '\f';
+  var char = '\n';
+  var char = '\r';
+  var char = '\t';
+  var char = '\v';
+  var char = '\\';
+  var char = '\'';
+  var char = '\"';
+  var char = '\0';
+
+  # Parenthesized Expression
+  var expr = (123);
+}

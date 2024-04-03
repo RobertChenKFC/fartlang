@@ -15,7 +15,7 @@ export BISON=bison
 export GPROF=gprof
 
 # flags
-export CFLAGS="-g -O0 -Wall -Wpedantic -I$SRC_ROOT -I$TEST_ROOT"
+export CFLAGS="-g -O0 -Wall -Wpedantic -Wno-gnu -I$SRC_ROOT -I$TEST_ROOT"
 export PROFILE_CFLAGS="$CFLAGS -pg"
 export VALGRIND_FLAGS="--error-exitcode=1 --leak-check=full -q"
 export CMP_FLAGS="-s"

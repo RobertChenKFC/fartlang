@@ -24,6 +24,7 @@ CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
 SAVE_FILES = $(dir $(BIN))lexer.txt $(dir $(BIN))parser.txt
 REF_FILES = $(wildcard *.ref)
 OUT_FILES = $(REF_FILES:.ref=.out)
+.PRECIOUS: $(OUT_FILES)
 TESTS = $(REF_FILES:.ref=.test)
 OUTPUT_FILES = $(SAVE_FILES) $(OUT_FILES)
 

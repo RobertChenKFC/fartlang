@@ -31,7 +31,8 @@ typedef struct SyntaxAST SyntaxAST;
   ENUM(SYNTAX_AST_KIND_VAR_INIT) \
   ENUM(SYNTAX_AST_KIND_OP) \
   ENUM(SYNTAX_AST_KIND_EXPR_LIST) \
-  ENUM(SYNTAX_AST_KIND_LITERAL)
+  ENUM(SYNTAX_AST_KIND_LITERAL) \
+  ENUM(SYNTAX_AST_KIND_METHOD_DECLS)
 typedef enum {
   SYNTAX_AST_FOREACH_KIND(SYNTAX_GEN_ENUM)
 } SyntaxASTKind;
@@ -61,7 +62,9 @@ enum {
   ENUM(SYNTAX_TYPE_NULL) \
   ENUM(SYNTAX_TYPE_STR) \
   ENUM(SYNTAX_TYPE_VOID) \
-  ENUM(SYNTAX_TYPE_IDENTIFIER)
+  ENUM(SYNTAX_TYPE_MODULE_PATH) \
+  ENUM(SYNTAX_TYPE_FUNC) \
+  ENUM(SYNTAX_TYPE_VAR)
 typedef enum {
   SYNTAX_FOREACH_TYPE(SYNTAX_GEN_ENUM)
 } SyntaxType;
@@ -144,7 +147,6 @@ struct SyntaxAST {
       double floatVal;
       bool boolVal;
       char *strVal;
-      int8_t charVal;
     } literal;
   };
 };

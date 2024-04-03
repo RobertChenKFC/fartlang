@@ -684,7 +684,6 @@ Parser *ParserFromFileImpl(
   Vector *handlerNames = VectorNew();
   int numHandlerNames;
   fscanf(file, "%d", &numHandlerNames);
-
   for (int i = 0; i < numHandlerNames; ++i) {
     int handlerNameLength;
     fscanf(file, "%d", &handlerNameLength);

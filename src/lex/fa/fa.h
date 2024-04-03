@@ -40,7 +40,7 @@ struct FATransition {
 };
 
 // Construct an empty FA
-FA *FANew();
+FA *FANew(void);
 // Deletes an "fa" created with FANew, as well as the transitions it contains
 void FADelete(FA *fa);
 // Creates a new FA state with no transitions and property "accepting"

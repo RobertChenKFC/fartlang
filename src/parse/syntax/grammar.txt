@@ -131,13 +131,17 @@
       | "-"
 
 <expr-mul>
-    ::= <expr-mul> <op-mul> <expr-unary-op>
-      | <expr-unary-op>
+    ::= <expr-mul> <op-mul> <expr-cast-op>
+      | <expr-cast-op>
 
 <op-mul>
     ::= "*"
       | "/"
       | "%"
+
+<expr-cast-op>
+    ::= <expr-unary-op> "as" <type>
+      | <expr-unary-op>
 
 <expr-unary-op>
     ::= <unary-op> <expr-access>
@@ -146,10 +150,6 @@
     ::= "-"
       | "!"
       | "~"
-      | <cast-op>
-
-<cast-op>
-    ::= "(" type ")"
 
 <expr-access>
     ::= <expr-access> "(" <expr-list> ")"

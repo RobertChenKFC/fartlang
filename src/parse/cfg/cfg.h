@@ -37,7 +37,7 @@ struct CFG {
 };
 
 // Creates a new CFG with no rules
-CFG *CFGNew();
+CFG *CFGNew(void);
 // Deletes "cfg" created with CFGNew
 void CFGDelete(CFG *cfg);
 // Sets the number of tokens of "cfg" to "numTokens"; note that this function

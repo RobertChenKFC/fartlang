@@ -75,7 +75,7 @@ extern Regex *REGEX_DIGITS;
 extern Regex *REGEX_LETTERS;
 
 // Initializes all constant regexes
-void RegexInit();
+void RegexInit(void);
 // Given a letter "a", returns a range for character class use
 RegexRange *RegexRangeFromLetter(unsigned char a);
 // Given a letter "from" and a letter "to", returns a range from "from" to "to"

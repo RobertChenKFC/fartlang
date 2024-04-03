@@ -10,6 +10,9 @@
 #include <assert.h>
 #include <unistd.h>
 #include <limits.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 // Constants
 const char *SYNTAX_LEXER_FILENAME = "lexer.txt";
@@ -95,8 +98,8 @@ enum {
   SWITCH,
   CASE,
   DEFAULT,
-  TRUE,
-  FALSE,
+  TRUE_LITERAL,
+  FALSE_LITERAL,
   THIS,
   FOR,
   NULL_LITERAL,
@@ -137,6 +140,7 @@ enum {
   EXPR_SHIFT,
   EXPR_ADD,
   EXPR_MUL,
+  EXPR_CAST_OP,
   EXPR_UNARY_OP,
   EXPR_ACCESS,
   EXPR_LIST,
@@ -187,7 +191,7 @@ char *SyntaxGetFilePath(const char *filename);
 bool SyntaxFileExists(const char *path);
 // Returns a lexer for fartlang. If lexer file with name SYNTAX_LEXER_FILENAME
 // doesn't exist in the same directory as the current executable, create one
-Lexer *SyntaxCreateLexer();
+Lexer *SyntaxCreateLexer(void);
 // Returns a parser for fartlang using fartlang "lexer". If parser file with
 // name SYNTAX_PARSER_FILENAME doesn't exist in the same directory as the
 // current executable, create one
@@ -195,7 +199,12 @@ Parser *SyntaxCreateParser(Lexer *lexer);
 
 char *SyntaxGetFilePath(const char *filename) {
   char *path = malloc(PATH_MAX);
+#ifdef __APPLE__
+  uint32_t len = PATH_MAX;
+  assert(_NSGetExecutablePath(path, &len) == 0);
+#else
   ssize_t len = readlink("/proc/self/exe", path, PATH_MAX);
+#endif
   int i;
   for (i = len - 1; path[i] != '/'; --i);
   strcpy(path + i + 1, filename);
@@ -206,7 +215,7 @@ bool SyntaxFileExists(const char *path) {
   return access(path, R_OK) == 0;
 }
 
-Lexer *SyntaxCreateLexer() {
+Lexer *SyntaxCreateLexer(void) {
   char *lexerFilePath = SyntaxGetFilePath(SYNTAX_LEXER_FILENAME);
   Lexer *lexer;
   if (!SyntaxFileExists(lexerFilePath)) {
@@ -326,7 +335,8 @@ Lexer *SyntaxCreateLexer() {
                     dot_, RegexZeroOrOne(decimals_)))),
             RegexFromConcat(2, dot_, decimals_)),
         RegexZeroOrOne(RegexFromConcat(3,
-            RegexFromLetter('e'), RegexZeroOrOne(sub_), int_literal_dec_)),
+            RegexFromLetter('e'), RegexZeroOrOne(RegexFromUnion(2, add_, sub_)),
+            int_literal_dec_)),
         RegexZeroOrOne(RegexFromUnion(2, f64_, f32_))));
     RegexRange *quoteRange = RegexRangeFromLetter('"');
     RegexRange *tickRange = RegexRangeFromLetter('\'');
@@ -474,8 +484,8 @@ Lexer *SyntaxCreateLexer() {
     assert(LexerConfigAddRegex(lexerConfig, switch_) == SWITCH);
     assert(LexerConfigAddRegex(lexerConfig, case_) == CASE);
     assert(LexerConfigAddRegex(lexerConfig, default_) == DEFAULT);
-    assert(LexerConfigAddRegex(lexerConfig, true_) == TRUE);
-    assert(LexerConfigAddRegex(lexerConfig, false_) == FALSE);
+    assert(LexerConfigAddRegex(lexerConfig, true_) == TRUE_LITERAL);
+    assert(LexerConfigAddRegex(lexerConfig, false_) == FALSE_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, this_) == THIS);
     assert(LexerConfigAddRegex(lexerConfig, for_) == FOR);
     assert(LexerConfigAddRegex(lexerConfig, null_literal_) == NULL_LITERAL);
@@ -542,6 +552,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == EXPR_SHIFT);
       assert(CFGAddVariable(cfg) == EXPR_ADD);
       assert(CFGAddVariable(cfg) == EXPR_MUL);
+      assert(CFGAddVariable(cfg) == EXPR_CAST_OP);
       assert(CFGAddVariable(cfg) == EXPR_UNARY_OP);
       assert(CFGAddVariable(cfg) == EXPR_ACCESS);
       assert(CFGAddVariable(cfg) == EXPR_LIST);
@@ -609,6 +620,10 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           VAR_DECL_STMT, 2, VAR_DECL, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDecl,
           VAR_DECL, 3, VAR_DECL_MODIFIERS, TYPE_OR_VAR, VAR_INIT_LIST);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_OR_VAR, 1, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVar,
+          TYPE_OR_VAR, 1, VAR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
           VAR_DECL_MODIFIERS, 2, VAR_DECL_MODIFIERS, VAR_DECL_MODIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
@@ -617,7 +632,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           VAR_DECL_MODIFIER, 1, STATIC);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           VAR_DECL_MODIFIER, 1, CONST);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           TYPE, 1, PRIMITIVE_TYPE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
           TYPE, 1, MODULE_PATH);
@@ -723,21 +738,23 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_ADD, 1, EXPR_MUL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMul,
-          EXPR_MUL, 3, EXPR_MUL, MUL, EXPR_UNARY_OP);
+          EXPR_MUL, 3, EXPR_MUL, MUL, EXPR_CAST_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprDiv,
-          EXPR_MUL, 3, EXPR_MUL, DIV, EXPR_UNARY_OP);
+          EXPR_MUL, 3, EXPR_MUL, DIV, EXPR_CAST_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMod,
-          EXPR_MUL, 3, EXPR_MUL, MOD, EXPR_UNARY_OP);
+          EXPR_MUL, 3, EXPR_MUL, MOD, EXPR_CAST_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          EXPR_MUL, 1, EXPR_UNARY_OP);
+          EXPR_MUL, 1, EXPR_CAST_OP);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
+          EXPR_CAST_OP, 3, EXPR_UNARY_OP, AS, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_CAST_OP, 1, EXPR_UNARY_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNeg,
           EXPR_UNARY_OP, 2, SUB, EXPR_ACCESS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNot,
           EXPR_UNARY_OP, 2, NOT, EXPR_ACCESS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitNot,
           EXPR_UNARY_OP, 2, BIT_NOT, EXPR_ACCESS);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
-          EXPR_UNARY_OP, 4, LPAREN, TYPE, RPAREN, EXPR_ACCESS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_UNARY_OP, 1, EXPR_ACCESS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCall,
@@ -767,9 +784,9 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerFloatLiteral,
           TERM, 1, FLOAT_LITERAL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTrueLiteral,
-          TERM, 1, TRUE);
+          TERM, 1, TRUE_LITERAL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerFalseLiteral,
-          TERM, 1, FALSE);
+          TERM, 1, FALSE_LITERAL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerThisLiteral,
           TERM, 1, THIS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerNullLiteral,
@@ -778,12 +795,14 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           TERM, 1, STRING_LITERAL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerCharLiteral,
           TERM, 1, CHAR_LITERAL);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVariable,
           TERM, 1, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenExpr,
           TERM, 3, LPAREN, EXPR, RPAREN);
       // TODO: continue here
-
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
+          METHOD_DECLS, 0);
+      
       // Create parser
       parser = ParserFromConfig(parserConfig);
       FILE *parserFile = fopen(parserFilePath, "w");
