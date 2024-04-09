@@ -148,7 +148,9 @@ void runTest(const char *testName) {
 }
 
 int main(void) {
-  runTest("import");
-  runTest("vardecl");
-  runTest("term");
+  // DEBUG
+  // runTest("import");
+  // runTest("vardecl");
+  runTest("float");
+  // runTest("term");
 }

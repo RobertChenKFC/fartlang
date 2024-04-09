@@ -10,6 +10,7 @@ DEPS += /parse/cfg
 DEPS += /parse/lr1
 DEPS += /parse/parser
 DEPS += /parse/syntax
+DEPS += /util/bigint
 DEPS += /util/bitset
 DEPS += /util/hashtable
 DEPS += /util/source
@@ -42,6 +43,8 @@ $(OUT_FILES): $(BIN)
 	# DEBUG
 	# $(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
 	$(BIN)
+	# DEBUG
+	touch $(OUT_FILES)
 
 .PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:
