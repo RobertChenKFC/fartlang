@@ -808,26 +808,23 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   // uint64_t intBin = 0, fracPart = 0, one = 1, fracBin = 0;
   enum {
     NUM_MANTISSA_BITS = 52,
+    // including the implicit first 1 bit
+    NUM_PRECISION_BITS = NUM_MANTISSA_BITS + 1,
     EXPONENT_OFFSET = 1023,
     MAX_EXPONENT = 2046
   };
-  Bigint intBin, fracPart, one, fracBin;
+
+  // Extract the integer part of the float literal
   // log(10)/log(64) = 0.553... < 0.6 = 3/5, so "length"*3/5 is an upper bound
   // on the number of 64-bit integers required to encode a decimal integer of
   // length "length". 
   int bigintSize = length * 3 / 5;
+
+  // DEBUG
+  printf("bigintSize: %d\n", bigintSize);
+
+  Bigint intBin;
   BigintNew(&intBin, bigintSize, 0);
-  BigintNew(&fracPart, bigintSize, 0);
-  BigintNew(&one, bigintSize, 1);
-  // Similarly, for the binary of the fraction part, we only need to store at
-  // most NUM_MANTISSA_BITS - 1 bits after the first set bit in the fraction
-  // part, and the first set bit (2^(-x) for some integer x) must satisfy
-  // 10^(-length) >= 2^(-x), so we also only need at most "length"*3/5 64-bit
-  // integers for the first set bit to appear, and then at most one more 64-bit
-  // integer to store the at most NUM_MANTISSA_BITS - 1 remaining bits after,
-  // so we allocate a bigint of size "bigintSize" + 1
-  int fracBinSize = bigintSize + 1;
-  BigintNew(&fracBin, fracBinSize, 0);
   int i;
   for (i = 0; i < length; ++i) {
     int d = str[i] - '0';
@@ -836,9 +833,15 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     // TEST
     // intBin = intBin * 10 + d;
     assert(BigintMulInt(&intBin, &intBin, 10));
+    assert(BigintAddInt(&intBin, &intBin, d));
   }
   if (str[i] == '.')
     ++i;
+
+  // Extract the fraction part of the float literal
+  Bigint fracPart, one;
+  BigintNew(&fracPart, bigintSize, 0);
+  BigintNew(&one, bigintSize, 1);
   for (; i < length; ++i) {
     int d = str[i] - '0';
     if (d < 0 || d > 9)
@@ -864,13 +867,25 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   BigintPrintHex(&one);
   //*/
 
+  // Similarly, for the binary of the fraction part, we only need to store at
+  // most NUM_PRECISION_BITS - 1 bits after the first set bit in the fraction
+  // part, and the first set bit (2^(-x) for some integer x) must satisfy
+  // 10^(-length) >= 2^(-x), so we also only need at most "length"*3/5 64-bit
+  // integers for the first set bit to appear, and then at most one more 64-bit
+  // integer to store the at most NUM_PRECISION_BITS - 1 remaining bits after,
+  // so we allocate a bigint of size "bigintSize" + 1
+  int fracBinSize = bigintSize + 1;
+  Bigint fracBin;
+  BigintNew(&fracBin, fracBinSize, 0);
   // Convert the fractional part into its binary representation. The most
   // significant bit of the last 64-bit integer represents 1/2, then the bit
   // to the right of it represents 1/4, then the next 1/8, ... etc
   // TEST
   // uint64_t mask = 1LL << (NUM_MANTISSA_BITS - 1);
   // while (mask) {
-  for (int bitIdx = 64 * fracBinSize - 1; bitIdx >= 0; --bitIdx) {
+  bool firstBitSet = false;
+  for (int bitIdx = 64 * fracBinSize - 1, remBits = NUM_PRECISION_BITS;
+       bitIdx >= 0 && remBits > 0; --bitIdx) {
     // TEST
     // fracPart *= 2;
     BigintMulInt(&fracPart, &fracPart, 2);
@@ -883,6 +898,12 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
       // TEST
       // fracPart -= one;
       assert(BigintSub(&fracPart, &fracPart, &one));
+      firstBitSet = true;
+    }
+    if (firstBitSet) {
+      // We only need to calculate a total of NUM_PRECISION_BITS bits after
+      // the first bit is set
+      --remBits;
     }
     // TEST
     // mask >>= 1;
@@ -890,6 +911,10 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     // DEBUG
     // printf("Frac Part: %llu, Mask: %016lx\n", fracPart, mask);
   }
+
+  // DEBUG
+  printf("After conversion, frac part: ");
+  BigintPrintHex(&fracPart);
 
   // DEBUG
   // TEST
@@ -978,7 +1003,7 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
 
   // Calculate the remaining number of mantissa bits to set after extracting
   // from the first set bit of the current 64 bits
-  int remMantissaBits = NUM_MANTISSA_BITS - 1 - firstSetBit;
+  int remMantissaBits = NUM_PRECISION_BITS - 1 - firstSetBit;
   int numRoundedBits;
   if (remMantissaBits > 0) {
     // If the current 64 bits is not enough to fill the mantissa, then
@@ -1068,11 +1093,10 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
         roundUp = true;
     }
   }
-  
 
   // Round the mantissa
   if (roundUp) {
-    if (++mantissaBits == (1LL << NUM_MANTISSA_BITS)) {
+    if (++mantissaBits == (1LL << NUM_PRECISION_BITS)) {
       // If rounding up makes the mantissa exceed the number of mantissa bits,
       // increase the exponent and make the mantissa 0
       mantissaBits = 0;
@@ -1082,11 +1106,14 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     }
   }
 
+  // Exclude the implicit first 1 bit from the mantissa
+  mantissaBits &= ~(1LL << (NUM_PRECISION_BITS - 1));
+
   // DEBUG
   printf("mantissa: %016llx, exponent: %016llx\n", mantissaBits, exponentBits);
 
   // Set the floating point value to the bits we calculated
-  uint64_t valBin = (exponentBits << 52) | mantissaBits;
+  uint64_t valBin = (exponentBits << NUM_MANTISSA_BITS) | mantissaBits;
   double val;
   memcpy(&val, &valBin, sizeof(val));
 

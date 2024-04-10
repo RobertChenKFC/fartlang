@@ -129,7 +129,23 @@ void PrintAST(FILE *file, SyntaxAST *node, int indentation) {
     PrintAST(file, child, indentation + 4);
 }
 
-void runTest(const char *testName) {
+void PrintFloat(FILE *file, SyntaxAST *node, int indentation) {
+  if (!node)
+    return;
+  if (node->kind == SYNTAX_AST_KIND_LITERAL &&
+      (node->literal.type == SYNTAX_TYPE_F64 ||
+       node->literal.type == SYNTAX_TYPE_F32)) {
+    uint64_t bits;
+    memcpy(&bits, &node->literal.floatVal, sizeof(bits));
+    fprintf(file, "%llx\n", bits);
+    return;
+  }
+  for (SyntaxAST *child = node->firstChild; child; child = child->sibling)
+    PrintFloat(file, child, indentation);
+}
+
+typedef void (*PrintFunc)(FILE*, SyntaxAST*, int);
+void runTest(const char *testName, PrintFunc print) {
   char *str = malloc(strlen(testName) + 6);
   strcpy(str, testName);
   strcat(str, ".fart");
@@ -140,17 +156,25 @@ void runTest(const char *testName) {
   strcpy(str, testName);
   strcat(str, ".out");
   file = fopen(str, "w");
-  PrintAST(file, node, 0);
+  print(file, node, 0);
   fclose(file);
 
   SyntaxASTDelete(node);
   free(str);
 }
 
+void astTest(const char *filename) {
+  runTest(filename, PrintAST);
+}
+
+void floatTest(const char *filename) {
+  runTest(filename, PrintFloat);
+}
+
 int main(void) {
   // DEBUG
-  // runTest("import");
-  // runTest("vardecl");
-  runTest("float");
-  // runTest("term");
+  // astTest("import");
+  // astTest("vardecl");
+  floatTest("float");
+  // astTest("term");
 }
