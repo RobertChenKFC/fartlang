@@ -293,7 +293,7 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, mul_, RegexFromLetter('*'));
     ADD_REGEX_CHAIN(chain, div_, RegexFromLetter('/'));
     ADD_REGEX_CHAIN(chain, mod_, RegexFromLetter('%'));
-    ADD_REGEX_CHAIN(chain, not_, RegexFromLetter('!'));
+    ADD_REGEX_CHAIN(chain, not_, RegexFromString("not"));
     ADD_REGEX_CHAIN(chain, bit_not_, RegexFromLetter('~'));
     RegexRange *digitsNo0Range = RegexRangeFromRange('1', '9');
     RegexCharacterClass *digitsNo0Class = RegexCharacterClassFromRanges(
@@ -326,7 +326,7 @@ Lexer *SyntaxCreateLexer(void) {
                 RegexFromString("0b"), RegexOneOrMore(digitsBin_))),
         RegexZeroOrOne(RegexFromUnion(8,
             i64_, u64_, i32_, u32_, i16_, u16_, i8_, u8_))));
-    ADD_REGEX_CHAIN(chain, decimals_, RegexZeroOrMore(REGEX_DIGITS));
+    ADD_REGEX_CHAIN(chain, decimals_, RegexOneOrMore(REGEX_DIGITS));
     ADD_REGEX_CHAIN(chain, float_literal_, RegexFromConcat(3,
         RegexFromUnion(2,
             RegexFromConcat(2,
@@ -694,7 +694,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           EXPR_LOGIC_OR, 3, EXPR_LOGIC_OR, OR, EXPR_LOGIC_AND);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_LOGIC_OR, 1, EXPR_LOGIC_AND);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLogicOr,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprLogicAnd,
           EXPR_LOGIC_AND, 3, EXPR_LOGIC_AND, AND, EXPR_BIT_OR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_LOGIC_AND, 1, EXPR_BIT_OR);
@@ -706,7 +706,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           EXPR_BIT_XOR, 3, EXPR_BIT_XOR, BIT_XOR, EXPR_BIT_AND);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_BIT_XOR, 1, EXPR_BIT_AND);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitXor,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprBitAnd,
           EXPR_BIT_AND, 3, EXPR_BIT_AND, BIT_AND, EXPR_REL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_BIT_AND, 1, EXPR_REL);
@@ -842,10 +842,17 @@ void SyntaxASTDelete(void *p) {
 
   switch (node->kind) {
     case SYNTAX_AST_KIND_IDENTIFIER:
+    case SYNTAX_AST_KIND_CLASS_DECL:
+    case SYNTAX_AST_KIND_VAR_INIT:
+    case SYNTAX_AST_KIND_MEMBER_ACCESS:
       free(node->string);
       break;
     case SYNTAX_AST_KIND_IMPORT_DECL:
       free(node->import.namespace);
+      break;
+    case SYNTAX_AST_KIND_LITERAL:
+      if (node->literal.type == SYNTAX_TYPE_STR)
+        free(node->literal.strVal);
       break;
   }
   free(node);

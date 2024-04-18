@@ -576,12 +576,13 @@ ParserDeclareHandler(SyntaxHandlerExprMemberAccess, rhs) {
   assert(dot_ && dot_->tokenID == DOT);
   assert(identifier_ && identifier_->tokenID == IDENTIFIER);
 
-  SyntaxAST *access = SyntaxASTNew(SYNTAX_AST_KIND_OP);
-  access->op = SYNTAX_OP_MEMBER_ACCESS;
+  SyntaxAST *access = SyntaxASTNew(SYNTAX_AST_KIND_MEMBER_ACCESS);
   access->loc.to = identifier_->loc.to;
   access->string = strndup(identifier_->str, identifier_->length);
+
   SyntaxASTAppend(access, expr);
   LexerTokenDelete(dot_);
+  LexerTokenDelete(identifier_);
   return access;
 }
 
@@ -850,8 +851,9 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     newStr = malloc(length + 1);
     for (int i = 0; i < numLength; ++i)
       newStr[i] = str[i];
-    for (int i = dotPos - exponent, dir = exponent < 0 ? 1 : -1;
-        i != dotPos - dir; i -= dir) {
+    for (int dir = exponent < 0 ? 1 : -1,
+         i = dotPos - exponent - (1 - hasDot) * dir;
+         i != dotPos - dir; i -= dir) {
       if (newStr[i] != '.')
         newStr[i + dir] = newStr[i];
     }
@@ -1180,6 +1182,7 @@ ParserDeclareHandler(SyntaxHandlerStringLiteral, rhs) {
       strVal[i++] = curChar;
     }
   }
+  strVal[i] = '\0';
   strToken->str[length - 1] = '"';
 
   if (isInvalid) {
@@ -1324,7 +1327,6 @@ SyntaxAST *SyntaxHandlerSeparatedTokenList(
   if (child) {
     assert(list);
     assert(child);
-
     if (childKind != -1)
       child = SyntaxTokenToAST(child, childKind);
     SyntaxASTAppend(list, child);

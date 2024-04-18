@@ -1,0 +1,19 @@
+class Expr {
+  var x = true or true if true or false else true or false;
+  var x = true and true or true and false or true and false;
+  var x = 1 | 2 and 3 | 4 and 5 | 6;
+  var x = 1 ^ 2 | 3 ^ 4 | 5 ^ 6;
+  var x = 1 & 2 ^ 3 & 4 ^ 5 & 6;
+  var x = 1 << 2 < 3 >> 4 <= 5 >> 6 == 7 << 8 != 9 >> 10 > 11 << 12 >= 13 << 14;
+  var x = 1 + 2 << 3 - 4 >> 5 + 6;
+  var x = 1 * 2 + 3 / 4 - 5 % 6;
+  var x = 1 as i64 * 2 as i32 / 3 as i16 % 4 as i8;
+  var x = -1 as i64;
+  var x = not false as bool;
+  var x = ~1 as u64;
+  var x = -1 as i64;
+  var x = -f()(1)(1, 2, 3);
+  var x = not f[1][];
+  var x = ~f.g.h;
+  var x = -f++--;
+}

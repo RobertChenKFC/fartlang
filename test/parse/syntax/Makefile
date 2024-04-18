@@ -43,8 +43,6 @@ $(OUT_FILES): $(BIN)
 	# DEBUG
 	# $(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
 	$(BIN)
-	# DEBUG
-	touch $(OUT_FILES)
 
 .PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:

@@ -66,7 +66,7 @@ void PrintLiteral(FILE *file, SyntaxAST *node) {
     case SYNTAX_TYPE_I16:
     case SYNTAX_TYPE_U8:
     case SYNTAX_TYPE_I8:
-      fprintf(file, "%llu", node->literal.intVal);
+      fprintf(file, "%llu", (unsigned long long)node->literal.intVal);
       break;
     case SYNTAX_TYPE_F64:
     case SYNTAX_TYPE_F32:
@@ -123,6 +123,12 @@ void PrintAST(FILE *file, SyntaxAST *node, int indentation) {
     case SYNTAX_AST_KIND_LITERAL:
       PrintLiteral(file, node);
       break;
+    case SYNTAX_AST_KIND_OP:
+      fprintf(file, "op: %s: ", SYNTAX_OP_STRS[node->op]);
+      break;
+    case SYNTAX_AST_KIND_MEMBER_ACCESS:
+      fprintf(file, "member: %s: ", node->string);
+      break;
   }
   fprintf(file, "\n");
   for (SyntaxAST *child = node->firstChild; child; child = child->sibling)
@@ -137,7 +143,7 @@ void PrintFloat(FILE *file, SyntaxAST *node, int indentation) {
        node->literal.type == SYNTAX_TYPE_F32)) {
     uint64_t bits;
     memcpy(&bits, &node->literal.floatVal, sizeof(bits));
-    fprintf(file, "%llx\n", bits);
+    fprintf(file, "%llx\n", (unsigned long long)bits);
     return;
   }
   for (SyntaxAST *child = node->firstChild; child; child = child->sibling)
@@ -224,7 +230,7 @@ void GenFloatTest(void) {
     double x = atof(floatStrs[i]);
     uint64_t y;
     memcpy(&y, &x, sizeof(y));
-    fprintf(refFile, "%llx\n", y);
+    fprintf(refFile, "%llx\n", (unsigned long long)y);
   }
   fprintf(fartFile, "}\n");
   fclose(fartFile);
@@ -237,9 +243,9 @@ void FloatTest(const char *filename) {
 }
 
 int main(void) {
-  // DEBUG
-  // AstTest("import");
-  // AstTest("vardecl");
+  AstTest("import");
+  AstTest("vardecl");
   FloatTest("float");
-  // AstTest("term");
+  AstTest("term");
+  AstTest("expr");
 }
