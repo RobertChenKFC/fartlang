@@ -743,13 +743,13 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     if (str[expPos] == 'e') {
       int j = expPos + 1;
       bool neg = false;
-      if (j == '+') {
+      if (str[j] == '+') {
         ++j;
-      } else if (j == '-') {
+      } else if (str[j] == '-') {
         neg = true;
         ++j;
       }
-      for (; j < length; ++j) {
+      for (; j < length && str[j] >= '0' && str[j] <= '9'; ++j) {
         if (exponent > INT_MAX / 10) {
           outOfRange = true;
           break;
@@ -760,15 +760,13 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
           outOfRange = true;
           break;
         }
+        exponent += d;
       }
       if (neg)
         exponent = -exponent;
       break;
     }
   }
-
-  // DEBUG
-  printf("Exponent: %d\n", exponent);
 
   // Extract the type postfix, default is f32 if empty
   char postfix[4] = "f32";
@@ -783,46 +781,100 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   }
 
   // Use the type postfix to determine the maximum value of this type
-  double maxVal = FLT_MAX;
+  double maxVal = FLT_MAX, minVal = FLT_TRUE_MIN;
   SyntaxType type = SYNTAX_TYPE_F32;
   static const char *postfixes[] = { "f64", "f32", NULL };
   static const double maxVals[] = { DBL_MAX, FLT_MAX };
+  static const double minVals[] = { DBL_TRUE_MIN, FLT_TRUE_MIN };
   static const SyntaxType types[] = { SYNTAX_TYPE_F64, SYNTAX_TYPE_F32 };
   for (int i = 0; postfixes[i]; ++i) {
     if (strcmp(postfix, postfixes[i]) == 0) {
       maxVal = maxVals[i];
+      minVal = minVals[i];
       type = types[i];
       break;
     }
   }
 
-  // Extract the integer part and the fractional part of the floating point
-  // literal
-  // TODO: use big integer implementations to store the integer and fractional
-  // part. We only have to be able to store at most
-  //   2^1023+2^1022+...+2^(1023-52),
-  // since out of this range means out of double precision range
-  // TODO: take the exponent into consideration and shift the dot position
-  // before converting
-  // TEST
-  // uint64_t intBin = 0, fracPart = 0, one = 1, fracBin = 0;
-  enum {
-    NUM_MANTISSA_BITS = 52,
-    // including the implicit first 1 bit
-    NUM_PRECISION_BITS = NUM_MANTISSA_BITS + 1,
-    EXPONENT_OFFSET = 1023,
-    MAX_EXPONENT = 2046
-  };
+  // Calculate the dot position and the length of the number (component before
+  // exponent and type postfix)
+  int dotPos;
+  for (dotPos = 0; dotPos < length && str[dotPos] >= '0' && str[dotPos] <= '9';
+       ++dotPos);
+  int numLength, hasDot;
+  if (str[dotPos] == '.') {
+    for (numLength = dotPos + 1;
+         numLength < length && str[numLength] >= '0' && str[numLength] <= '9';
+         ++numLength);
+    hasDot = 1;
+  } else {
+    numLength = dotPos;
+    hasDot = 0;
+  }
+  dotPos += exponent;
+
+  // Adjust the float literal string to reflect the exponent
+  // TODO: use a better method whose memory usage doesn't scale with the
+  // exponent value
+  char *newStr;
+  if (dotPos < 0) {
+    // Dot is moved left and out of range, so prepend 0's at the front
+    length = numLength - dotPos;
+    newStr = malloc(length + 1);
+    newStr[0] = '.';
+    for (int i = 1; i <= -dotPos; ++i)
+      newStr[i] = '0';
+    for (int i = 1 - dotPos, j = 0; j < numLength; ++j) {
+      if (str[j] == '.')
+        continue;
+      newStr[i++] = str[j];
+    }
+    newStr[length] = '\0';
+  } else if (dotPos >= numLength) {
+    // Dot is moved right and out of range, so append 0's at the end
+    length = dotPos + 1;
+    newStr = malloc(length + 1);
+
+    for (int i = 0, j = 0; j < numLength; ++j) {
+      if (str[j] == '.')
+        continue;
+      newStr[i++] = str[j];
+    }
+    for (int i = numLength - hasDot; i < dotPos; ++i)
+      newStr[i] = '0';
+    newStr[dotPos] = '.';
+    newStr[length] = '\0';
+  } else {
+    // Dot is moved to somewhere else in range
+    length = numLength;
+    newStr = malloc(length + 1);
+    for (int i = 0; i < numLength; ++i)
+      newStr[i] = str[i];
+    for (int i = dotPos - exponent, dir = exponent < 0 ? 1 : -1;
+        i != dotPos - dir; i -= dir) {
+      if (newStr[i] != '.')
+        newStr[i + dir] = newStr[i];
+    }
+    newStr[dotPos] = '.';
+    newStr[length] = '\0';
+  }
+  str = newStr;
 
   // Extract the integer part of the float literal
-  // log(10)/log(64) = 0.553... < 0.6 = 3/5, so "length"*3/5 is an upper bound
-  // on the number of 64-bit integers required to encode a decimal integer of
-  // length "length". 
-  int bigintSize = length * 3 / 5;
-
-  // DEBUG
-  printf("bigintSize: %d\n", bigintSize);
-
+  // Since the integer part is at most "length" when written in decimal, for it
+  // to fit in our Bigint of size "bigintSize" (size is the number of 64-bit
+  // integers), we have the following inequality:
+  //
+  //    2 ^ (64 * bigintSize) >= 10 ^ length
+  // => 64 * bigintSize * log(2) >= length * log(10)
+  // => bigintSize >= length * (log(10) / (64 * log(2))
+  //
+  // Since log(10) / (64 * log(2)) = 0.05... < 0.06 = 3/50, length*3/50 + 1
+  // should be an upper bound on the number of 64 bit integers required to fit
+  // the integer part
+  // TODO: take the exponent into consideration and shift the dot position
+  // before converting
+  int bigintSize = length * 3 / 50 + 1;
   Bigint intBin;
   BigintNew(&intBin, bigintSize, 0);
   int i;
@@ -830,8 +882,6 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     int d = str[i] - '0';
     if (d < 0 || d > 9)
       break;
-    // TEST
-    // intBin = intBin * 10 + d;
     assert(BigintMulInt(&intBin, &intBin, 10));
     assert(BigintAddInt(&intBin, &intBin, d));
   }
@@ -846,121 +896,59 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     int d = str[i] - '0';
     if (d < 0 || d > 9)
       break;
-    // TEST
-    // fracPart = fracPart * 10 + d;
     assert(BigintMulInt(&fracPart, &fracPart, 10));
     assert(BigintAddInt(&fracPart, &fracPart, d));
-    // TEST
-    // one *= 10;
     assert(BigintMulInt(&one, &one, 10));
   }
 
-  // DEBUG
-  // TEST
-  // printf("Int Part: %llu, Frac Part: %llu, One: %llu\n", intBin, fracPart, one);
-  ///*
-  printf("Int Part: ");
-  BigintPrintHex(&intBin);
-  printf("\nFrac Part: ");
-  BigintPrintHex(&fracPart);
-  printf("\nOne: ");
-  BigintPrintHex(&one);
-  //*/
+  enum {
+    NUM_MANTISSA_BITS = 52,
+    // including the implicit first 1 bit
+    NUM_PRECISION_BITS = NUM_MANTISSA_BITS + 1,
+    EXPONENT_OFFSET = 1023,
+    MAX_EXPONENT = 2046
+  };
 
-  // Similarly, for the binary of the fraction part, we only need to store at
-  // most NUM_PRECISION_BITS - 1 bits after the first set bit in the fraction
-  // part, and the first set bit (2^(-x) for some integer x) must satisfy
-  // 10^(-length) >= 2^(-x), so we also only need at most "length"*3/5 64-bit
-  // integers for the first set bit to appear, and then at most one more 64-bit
-  // integer to store the at most NUM_PRECISION_BITS - 1 remaining bits after,
-  // so we allocate a bigint of size "bigintSize" + 1
-  int fracBinSize = bigintSize + 1;
-  Bigint fracBin;
-  BigintNew(&fracBin, fracBinSize, 0);
-  // Convert the fractional part into its binary representation. The most
-  // significant bit of the last 64-bit integer represents 1/2, then the bit
-  // to the right of it represents 1/4, then the next 1/8, ... etc
-  // TEST
-  // uint64_t mask = 1LL << (NUM_MANTISSA_BITS - 1);
-  // while (mask) {
-  bool firstBitSet = false;
-  for (int bitIdx = 64 * fracBinSize - 1, remBits = NUM_PRECISION_BITS;
-       bitIdx >= 0 && remBits > 0; --bitIdx) {
-    // TEST
-    // fracPart *= 2;
-    BigintMulInt(&fracPart, &fracPart, 2);
-    // TEST
-    // if (fracPart >= one) {
-    if (BigintCmp(&fracPart, &one) >= 0) {
-      // TEST
-      // fracBin |= mask;
-      BigintSetBit(&fracBin, bitIdx, 1);
-      // TEST
-      // fracPart -= one;
-      assert(BigintSub(&fracPart, &fracPart, &one));
-      firstBitSet = true;
+  // Extract the binary of the fractional part. We only need to store at most
+  // NUM_PRECISION_BITS after (and including) the most significant set bit for
+  // the mantissa, so calculating 64 bits is definitely enough (we calculate
+  // the full 64 bits for easier handling later) and store the number of leading
+  // 0's separately and use it to adjust the exponent later. We only calculate
+  // this if the fraction part is actually nonzero, otherwise we will get stuck
+  // in an infinite loop
+  uint64_t fracBin = 0;
+  int numLeading0s = 0;
+  if (BigintCmpInt(&fracPart, 0) != 0) {
+    bool firstBitSet = false;
+    for (uint64_t fracBit = 1ULL << 63; fracBit != 0;) {
+      BigintMulInt(&fracPart, &fracPart, 2);
+      if (BigintCmp(&fracPart, &one) >= 0) {
+        fracBin |= fracBit;
+        assert(BigintSub(&fracPart, &fracPart, &one));
+        firstBitSet = true;
+      }
+      if (firstBitSet)
+        fracBit >>= 1;
+      else
+        ++numLeading0s;
     }
-    if (firstBitSet) {
-      // We only need to calculate a total of NUM_PRECISION_BITS bits after
-      // the first bit is set
-      --remBits;
-    }
-    // TEST
-    // mask >>= 1;
-
-    // DEBUG
-    // printf("Frac Part: %llu, Mask: %016lx\n", fracPart, mask);
   }
-
-  // DEBUG
-  printf("After conversion, frac part: ");
-  BigintPrintHex(&fracPart);
-
-  // DEBUG
-  // TEST
-  // printf("Frac Bin: %016lx\n", fracBin);
-  printf("Frac Bin: ");
-  BigintPrintHex(&fracBin);
 
   // Combine the integer and the fractional binary representations to form the
   // mantissa, updating the exponent along the process
-  // TODO: consider rounding bits
   uint64_t mantissaBits = 0, exponentBits = 0;
-  // TEST
-  /*
-  if (intBin != 0) {
-    for (int i = 63; i >= 0; --i) {
-      if ((intBin >> i) & 1) {
-        mantissaBits = (intBin << (63 - i + 1)) | (fracBin >> i);
-        exponentBits = i + 1023;
-        break;
-      }
-    }
-  } else if (fracBin == 0) {
-    exponentBits = 0;
-  } else {
-    for (int i = 63; i >= 0; --i) {
-      if ((fracBin >> i) & 1) {
-        mantissaBits = fracBin << (63 - i + 1);
-        exponentBits = i - 64 + 1023;
-        break;
-      }
-    }
-  }
-  */
-
-  // Find the most significant non-zero bit from the integer and fraction parts
-  Bigint *bin;
-  int lastIdx;
+  // Find the most significant non-zero 64-bit integer from the integer and
+  // fraction binary
   bool intPartIs0 = BigintCmpInt(&intBin, 0) == 0;
+  uint64_t cur64Bits;
+  int cur64BitIdx = -1;
   if (intPartIs0) {
-    bin = &fracBin;
-    lastIdx = fracBinSize - 1;
+    cur64Bits = fracBin;
   } else {
-    bin = &intBin;
-    lastIdx = bigintSize - 1;
+    for (cur64BitIdx = bigintSize - 1;
+         (cur64Bits = intBin.arr[cur64BitIdx]) == 0; --cur64BitIdx);
   }
-  if (BigintCmpInt(bin, 0) == 0) {
+  if (cur64Bits == 0) {
     // Both the integer and fraction parts are 0, so the value must be 0.
     // We treat this as a special case and return early
     SyntaxAST *floatLiteral = SyntaxASTNew(SYNTAX_AST_KIND_LITERAL);
@@ -971,30 +959,35 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     BigintDelete(&intBin);
     BigintDelete(&fracPart);
     BigintDelete(&one);
-    BigintDelete(&fracBin);
+    free(str);
     return floatLiteral;
   }
   // The value is nonzero, so we can find the first set bit
-  int extractIdx, firstSetBit;
-  for (extractIdx = lastIdx; bin->arr[extractIdx] == 0; --extractIdx);
-  for (firstSetBit = 63; ((bin->arr[extractIdx] >> firstSetBit) & 1) == 0;
-       --firstSetBit);
+  int firstSetBit;
+  for (firstSetBit = 63; ((cur64Bits >> firstSetBit) & 1) == 0; --firstSetBit);
 
   // Calculate the exponent
   // TODO: add exponent from literal
   bool tooSmall = false;
+  int numPrecisionBits = NUM_PRECISION_BITS;
   if (intPartIs0) {
-    // Only fractional part, exponent is negative
-    exponentBits = EXPONENT_OFFSET - (lastIdx - extractIdx) * 64 -
-                   (64 - firstSetBit);
-    if (exponentBits < 0) {
+    // Only fraction part, exponent is negative. Since we only have the fraction
+    // part, it should be nonzero, and the most significant bit should be set
+    assert(firstSetBit == 63);
+    if (numLeading0s + 1 >= EXPONENT_OFFSET + NUM_MANTISSA_BITS) {
       // Exponent too small, set value to 0
-      // TODO: subnormal numbers
       tooSmall = true;
+    } else if (numLeading0s + 1 >= EXPONENT_OFFSET) {
+      // Subnormal numbers
+      numPrecisionBits = EXPONENT_OFFSET + NUM_MANTISSA_BITS -
+          (numLeading0s + 1);
+    } else {
+      // Normal numbers
+      exponentBits = EXPONENT_OFFSET - numLeading0s - 1;
     }
   } else {
     // Has integer part, exponent is positive
-    exponentBits = EXPONENT_OFFSET + extractIdx * 64 + firstSetBit;
+    exponentBits = EXPONENT_OFFSET + cur64BitIdx * 64 + firstSetBit;
     if (exponentBits > MAX_EXPONENT) {
       // Exponent too large, out of range
       outOfRange = true;
@@ -1003,23 +996,27 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
 
   // Calculate the remaining number of mantissa bits to set after extracting
   // from the first set bit of the current 64 bits
-  int remMantissaBits = NUM_PRECISION_BITS - 1 - firstSetBit;
+  int remMantissaBits = numPrecisionBits - 1 - firstSetBit;
   int numRoundedBits;
   if (remMantissaBits > 0) {
     // If the current 64 bits is not enough to fill the mantissa, then
     // we fill in what we can here, and the rest of the mantissa bits should
-    // be extracted from the next 64 bits
-    mantissaBits |= bin->arr[extractIdx] << remMantissaBits;
-    numRoundedBits = 64 - remMantissaBits;
-    if (--extractIdx < 0) {
-      // If this is the last 64 bits, then we must be extracting from the
-      // integer part, because we guaranteed that the floating point part
-      // has more than enough precision bits (as long as it is not zero,
-      // which we handled as a special case)
-      assert (bin == &intBin);
-      bin = &fracBin;
-      extractIdx = fracBinSize - 1;
+    // be extracted from the next 64 bit. In this case, we must be extracting
+    // from the integer part, because we guaranteed that the floating point part
+    // has more than enough precision bits (as long as it is not zero, which we
+    // handled as a special case)
+    assert(!intPartIs0);
+    mantissaBits |= cur64Bits << remMantissaBits;
+    if (cur64BitIdx == 0) {
+      // Last 64 bits of the integer part, the next 64 bits should from the
+      // fraction part. We extract the next 64 bits while taking the number of
+      // leading 0's in the fraction part into account
+      cur64Bits = fracBin >> numLeading0s;
+    } else {
+      // Next 64 bits in the integer part
+      cur64Bits = intBin.arr[cur64BitIdx - 1];
     }
+    numRoundedBits = 64 - remMantissaBits;
   } else {
     // If the current 64 bits is enough to fill in the mantissa, then they
     // will be extracted later
@@ -1027,71 +1024,56 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   }
 
   // Extract the last bits of the mantissa
-  uint64_t last64Bits = bin->arr[extractIdx];
-  mantissaBits |= last64Bits >> numRoundedBits;
+  mantissaBits |= cur64Bits >> numRoundedBits;
 
   // Calculate the rounding
   bool roundUp;
-  if (numRoundedBits == 0 && bin == &fracBin) {
-    // Mantissa extracted from the last 64 bits of the fraction part, so we
-    // should check if the remaining fraction part >/=/< 0.5. In other words,
-    // check if the twice the remaining fraction part >/=/< 1
-    BigintMulInt(&fracPart, &fracPart, 2);
-    int cmp = BigintCmp(&fracPart, &one) == 0;
-    if (cmp > 0)
-      roundUp = true;
-    else if (cmp < 0)
-      roundUp = false;
-    else
+  if (numRoundedBits == 0) {
+    // No bits are rounded off in the current 64 bits, so the bits that are
+    // rounded off must be from the next 64 bits. Since the fraction part
+    // always has more than enough precision bits, the only way the current
+    // 64 bits are used entirely without bits being rounded off is if the
+    // current 64 bits are from the integer part
+    assert(!intPartIs0);
+    if (--cur64BitIdx < 0) {
+      // Mantissa extracted from the last 64 bits of the integer part, so the
+      // rounding starts from the fraction part
+      cur64Bits = fracBin >> numLeading0s;
+    } else {
+      cur64Bits = intBin.arr[cur64BitIdx];
+    }
+    numRoundedBits = 64;
+  }
+  // Apparently, left shift is undefined if the shift count is greater than or
+  // equal to the bit width of the type, so we have to check that separately
+  uint64_t roundedBits = numRoundedBits == 64
+      ? cur64Bits : (cur64Bits & ((1LL << numRoundedBits) - 1));
+  uint64_t half = 1LL << (numRoundedBits - 1);
+
+  // Compare the rounded off bits to 0.5
+  if (roundedBits < half) {
+    roundUp = false;
+  } else if (roundedBits > half) {
+    roundUp = true;
+  } else {
+    // If the remaining bits are all zero, then the rounded off bits equate
+    // to exactly 0.5, so we should round to even; otherwise the rounded off
+    // bits is greater than 0.5, and we should round up
+    bool allZeros = BigintCmpInt(&fracPart, 0) == 0;
+    for (int i = cur64BitIdx - 1; i >= 0; --i) {
+      if (intBin.arr[i] != 0) {
+        allZeros = false;
+        break;
+      }
+    }
+    if (cur64BitIdx >= 0)
+      allZeros = allZeros && fracBin == 0;
+    if (allZeros)
       // Round to even
       roundUp = mantissaBits & 1;
-  } else {
-    if (numRoundedBits == 0) {
-      // No bits are rounded off in the current 64 bits, so the bits that are
-      // rounded off must be from the next 64 bits
-      if (--extractIdx < 0) {
-        // Mantissa extracted from the last 64 bits of the integer part, so the
-        // rounding starts from the fraction part
-        assert(bin == &intBin);
-        bin = &fracBin;
-        extractIdx = fracBinSize - 1;
-      }
-      last64Bits = bin->arr[extractIdx];
-    }
-    uint64_t roundedBits = last64Bits & ((1LL << numRoundedBits) - 1);
-    uint64_t half = 1LL << (numRoundedBits - 1);
-
-    // Compare the rounded off bits to 0.5
-    if (roundedBits < half) {
-      roundUp = false;
-    } else if (roundedBits > half) {
+    else
+      // Round up
       roundUp = true;
-    } else {
-      // If the remaining bits are all zero, then the rounded off bits equate
-      // to exactly 0.5, so we should round to even, otherwise the rounded off
-      // bits is greater than 0.5, and we should round up
-      bool allZeros = BigintCmpInt(&fracPart, 0) == 0;
-      for (int i = extractIdx - 1; i >= 0; --i) {
-        if (bin->arr[i] != 0) {
-          allZeros = false;
-          break;
-        }
-      }
-      if (bin == &intBin) {
-        for (int i = fracBinSize - 1; i >= 0; --i) {
-          if (fracBin.arr[i] != 0) {
-            allZeros = false;
-            break;
-          }
-        }
-      }
-      if (allZeros)
-        // Round to even
-        roundUp = mantissaBits & 1;
-      else
-        // Round up
-        roundUp = true;
-    }
   }
 
   // Round the mantissa
@@ -1106,21 +1088,17 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     }
   }
 
-  // Exclude the implicit first 1 bit from the mantissa
+  // Exclude the implicit first 1 bit from the mantissa, if it is not a
+  // subnormal number
   mantissaBits &= ~(1LL << (NUM_PRECISION_BITS - 1));
-
-  // DEBUG
-  printf("mantissa: %016llx, exponent: %016llx\n", mantissaBits, exponentBits);
 
   // Set the floating point value to the bits we calculated
   uint64_t valBin = (exponentBits << NUM_MANTISSA_BITS) | mantissaBits;
   double val;
   memcpy(&val, &valBin, sizeof(val));
 
-  // DEBUG
-  printf("val: %016llx (%lf)\n", valBin, val); 
-
-  if (val > maxVal || outOfRange) {
+  // Handle out of range
+  if (outOfRange || val > maxVal) {
     // TODO: perhaps make this into an error, but would have to handle parser
     //       errors that are generated in the handler
     Parser *parser = rhs->parser;
@@ -1128,11 +1106,11 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     SourceLocation *loc = &floatToken->loc;
     fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET" %s:%d: ",
             lexer->filename, loc->from.lineNo + 1);
-    fprintf(stderr, "float literal value out of range of %s, converting value"
+    fprintf(stderr, "float literal value out of range of %s, converting value "
                     "to inf\n", postfix);
     SourceLocationPrint(lexer->source, 1, SOURCE_COLOR_RED, loc);
     val = INFINITY;
-  } else if (tooSmall) {
+  } else if (tooSmall || val < minVal) {
     // TODO: perhaps make this into an error, but would have to handle parser
     //       errors that are generated in the handler
     Parser *parser = rhs->parser;
@@ -1140,8 +1118,8 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
     SourceLocation *loc = &floatToken->loc;
     fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET" %s:%d: ",
             lexer->filename, loc->from.lineNo + 1);
-    fprintf(stderr, "float literal value out of range of %s, converting value"
-                    "to 0\n", postfix);
+    fprintf(stderr, "float literal value too small to be represented in %s, "
+                    "converting value to 0\n", postfix);
     SourceLocationPrint(lexer->source, 1, SOURCE_COLOR_RED, loc);
     val = 0;
   }
@@ -1155,7 +1133,7 @@ ParserDeclareHandler(SyntaxHandlerFloatLiteral, rhs) {
   BigintDelete(&intBin);
   BigintDelete(&fracPart);
   BigintDelete(&one);
-  BigintDelete(&fracBin);
+  free(str);
   return floatLiteral;
 }
 

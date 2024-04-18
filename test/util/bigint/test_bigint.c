@@ -1,6 +1,7 @@
 #include "util/bigint/bigint.h"
 #include <assert.h>
 #include <stdio.h>
+#include <stdint.h>
 
 void test1(void) {
   // 1. Create Bigint and print
@@ -63,9 +64,20 @@ void test4(void) {
   BigintDelete(&y);
 }
 
+void test5(void) {
+  // 5. Test overflow
+  Bigint x;
+  BigintNew(&x, 2, UINT64_MAX);
+  assert(BigintAddInt(&x, &x, 1));
+  assert(x.arr[0] == 0 && x.arr[1] == 1);
+  x.arr[0] = x.arr[1] = UINT64_MAX;
+  assert(!BigintAddInt(&x, &x, 1));
+}
+
 int main(void) {
   test1();
   test2();
   test3();
   test4();
+  test5();
 }

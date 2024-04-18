@@ -44,14 +44,17 @@ bool BigintAddCarry(Bigint *c, Bigint *a, Bigint *b, uint64_t carry) {
   if (c != a)
     overflow = !BigintCopy(c, a);
 
-  for (int i = 0; i < b->size; ++i) {
+  int size = b->size > c->size ? b->size : c->size;
+  for (int i = 0; i < size; ++i) {
     if (i >= c->size && (b->arr[i] != 0 || carry != 0)) {
       overflow = true;
     } else {
-      uint64_t nxtCarry = c->arr[i] > UINT64_MAX - b->arr[i] ? 1 : 0;
-      c->arr[i] += b->arr[i];
-      nxtCarry += c->arr[i] > UINT64_MAX - carry ? 1 : 0;
+      uint64_t nxtCarry = c->arr[i] > UINT64_MAX - carry ? 1 : 0;
       c->arr[i] += carry;
+      if (i < b->size) {
+        nxtCarry += c->arr[i] > UINT64_MAX - b->arr[i] ? 1 : 0;
+        c->arr[i] += b->arr[i];
+      }
       carry = nxtCarry;
     }
   }

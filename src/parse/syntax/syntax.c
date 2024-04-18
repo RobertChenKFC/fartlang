@@ -326,8 +326,7 @@ Lexer *SyntaxCreateLexer(void) {
                 RegexFromString("0b"), RegexOneOrMore(digitsBin_))),
         RegexZeroOrOne(RegexFromUnion(8,
             i64_, u64_, i32_, u32_, i16_, u16_, i8_, u8_))));
-    ADD_REGEX_CHAIN(chain, decimals_, RegexFromConcat(2,
-        RegexZeroOrMore(REGEX_DIGITS), digitsNo0_));
+    ADD_REGEX_CHAIN(chain, decimals_, RegexZeroOrMore(REGEX_DIGITS));
     ADD_REGEX_CHAIN(chain, float_literal_, RegexFromConcat(3,
         RegexFromUnion(2,
             RegexFromConcat(2,
