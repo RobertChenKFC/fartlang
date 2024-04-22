@@ -33,7 +33,10 @@ typedef struct SyntaxAST SyntaxAST;
   ENUM(SYNTAX_AST_KIND_EXPR_LIST) \
   ENUM(SYNTAX_AST_KIND_LITERAL) \
   ENUM(SYNTAX_AST_KIND_METHOD_DECLS) \
-  ENUM(SYNTAX_AST_KIND_MEMBER_ACCESS)
+  ENUM(SYNTAX_AST_KIND_MEMBER_ACCESS) \
+  ENUM(SYNTAX_AST_KIND_METHOD_DECL) \
+  ENUM(SYNTAX_AST_KIND_PARAM_LIST) \
+  ENUM(SYNTAX_AST_KIND_PARAM)
 typedef enum {
   SYNTAX_AST_FOREACH_KIND(SYNTAX_GEN_ENUM)
 } SyntaxASTKind;
@@ -106,6 +109,16 @@ typedef enum {
 } SyntaxOp;
 extern const char *SYNTAX_OP_STRS[];
 
+// Method declaration modifiers
+#define SYNTAX_FOREACH_METHOD_TYPE(ENUM) \
+  ENUM(SYNTAX_METHOD_TYPE_CONSTRUCTOR) \
+  ENUM(SYNTAX_METHOD_TYPE_STATIC) \
+  ENUM(SYNTAX_METHOD_TYPE_METHOD)
+typedef enum {
+  SYNTAX_FOREACH_METHOD_TYPE(SYNTAX_GEN_ENUM)
+} SyntaxMethodType;
+extern const char *SYNTAX_METHOD_TYPE_STRS[];
+
 // A structure to store the AST of a fartlang program. This structs stores
 // any node in the AST. A node has pointers "firstChild" and "lastChild" that
 // points to the first and last children of the node, respectively, and a
@@ -124,7 +137,8 @@ struct SyntaxAST {
   // TODO: fill this in later
   union {
     // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_CLASS_DECL,
-    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_MEMBER_ACCESS
+    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_MEMBER_ACCESS,
+    // SYNTAX_AST_KIND_PARAM
     char *string; 
     // SYNTAX_AST_KIND_IMPORT_DECL
     struct {
@@ -148,6 +162,11 @@ struct SyntaxAST {
       bool boolVal;
       char *strVal;
     } literal;
+    // SYNTAX_AST_KIND_METHOD_DECL
+    struct {
+      SyntaxMethodType type;
+      char *name;
+    } method;
   };
 };
 

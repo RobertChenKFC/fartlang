@@ -183,16 +183,27 @@
       |
 
 <method-decl>
-    ::= <identifier> "(" <param-list> ")" "{" <stmts> "}"
-      | <method-decl-modifiers> <type-or-void> <identifier> "(" <param-list> ")"  "{" <stmts> "}"
+    ::= <method-decl-prefix> <identifier> "(" <param-list> ")" 
+        <method-decl-body>
+
+<method-decl-prefix>
+    ::= <method-decl-modifiers> <type-or-void>
+      |
+
+<method-decl-body>
+    ::= "{" <stmts> "}"
+      |
 
 <param-list>
     ::= <param-list-nonempty>
       |
 
 <param-list-nonempty>
-    ::= <param-list-nonempty> "," <type> <identifier>
-      | <type> <identifier>
+    ::= <param-list-nonempty> "," <param>
+      | <param>
+
+<param>
+    ::= <type> <identifier>
 
 <stmts>
     ::= <stmts> <stmt>
@@ -206,7 +217,7 @@
       | <switch-stmt>
       | <for-stmt>
       | <while-stmt>
-	  | <break-stmt>
+	    | <break-stmt>
       | <return-stmt>
 
 <expr-stmt>
@@ -216,15 +227,12 @@
     ::= <assign> ";"
 
 <assign>
-    ::= <assign-eq>
+    ::= <assign> <op-assign> <expr>
       | <expr> <op-assign> <expr>
 
-<assign-eq>
-    ::= <assign-eq> "=" <expr>
-      | <expr> "=" <expr>
-
 <op-assign>
-    ::= "+=" | "-=" | "*=" | "/=" | "%=" | "<<=" | ">>=" | "&=" | "^=" | "|="
+    ::= "="   | "+="  | "-=" | "*=" | "/=" | "%="
+      | "<<=" | ">>=" | "&=" | "^=" | "|="
 
 <if-stmt>
     ::= "if" <expr> "{" <stmts> "}" <else-if-bodies> <else-body>

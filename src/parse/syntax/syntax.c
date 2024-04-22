@@ -26,6 +26,9 @@ const char *SYNTAX_TYPE_STRS[] = {
 const char *SYNTAX_OP_STRS[] = {
   SYNTAX_FOREACH_OP(SYNTAX_GEN_STR)
 };
+const char *SYNTAX_METHOD_TYPE_STRS[] = {
+  SYNTAX_FOREACH_METHOD_TYPE(SYNTAX_GEN_STR)
+};
 // Token ID's
 enum {
   ADD_ADD,
@@ -148,14 +151,16 @@ enum {
   TERM,
   METHOD_DECLS,
   METHOD_DECL,
+  METHOD_DECL_PREFIX,
+  METHOD_DECL_BODY,
   PARAM_LIST,
   PARAM_LIST_NONEMPTY,
+  PARAM,
   STMTS,
   STMT,
   EXPR_STMT,
   ASSIGN_STMT,
   ASSIGN,
-  ASSIGN_EQ,
   OP_ASSIGN,
   IF_STMT,
   ELSE_IF_BODIES,
@@ -559,14 +564,16 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == TERM);
       assert(CFGAddVariable(cfg) == METHOD_DECLS);
       assert(CFGAddVariable(cfg) == METHOD_DECL);
+      assert(CFGAddVariable(cfg) == METHOD_DECL_PREFIX);
+      assert(CFGAddVariable(cfg) == METHOD_DECL_BODY);
       assert(CFGAddVariable(cfg) == PARAM_LIST);
       assert(CFGAddVariable(cfg) == PARAM_LIST_NONEMPTY);
+      assert(CFGAddVariable(cfg) == PARAM);
       assert(CFGAddVariable(cfg) == STMTS);
       assert(CFGAddVariable(cfg) == STMT);
       assert(CFGAddVariable(cfg) == EXPR_STMT);
       assert(CFGAddVariable(cfg) == ASSIGN_STMT);
       assert(CFGAddVariable(cfg) == ASSIGN);
-      assert(CFGAddVariable(cfg) == ASSIGN_EQ);
       assert(CFGAddVariable(cfg) == OP_ASSIGN);
       assert(CFGAddVariable(cfg) == IF_STMT);
       assert(CFGAddVariable(cfg) == ELSE_IF_BODIES);
@@ -798,9 +805,43 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           TERM, 1, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenExpr,
           TERM, 3, LPAREN, EXPR, RPAREN);
-      // TODO: continue here
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
+          METHOD_DECLS, 2, METHOD_DECLS, METHOD_DECL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
           METHOD_DECLS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecl,
+          METHOD_DECL, 6, METHOD_DECL_PREFIX,
+          IDENTIFIER, LPAREN, PARAM_LIST, RPAREN, METHOD_DECL_BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclPrefix,
+          METHOD_DECL_PREFIX, 2, METHOD_DECL_MODIFIERS, TYPE_OR_VOID);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclPrefix,
+          METHOD_DECL_PREFIX, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
+          METHOD_DECL_MODIFIERS, 1, STATIC);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
+          METHOD_DECL_MODIFIERS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclBody,
+          METHOD_DECL_BODY, 3, LBRACE, STMTS, RBRACE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclBody,
+          METHOD_DECL_BODY, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          PARAM_LIST, 1, PARAM_LIST_NONEMPTY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParamList,
+          PARAM_LIST, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParamList,
+          PARAM_LIST_NONEMPTY, 3, PARAM_LIST, COMMA, PARAM);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParamList,
+          PARAM_LIST_NONEMPTY, 1, PARAM);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParam,
+          PARAM, 2, TYPE, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerStmts,
+          STMTS, 0);
+      /*
+<stmts>
+    ::= <stmts> <stmt>
+      |
+      */
+      // TODO: continue here
       
       // Create parser
       parser = ParserFromConfig(parserConfig);
@@ -845,6 +886,7 @@ void SyntaxASTDelete(void *p) {
     case SYNTAX_AST_KIND_CLASS_DECL:
     case SYNTAX_AST_KIND_VAR_INIT:
     case SYNTAX_AST_KIND_MEMBER_ACCESS:
+    case SYNTAX_AST_KIND_PARAM:
       free(node->string);
       break;
     case SYNTAX_AST_KIND_IMPORT_DECL:

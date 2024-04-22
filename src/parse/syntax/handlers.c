@@ -1265,6 +1265,103 @@ ParserDeclareHandler(SyntaxHandlerParenExpr, rhs) {
   return expr;
 }
 
+ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
+  assert(rhs->size == 6);
+  SyntaxAST *method = rhs->arr[0];
+  LexerToken *identifier_ = rhs->arr[1];
+  LexerToken *lParen_ = rhs->arr[2];
+  SyntaxAST *paramList = rhs->arr[3];
+  LexerToken *rParen_ = rhs->arr[4];
+  SyntaxAST *body = rhs->arr[5];
+  assert(method);
+  assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+  assert(lParen_ && lParen_->tokenID == LPAREN);
+  assert(paramList);
+  assert(rParen_ && rParen_->tokenID == RPAREN);
+
+  method->string = strndup(identifier_->str, identifier_->length);
+  method->loc.from = SourcePointMax(&method->loc.from, &identifier_->loc.from);
+  SyntaxASTAppend(method, paramList);
+  if (body)
+    SyntaxASTAppend(method, body);
+  else
+    method->loc.to = rParen_->loc.to;
+  return method;
+}
+
+ParserDeclareHandler(SyntaxHandlerMethodDeclPrefix, rhs) {
+  SyntaxAST *method;
+  if (rhs->size == 2) {
+    method = rhs->arr[0];
+    SyntaxAST *retType = rhs->arr[1];
+    assert(method);
+    assert(retType);
+    SyntaxASTAppend(method, retType);
+  } else {
+    assert(rhs->size == 0);
+    method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
+    method->method.type = SYNTAX_METHOD_TYPE_CONSTRUCTOR;
+  }
+  return method;
+}
+
+ParserDeclareHandler(SyntaxHandlerMethodDeclModifiers, rhs) {
+  SyntaxAST *method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
+  if (rhs->size == 1) {
+    LexerToken *static_ = rhs->arr[0];
+    assert(static_ && static_->tokenID == STATIC);
+
+    method->method.type = SYNTAX_METHOD_TYPE_STATIC;
+    method->loc.from = static_->loc.from;
+    LexerTokenDelete(static_);
+  } else {
+    assert(rhs->size == 0);
+    method->method.type = SYNTAX_METHOD_TYPE_METHOD;
+  }
+  return method;
+}
+
+ParserDeclareHandler(SyntaxHandlerMethodDeclBody, rhs) {
+  if (rhs->size == 3) {
+    LexerToken *lbrace_ = rhs->arr[0];
+    SyntaxAST *stmts = rhs->arr[1];
+    LexerToken *rbrace_ = rhs->arr[2];
+    assert(lbrace_ && lbrace_->tokenID == LBRACE);
+    assert(stmts);
+    assert(rbrace_ && rbrace_->tokenID == RBRACE);
+
+    LexerTokenDelete(lbrace_);
+    LexerTokenDelete(rbrace_);
+    return stmts;
+  } else {
+    assert(rhs->size == 0);
+    return NULL;
+  }
+}
+
+ParserDeclareHandler(SyntaxHandlerParamList, rhs) {
+  return SyntaxHandlerSeparatedList(rhs, COMMA, SYNTAX_AST_KIND_PARAM_LIST);
+}
+
+ParserDeclareHandler(SyntaxHandlerParam, rhs) {
+  assert(rhs->size == 2);
+  SyntaxAST *type = rhs->arr[0];
+  LexerToken *identifier_ = rhs->arr[1];
+  assert(type);
+  assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+
+  SyntaxAST *param = SyntaxASTNew(SYNTAX_AST_KIND_PARAM);
+  SyntaxASTAppend(param, type);
+  param->string = strndup(identifier_->str, identifier_->length);
+  param->loc.to = identifier_->loc.to;
+  LexerTokenDelete(identifier_);
+  return param;
+}
+
+ParserDeclareHandler(SyntaxHandlerStmts, rhs) {
+  return SyntaxHandlerList(rhs, SYNTAX_AST_KIND_STMTS);
+}
+
 SyntaxAST *SyntaxASTNew(int kind) {
   SyntaxAST *node = malloc(sizeof(SyntaxAST));
   node->firstChild = node->lastChild = node->sibling = NULL;
