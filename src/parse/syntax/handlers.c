@@ -65,6 +65,11 @@ SyntaxAST *SyntaxHandlerLiteral(
 // pointed by "p" is unchanged, and returns -1
 char SyntaxNextCharacter(char **p);
 
+ParserDeclareHandler(SyntaxHandlerPlaceholder, rhs) {
+  fprintf(stderr, "replace the placeholder handler!\n");
+  abort();
+}
+
 ParserDeclareHandler(SyntaxHandlerModule, rhs) {
   assert(rhs->size == 2);
   SyntaxAST *importDecls = rhs->arr[0], *classDecls = rhs->arr[1];
@@ -75,6 +80,11 @@ ParserDeclareHandler(SyntaxHandlerModule, rhs) {
   SyntaxASTAppend(module, importDecls);
   SyntaxASTAppend(module, classDecls);
   return module;
+}
+
+ParserDeclareHandler(SyntaxHandlerNull, rhs) {
+  assert(rhs->size == 0);
+  return NULL;
 }
 
 ParserDeclareHandler(SyntaxHandlerImportDecls, rhs) {
@@ -193,16 +203,17 @@ ParserDeclareHandler(SyntaxHandlerVarDeclStmt, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerVarDecl, rhs) {
+  assert(rhs->size == 3);
   SyntaxAST *varDecl = rhs->arr[0];
-  SyntaxAST *type = rhs->arr[1];
+  LexerToken *var_ = rhs->arr[1];
   SyntaxAST *varInitList = rhs->arr[2];
   assert(varDecl);
-  assert(type);
+  assert(var_ && var_->tokenID == VAR);
   assert(varInitList);
 
-  SyntaxASTAppend(varDecl, type);
+  varDecl->loc.from = SourcePointMin(&varDecl->loc.from, &var_->loc.from);
   SyntaxASTAppend(varDecl, varInitList);
-
+  LexerTokenDelete(var_);
   return varDecl;
 }
 
@@ -240,21 +251,10 @@ ParserDeclareHandler(SyntaxHandlerMove, rhs) {
   return rhs->arr[0];
 }
 
-ParserDeclareHandler(SyntaxHandlerVar, rhs) {
-  assert(rhs->size == 1);
-  LexerToken *var_ = rhs->arr[0];
-
-  SyntaxAST *type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
-  type->type.baseType = SYNTAX_TYPE_VAR;
-  type->type.arrayLevels = 0;
-  type->loc = var_->loc;
-  LexerTokenDelete(var_);
-  return type;
-}
-
 ParserDeclareHandler(SyntaxHandlerType, rhs) {
   SyntaxAST *type;
   if (rhs->size == 1) {
+    // Module path
     SyntaxAST *modulePath = rhs->arr[0];
     assert(modulePath);
 
@@ -263,6 +263,7 @@ ParserDeclareHandler(SyntaxHandlerType, rhs) {
     type->type.baseType = SYNTAX_TYPE_MODULE_PATH;
     type->type.arrayLevels = 0;
   } else if (rhs->size == 3) {
+    // Array type
     type = rhs->arr[0];
     LexerToken *lbrack_ = rhs->arr[1];
     LexerToken *rbrack_ = rhs->arr[2];
@@ -274,22 +275,27 @@ ParserDeclareHandler(SyntaxHandlerType, rhs) {
     LexerTokenDelete(lbrack_);
     LexerTokenDelete(rbrack_);
   } else {
-    assert(rhs->size == 4);
-    SyntaxAST *retType = rhs->arr[0];
+    // Function type
+    assert(rhs->size == 5);
+    LexerToken *fn_ = rhs->arr[0];
     LexerToken *lparen_ = rhs->arr[1];
     SyntaxAST *typeList = rhs->arr[2];
     LexerToken *rparen_ = rhs->arr[3];
-    assert(retType);
+    SyntaxAST *retType = rhs->arr[4];
+    assert(fn_ && fn_->tokenID == FN);
     assert(lparen_ && lparen_->tokenID == LPAREN);
     assert(typeList);
     assert(rparen_ && rparen_->tokenID == RPAREN);
+    assert(retType);
 
     type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
     SyntaxASTAppend(type, retType);
     SyntaxASTAppend(type, typeList);
     type->type.baseType = SYNTAX_TYPE_FUNC;
     type->type.arrayLevels = 0;
+    type->loc.from = fn_->loc.from;
     type->loc.to = rparen_->loc.to;
+    LexerTokenDelete(fn_);
     LexerTokenDelete(lparen_);
     LexerTokenDelete(rparen_);
   }
@@ -353,6 +359,23 @@ ParserDeclareHandler(SyntaxHandlerPrimitiveType, rhs) {
   return type;
 }
 
+ParserDeclareHandler(SyntaxHandlerReturnType, rhs) {
+  if (rhs->size == 2) {
+    LexerToken *arrow_ = rhs->arr[0];
+    SyntaxAST *returnType = rhs->arr[1];
+    assert(arrow_ && arrow_->tokenID == ARROW);
+
+    LexerTokenDelete(arrow_);
+    return returnType;
+  } else {
+    SyntaxAST *returnType = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
+    assert(rhs->size == 0);
+    returnType->type.baseType = SYNTAX_TYPE_VOID;
+    returnType->type.arrayLevels = 0;
+    return returnType;
+  }
+}
+
 ParserDeclareHandler(SyntaxHandlerTypeList, rhs) {
   return SyntaxHandlerSeparatedList(rhs, COMMA, SYNTAX_AST_KIND_TYPE_LIST);
 }
@@ -362,14 +385,12 @@ ParserDeclareHandler(SyntaxHandlerVarInitList, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerVarInit, rhs) {
-  SyntaxAST *varInit = SyntaxASTNew(SYNTAX_AST_KIND_VAR_INIT);
-  LexerToken *identifier_ = rhs->arr[0];
-  varInit->loc = identifier_->loc;
-  varInit->string = strndup(identifier_->str, identifier_->length);
-
+  SyntaxAST *varInit;
   if (rhs->size == 3) {
+    varInit = rhs->arr[0];
     LexerToken *eq_ = rhs->arr[1];
     SyntaxAST *expr = rhs->arr[2];
+    assert(varInit);
     assert(eq_);
     assert(expr);
 
@@ -377,8 +398,37 @@ ParserDeclareHandler(SyntaxHandlerVarInit, rhs) {
     LexerTokenDelete(eq_);
   } else {
     assert(rhs->size == 1);
+    varInit = rhs->arr[0];
+    assert(varInit);
+  }
+  return varInit;
+}
+
+ParserDeclareHandler(SyntaxHandlerVarName, rhs) {
+  SyntaxAST *varInit = SyntaxASTNew(SYNTAX_AST_KIND_VAR_INIT);
+  SyntaxAST *type;
+  LexerToken *identifier_;
+  if (rhs->size == 3) {
+    identifier_ = rhs->arr[0];
+    LexerToken *col_ = rhs->arr[1];
+    type = rhs->arr[2];
+    assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+    assert(col_ && col_->tokenID == COL);
+    assert(type);
+    LexerTokenDelete(col_);
+  } else {
+    assert(rhs->size == 1);
+    identifier_ = rhs->arr[0];
+    assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+    type = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
+    type->type.baseType = SYNTAX_TYPE_VAR;
+    type->type.arrayLevels = 0;
   }
 
+  varInit->loc.from = identifier_->loc.from;
+  varInit->loc.to = SourcePointMax(&varInit->loc.to, &identifier_->loc.to);
+  varInit->string = strndup(identifier_->str, identifier_->length);
+  SyntaxASTAppend(varInit, type);
   LexerTokenDelete(identifier_);
   return varInit;
 }
@@ -1251,37 +1301,40 @@ ParserDeclareHandler(SyntaxHandlerVariable, rhs) {
   return SyntaxTokenToAST(identifier_, SYNTAX_AST_KIND_IDENTIFIER);
 }
 
-ParserDeclareHandler(SyntaxHandlerParenExpr, rhs) {
+ParserDeclareHandler(SyntaxHandlerParenTerm, rhs) {
   assert(rhs->size == 3);
   LexerToken *lparen_ = rhs->arr[0];
-  SyntaxAST *expr = rhs->arr[1];
+  SyntaxAST *term = rhs->arr[1];
   LexerToken *rparen_ = rhs->arr[2];
   assert(lparen_ && lparen_->tokenID == LPAREN);
-  assert(expr);
+  assert(term);
   assert(rparen_ && rparen_->tokenID == RPAREN);
 
   LexerTokenDelete(lparen_);
   LexerTokenDelete(rparen_);
-  return expr;
+  return term;
 }
 
 ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
-  assert(rhs->size == 6);
+  assert(rhs->size == 7);
   SyntaxAST *method = rhs->arr[0];
   LexerToken *identifier_ = rhs->arr[1];
   LexerToken *lParen_ = rhs->arr[2];
   SyntaxAST *paramList = rhs->arr[3];
   LexerToken *rParen_ = rhs->arr[4];
-  SyntaxAST *body = rhs->arr[5];
+  SyntaxAST *returnType = rhs->arr[5];
+  SyntaxAST *body = rhs->arr[6];
   assert(method);
   assert(identifier_ && identifier_->tokenID == IDENTIFIER);
   assert(lParen_ && lParen_->tokenID == LPAREN);
   assert(paramList);
   assert(rParen_ && rParen_->tokenID == RPAREN);
+  assert(returnType);
 
   method->string = strndup(identifier_->str, identifier_->length);
   method->loc.from = SourcePointMax(&method->loc.from, &identifier_->loc.from);
   SyntaxASTAppend(method, paramList);
+  SyntaxASTAppend(method, returnType);
   if (body)
     SyntaxASTAppend(method, body);
   else
@@ -1289,31 +1342,15 @@ ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
   return method;
 }
 
-ParserDeclareHandler(SyntaxHandlerMethodDeclPrefix, rhs) {
-  SyntaxAST *method;
-  if (rhs->size == 2) {
-    method = rhs->arr[0];
-    SyntaxAST *retType = rhs->arr[1];
-    assert(method);
-    assert(retType);
-    SyntaxASTAppend(method, retType);
-  } else {
-    assert(rhs->size == 0);
-    method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
-    method->method.type = SYNTAX_METHOD_TYPE_CONSTRUCTOR;
-  }
-  return method;
-}
-
 ParserDeclareHandler(SyntaxHandlerMethodDeclModifiers, rhs) {
   SyntaxAST *method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
   if (rhs->size == 1) {
-    LexerToken *static_ = rhs->arr[0];
-    assert(static_ && static_->tokenID == STATIC);
+    LexerToken *fn_ = rhs->arr[0];
+    assert(fn_ && fn_->tokenID == FN);
 
-    method->method.type = SYNTAX_METHOD_TYPE_STATIC;
-    method->loc.from = static_->loc.from;
-    LexerTokenDelete(static_);
+    method->method.type = SYNTAX_METHOD_TYPE_FN;
+    method->loc.from = fn_->loc.from;
+    LexerTokenDelete(fn_);
   } else {
     assert(rhs->size == 0);
     method->method.type = SYNTAX_METHOD_TYPE_METHOD;
@@ -1321,22 +1358,18 @@ ParserDeclareHandler(SyntaxHandlerMethodDeclModifiers, rhs) {
   return method;
 }
 
-ParserDeclareHandler(SyntaxHandlerMethodDeclBody, rhs) {
-  if (rhs->size == 3) {
-    LexerToken *lbrace_ = rhs->arr[0];
-    SyntaxAST *stmts = rhs->arr[1];
-    LexerToken *rbrace_ = rhs->arr[2];
-    assert(lbrace_ && lbrace_->tokenID == LBRACE);
-    assert(stmts);
-    assert(rbrace_ && rbrace_->tokenID == RBRACE);
+ParserDeclareHandler(SyntaxHandlerBody, rhs) {
+  assert(rhs->size == 3);
+  LexerToken *lbrace_ = rhs->arr[0];
+  SyntaxAST *stmts = rhs->arr[1];
+  LexerToken *rbrace_ = rhs->arr[2];
+  assert(lbrace_ && lbrace_->tokenID == LBRACE);
+  assert(stmts);
+  assert(rbrace_ && rbrace_->tokenID == RBRACE);
 
-    LexerTokenDelete(lbrace_);
-    LexerTokenDelete(rbrace_);
-    return stmts;
-  } else {
-    assert(rhs->size == 0);
-    return NULL;
-  }
+  LexerTokenDelete(lbrace_);
+  LexerTokenDelete(rbrace_);
+  return stmts;
 }
 
 ParserDeclareHandler(SyntaxHandlerParamList, rhs) {

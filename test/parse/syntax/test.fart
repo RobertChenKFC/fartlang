@@ -6,7 +6,7 @@ class Array {
     u64 _size, _capacity;
 
     Array() {
-        _arr = new any[DEFAULT_CAPACITY];
+        _arr = any[DEFAULT_CAPACITY];
         _size = 0;
         _capacity = DEFAULT_CAPACITY;
     }

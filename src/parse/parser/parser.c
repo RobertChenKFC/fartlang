@@ -440,7 +440,7 @@ Parser *ParserFromConfig(ParserConfig *config) {
           if (!hasConflicts) {
             if (conflictNum == 0 && !inExpectedFormat) {
               fprintf(stderr, SOURCE_COLOR_YELLOW"[Warning]"SOURCE_COLOR_RESET
-                      "There are conflicts in the parser, so there will be "
+                      " There are conflicts in the parser, so there will be "
                       "additional warning messages describing the conflicts. "
                       "However, the warning messages will only output properly "
                       "if the source code is in the correct format (the LHS "

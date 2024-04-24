@@ -2,121 +2,130 @@ SYNTAX_AST_KIND_MODULE: 1:1~29:1:
     SYNTAX_AST_KIND_IMPORT_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 
     SYNTAX_AST_KIND_CLASS_DECLS: 1:1~29:1: 
         SYNTAX_AST_KIND_CLASS_DECL: 1:1~29:1: 
-            SYNTAX_AST_KIND_STMTS: 3:3~28:9: 
-                SYNTAX_AST_KIND_VAR_DECL: 3:3~3:8: 
-                    SYNTAX_AST_KIND_TYPE: 3:3~3:4: base type: SYNTAX_TYPE_U8, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 3:6~3:7: 
-                        SYNTAX_AST_KIND_VAR_INIT: 3:6~3:7: variable: c1: 
-                SYNTAX_AST_KIND_VAR_DECL: 5:3~5:15: static: 
-                    SYNTAX_AST_KIND_TYPE: 5:10~5:11: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 5:13~5:14: 
-                        SYNTAX_AST_KIND_VAR_INIT: 5:13~5:14: variable: c2: 
-                SYNTAX_AST_KIND_VAR_DECL: 7:3~7:15: const: 
-                    SYNTAX_AST_KIND_TYPE: 7:9~7:11: base type: SYNTAX_TYPE_U16, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 7:13~7:14: 
-                        SYNTAX_AST_KIND_VAR_INIT: 7:13~7:14: variable: s1: 
-                SYNTAX_AST_KIND_VAR_DECL: 9:3~9:22: static and const: 
-                    SYNTAX_AST_KIND_TYPE: 9:16~9:18: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 9:20~9:21: 
-                        SYNTAX_AST_KIND_VAR_INIT: 9:20~9:21: variable: s2: 
-                SYNTAX_AST_KIND_VAR_DECL: 10:3~10:22: static and const: 
-                    SYNTAX_AST_KIND_TYPE: 10:16~10:18: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 10:20~10:21: 
-                        SYNTAX_AST_KIND_VAR_INIT: 10:20~10:21: variable: i1: 
-                SYNTAX_AST_KIND_VAR_DECL: 13:3~13:9: 
-                    SYNTAX_AST_KIND_TYPE: 13:3~13:5: base type: SYNTAX_TYPE_U64, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 13:7~13:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 13:7~13:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 14:3~14:9: 
-                    SYNTAX_AST_KIND_TYPE: 14:3~14:5: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 14:7~14:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 14:7~14:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 15:3~15:9: 
-                    SYNTAX_AST_KIND_TYPE: 15:3~15:5: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 15:7~15:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 15:7~15:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 16:3~16:9: 
-                    SYNTAX_AST_KIND_TYPE: 16:3~16:5: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 16:7~16:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 16:7~16:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 17:3~17:9: 
-                    SYNTAX_AST_KIND_TYPE: 17:3~17:5: base type: SYNTAX_TYPE_U16, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 17:7~17:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 17:7~17:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 18:3~18:9: 
-                    SYNTAX_AST_KIND_TYPE: 18:3~18:5: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:8: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 19:3~19:8: 
-                    SYNTAX_AST_KIND_TYPE: 19:3~19:4: base type: SYNTAX_TYPE_U8, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 19:6~19:7: 
-                        SYNTAX_AST_KIND_VAR_INIT: 19:6~19:7: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 20:3~20:8: 
-                    SYNTAX_AST_KIND_TYPE: 20:3~20:4: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 20:6~20:7: 
-                        SYNTAX_AST_KIND_VAR_INIT: 20:6~20:7: variable: x1: 
-                SYNTAX_AST_KIND_VAR_DECL: 22:3~22:12: 
-                    SYNTAX_AST_KIND_TYPE: 22:3~22:8: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                        SYNTAX_AST_KIND_MODULE_PATH: 22:3~22:8: 
-                            SYNTAX_AST_KIND_IDENTIFIER: 22:3~22:8: Vector: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 22:10~22:11: 
-                        SYNTAX_AST_KIND_VAR_INIT: 22:10~22:11: variable: v1: 
-                SYNTAX_AST_KIND_VAR_DECL: 23:3~23:32: 
-                    SYNTAX_AST_KIND_TYPE: 23:3~23:17: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                        SYNTAX_AST_KIND_MODULE_PATH: 23:3~23:17: 
-                            SYNTAX_AST_KIND_IDENTIFIER: 23:3~23:8: Vector: 
-                            SYNTAX_AST_KIND_IDENTIFIER: 23:10~23:17: Iterator: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 23:19~23:31: 
-                        SYNTAX_AST_KIND_VAR_INIT: 23:19~23:21: variable: it1: 
-                        SYNTAX_AST_KIND_VAR_INIT: 23:24~23:26: variable: it2: 
-                        SYNTAX_AST_KIND_VAR_INIT: 23:29~23:31: variable: it3: 
-                SYNTAX_AST_KIND_VAR_DECL: 24:3~24:26: 
-                    SYNTAX_AST_KIND_TYPE: 24:3~24:19: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 1, child types: 
-                        SYNTAX_AST_KIND_MODULE_PATH: 24:3~24:17: 
-                            SYNTAX_AST_KIND_IDENTIFIER: 24:3~24:8: Vector: 
-                            SYNTAX_AST_KIND_IDENTIFIER: 24:10~24:17: Iterator: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 24:21~24:25: 
-                        SYNTAX_AST_KIND_VAR_INIT: 24:21~24:25: variable: itArr: 
-                SYNTAX_AST_KIND_VAR_DECL: 25:3~25:31: 
-                    SYNTAX_AST_KIND_TYPE: 25:3~25:27: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
-                        SYNTAX_AST_KIND_TYPE: 25:3~25:6: base type: SYNTAX_TYPE_BOOL, array levels: 0, child types: 
-                        SYNTAX_AST_KIND_TYPE_LIST: 25:9~25:26: 
-                            SYNTAX_AST_KIND_TYPE: 25:9~25:16: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                                SYNTAX_AST_KIND_MODULE_PATH: 25:9~25:16: 
-                                    SYNTAX_AST_KIND_IDENTIFIER: 25:9~25:12: Math: 
-                                    SYNTAX_AST_KIND_IDENTIFIER: 25:14~25:16: Int: 
-                            SYNTAX_AST_KIND_TYPE: 25:19~25:26: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                                SYNTAX_AST_KIND_MODULE_PATH: 25:19~25:26: 
-                                    SYNTAX_AST_KIND_IDENTIFIER: 25:19~25:22: Math: 
-                                    SYNTAX_AST_KIND_IDENTIFIER: 25:24~25:26: Int: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 25:29~25:30: 
-                        SYNTAX_AST_KIND_VAR_INIT: 25:29~25:30: variable: lt: 
-                SYNTAX_AST_KIND_VAR_DECL: 26:3~26:90: 
-                    SYNTAX_AST_KIND_TYPE: 26:3~26:73: base type: SYNTAX_TYPE_FUNC, array levels: 2, child types: 
-                        SYNTAX_AST_KIND_TYPE: 26:3~26:8: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_MODULE_PATH: 26:3~26:8: 
-                                SYNTAX_AST_KIND_IDENTIFIER: 26:3~26:8: Vector: 
-                        SYNTAX_AST_KIND_TYPE_LIST: 26:11~26:68: 
-                            SYNTAX_AST_KIND_TYPE: 26:11~26:16: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                                SYNTAX_AST_KIND_MODULE_PATH: 26:11~26:16: 
-                                    SYNTAX_AST_KIND_IDENTIFIER: 26:11~26:16: Vector: 
-                            SYNTAX_AST_KIND_TYPE: 26:19~26:56: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
-                                SYNTAX_AST_KIND_TYPE: 26:19~26:24: base type: SYNTAX_TYPE_BOOL, array levels: 1, child types: 
-                                SYNTAX_AST_KIND_TYPE_LIST: 26:27~26:55: 
-                                    SYNTAX_AST_KIND_TYPE: 26:27~26:39: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                                        SYNTAX_AST_KIND_MODULE_PATH: 26:27~26:39: 
-                                            SYNTAX_AST_KIND_IDENTIFIER: 26:27~26:30: List: 
-                                            SYNTAX_AST_KIND_IDENTIFIER: 26:32~26:39: Iterator: 
-                                    SYNTAX_AST_KIND_TYPE: 26:42~26:55: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
-                                        SYNTAX_AST_KIND_MODULE_PATH: 26:42~26:55: 
-                                            SYNTAX_AST_KIND_IDENTIFIER: 26:42~26:46: Queue: 
-                                            SYNTAX_AST_KIND_IDENTIFIER: 26:48~26:55: Iterator: 
-                            SYNTAX_AST_KIND_TYPE: 26:59~26:63: base type: SYNTAX_TYPE_I64, array levels: 1, child types: 
-                            SYNTAX_AST_KIND_TYPE: 26:66~26:68: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 26:75~26:89: 
-                        SYNTAX_AST_KIND_VAR_INIT: 26:75~26:89: variable: messyType123456: 
-                SYNTAX_AST_KIND_VAR_DECL: 28:3~28:9: 
-                    SYNTAX_AST_KIND_TYPE: 28:3~28:5: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 28:7~28:8: 
-                        SYNTAX_AST_KIND_VAR_INIT: 28:7~28:8: variable: v2: 
+            SYNTAX_AST_KIND_STMTS: 3:3~28:15: 
+                SYNTAX_AST_KIND_VAR_DECL: 3:3~3:13: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 3:7~3:12: 
+                        SYNTAX_AST_KIND_VAR_INIT: 3:7~3:12: variable: c1: 
+                            SYNTAX_AST_KIND_TYPE: 3:11~3:12: base type: SYNTAX_TYPE_U8, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 5:3~5:20: static: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 5:14~5:19: 
+                        SYNTAX_AST_KIND_VAR_INIT: 5:14~5:19: variable: c2: 
+                            SYNTAX_AST_KIND_TYPE: 5:18~5:19: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 7:3~7:20: const: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 7:13~7:19: 
+                        SYNTAX_AST_KIND_VAR_INIT: 7:13~7:19: variable: s1: 
+                            SYNTAX_AST_KIND_TYPE: 7:17~7:19: base type: SYNTAX_TYPE_U16, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 9:3~9:27: static and const: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 9:20~9:26: 
+                        SYNTAX_AST_KIND_VAR_INIT: 9:20~9:26: variable: s2: 
+                            SYNTAX_AST_KIND_TYPE: 9:24~9:26: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 10:3~10:27: static and const: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 10:20~10:26: 
+                        SYNTAX_AST_KIND_VAR_INIT: 10:20~10:26: variable: i1: 
+                            SYNTAX_AST_KIND_TYPE: 10:24~10:26: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 13:3~13:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 13:7~13:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 13:7~13:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 13:11~13:13: base type: SYNTAX_TYPE_U64, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 14:3~14:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 14:7~14:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 14:7~14:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 14:11~14:13: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 15:3~15:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 15:7~15:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 15:7~15:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 15:11~15:13: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 16:3~16:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 16:7~16:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 16:7~16:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 16:11~16:13: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 17:3~17:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 17:7~17:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 17:7~17:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 17:11~17:13: base type: SYNTAX_TYPE_U16, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 18:3~18:14: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:13: 
+                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:13: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 18:11~18:13: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 19:3~19:13: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 19:7~19:12: 
+                        SYNTAX_AST_KIND_VAR_INIT: 19:7~19:12: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 19:11~19:12: base type: SYNTAX_TYPE_U8, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 20:3~20:13: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 20:7~20:12: 
+                        SYNTAX_AST_KIND_VAR_INIT: 20:7~20:12: variable: x1: 
+                            SYNTAX_AST_KIND_TYPE: 20:11~20:12: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 22:3~22:17: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 22:7~22:16: 
+                        SYNTAX_AST_KIND_VAR_INIT: 22:7~22:16: variable: v1: 
+                            SYNTAX_AST_KIND_TYPE: 22:11~22:16: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 22:11~22:16: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 22:11~22:16: Vector: 
+                SYNTAX_AST_KIND_VAR_DECL: 23:3~23:71: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 23:7~23:70: 
+                        SYNTAX_AST_KIND_VAR_INIT: 23:7~23:26: variable: it1: 
+                            SYNTAX_AST_KIND_TYPE: 23:12~23:26: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 23:12~23:26: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:12~23:17: Vector: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:19~23:26: Iterator: 
+                        SYNTAX_AST_KIND_VAR_INIT: 23:29~23:48: variable: it2: 
+                            SYNTAX_AST_KIND_TYPE: 23:34~23:48: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 23:34~23:48: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:34~23:39: Vector: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:41~23:48: Iterator: 
+                        SYNTAX_AST_KIND_VAR_INIT: 23:51~23:70: variable: it3: 
+                            SYNTAX_AST_KIND_TYPE: 23:56~23:70: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 23:56~23:70: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:56~23:61: Vector: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 23:63~23:70: Iterator: 
+                SYNTAX_AST_KIND_VAR_DECL: 24:3~24:31: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 24:7~24:30: 
+                        SYNTAX_AST_KIND_VAR_INIT: 24:7~24:30: variable: itArr: 
+                            SYNTAX_AST_KIND_TYPE: 24:14~24:30: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 1, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 24:14~24:28: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 24:14~24:19: Vector: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 24:21~24:28: Iterator: 
+                SYNTAX_AST_KIND_VAR_DECL: 25:3~25:42: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 25:7~25:33: 
+                        SYNTAX_AST_KIND_VAR_INIT: 25:7~25:33: variable: lt: 
+                            SYNTAX_AST_KIND_TYPE: 25:11~25:33: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_TYPE: 25:38~25:41: base type: SYNTAX_TYPE_BOOL, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_TYPE_LIST: 25:15~25:32: 
+                                    SYNTAX_AST_KIND_TYPE: 25:15~25:22: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_MODULE_PATH: 25:15~25:22: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 25:15~25:18: Math: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 25:20~25:22: Int: 
+                                    SYNTAX_AST_KIND_TYPE: 25:25~25:32: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_MODULE_PATH: 25:25~25:32: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 25:25~25:28: Math: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 25:30~25:32: Int: 
+                SYNTAX_AST_KIND_VAR_DECL: 26:3~26:109: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 26:7~26:108: 
+                        SYNTAX_AST_KIND_VAR_INIT: 26:7~26:108: variable: messyType123456: 
+                            SYNTAX_AST_KIND_TYPE: 26:25~26:108: base type: SYNTAX_TYPE_FUNC, array levels: 2, child types: 
+                                SYNTAX_AST_KIND_TYPE: 26:98~26:103: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                    SYNTAX_AST_KIND_MODULE_PATH: 26:98~26:103: 
+                                        SYNTAX_AST_KIND_IDENTIFIER: 26:98~26:103: Vector: 
+                                SYNTAX_AST_KIND_TYPE_LIST: 26:29~26:92: 
+                                    SYNTAX_AST_KIND_TYPE: 26:29~26:34: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_MODULE_PATH: 26:29~26:34: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 26:29~26:34: Vector: 
+                                    SYNTAX_AST_KIND_TYPE: 26:37~26:70: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_TYPE: 26:75~26:80: base type: SYNTAX_TYPE_BOOL, array levels: 1, child types: 
+                                        SYNTAX_AST_KIND_TYPE_LIST: 26:41~26:69: 
+                                            SYNTAX_AST_KIND_TYPE: 26:41~26:53: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                                SYNTAX_AST_KIND_MODULE_PATH: 26:41~26:53: 
+                                                    SYNTAX_AST_KIND_IDENTIFIER: 26:41~26:44: List: 
+                                                    SYNTAX_AST_KIND_IDENTIFIER: 26:46~26:53: Iterator: 
+                                            SYNTAX_AST_KIND_TYPE: 26:56~26:69: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                                SYNTAX_AST_KIND_MODULE_PATH: 26:56~26:69: 
+                                                    SYNTAX_AST_KIND_IDENTIFIER: 26:56~26:60: Queue: 
+                                                    SYNTAX_AST_KIND_IDENTIFIER: 26:62~26:69: Iterator: 
+                                    SYNTAX_AST_KIND_TYPE: 26:83~26:87: base type: SYNTAX_TYPE_I64, array levels: 1, child types: 
+                                    SYNTAX_AST_KIND_TYPE: 26:90~26:92: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 28:3~28:15: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 28:7~28:14: 
+                        SYNTAX_AST_KIND_VAR_INIT: 28:7~28:14: variable: v2: 
+                            SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
+                            SYNTAX_AST_KIND_LITERAL: 28:12~28:14: type SYNTAX_TYPE_I32, value 123
             SYNTAX_AST_KIND_METHOD_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 

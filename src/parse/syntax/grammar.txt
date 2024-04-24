@@ -15,7 +15,7 @@
 <module-path-ext>
 	  | "as" <identifier>
 	  | "." "*"
-      |
+    |
 
 <class-decls>
     ::= <class-decls> <class-decl>
@@ -32,7 +32,7 @@
     ::= <var-decl> ";"
 
 <var-decl>
-    ::= <var-decl-modifiers> <type-or-var> <var-init-list>
+    ::= <var-decl-modifiers> <var> <var-init-list>
 
 <var-decl-modifiers>
     ::= <var-decl-static-modifier> <var-decl-const-modifier>
@@ -45,39 +45,49 @@
     ::= "const"
       |
 
-<type-or-var>
-    ::= <type>
-      | "var"
-
 <type>
-    ::= <primitive-types>
-      | <module-path>
-      | <type> "[" "]"
-      | <type-or-void> "(" <type-list> ")"
+    ::= <type-fn-expr>
 
-<primitive-types>
-    ::= "i64" | "u64" | "i32" | "u32" | "i16" | "u16" | "i8" | "u8" |
-      | "f64" | "f32"
-      | "bool" | "any"
+<type-fn-expr>
+    ::= "(" <type-list> ")" <ret-type>
+      | <type-arr-expr>
 
-<type-or-void>
-    ::= <type>
-      | "void"
+<ret-type>
+    ::= "->" <type>
+      |
 
 <type-list>
     ::= <type-list-nonempty>
       |
 
 <type-list-nonempty>
-    ::= <type-list-nonempty> "," <type>
+    ::= "fn" <type-list-nonempty> "," <type>
       | <type>
+
+<type-arr-expr>
+    ::= <type-arr-expr> "[" "]"
+      | <type-term>
+
+<type-term>
+    ::= <primitive-types>
+      | <module-path>
+      | "(" <type> ")"
+
+<primitive-types>
+    ::= "i64" | "u64" | "i32" | "u32" | "i16" | "u16" | "i8" | "u8" |
+      | "f64" | "f32"
+      | "bool" | "any"
 
 <var-init-list>
     ::= <var-init-list> "," <var-init>
       | <var-init>
 
 <var-init>
-    ::= <identifier> "=" <expr>
+    ::= <var-name> "=" <expr>
+      | <var-name>
+
+<var-name>
+    ::= <identifier> ":" <type>
       | <identifier>
 
 <expr>
@@ -183,11 +193,15 @@
       |
 
 <method-decl>
-    ::= <method-decl-prefix> <identifier> "(" <param-list> ")" 
+    ::= <method-decl-prefix> <identifier> "(" <param-list> ")" <ret-type>
         <method-decl-body>
 
 <method-decl-prefix>
-    ::= <method-decl-modifiers> <type-or-void>
+    ::= <method-decl-modifiers>
+      |
+
+<method-decl-modifiers>
+    ::= "static"
       |
 
 <method-decl-body>
@@ -284,7 +298,3 @@
 <return-stmt>
 	::= "return" ";"
 	  | "return" <expr> ";"
-
-<method-decl-modifiers>
-    ::= "static"
-      |

@@ -1,29 +1,29 @@
 class VarDecl {
   # No modifiers
-  u8 c1;
+  var c1: u8;
   # Static variable
-  static i8 c2;
+  static var c2: i8;
   # Constant variable
-  const u16 s1;
+  const var s1: u16;
   # Static and constant variable
-  static const i16 s2;
-  const static u32 i1;
+  static const var s2: i16;
+  const static var i1: u32;
 
   # All primitive types
-  u64 x1;
-  i64 x1;
-  u32 x1;
-  i32 x1;
-  u16 x1;
-  i16 x1;
-  u8 x1;
-  i8 x1;
+  var x1: u64;
+  var x1: i64;
+  var x1: u32;
+  var x1: i32;
+  var x1: u16;
+  var x1: i16;
+  var x1: u8;
+  var x1: i8;
   # Custom types
-  Vector v1;
-  Vector.Iterator it1, it2, it3;
-  Vector.Iterator[] itArr;
-  bool (Math.Int, Math.Int) lt;
-  Vector (Vector, bool[] (List.Iterator, Queue.Iterator), i64[], u32)[][] messyType123456;
+  var v1: Vector;
+  var it1: Vector.Iterator, it2: Vector.Iterator, it3: Vector.Iterator;
+  var itArr: Vector.Iterator[];
+  var lt: fn (Math.Int, Math.Int) -> bool;
+  var messyType123456: (fn (Vector, fn (List.Iterator, Queue.Iterator) -> bool[], i64[], u32) -> Vector)[][];
   # Auto type deduction
-  var v2;
+  var v2 = 123;
 }

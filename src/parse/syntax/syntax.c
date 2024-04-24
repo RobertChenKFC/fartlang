@@ -51,8 +51,11 @@ enum {
   RBRACE,
   STATIC,
   SEMICOL,
+  COL,
+  ARROW,
   CONST,
   VAR,
+  FN,
   LBRACK,
   RBRACK,
   LPAREN,
@@ -105,6 +108,9 @@ enum {
   FALSE_LITERAL,
   THIS,
   FOR,
+  WHILE,
+  BREAK,
+  RETURN,
   NULL_LITERAL,
   IDENTIFIER,
   NUM_TOKENS,
@@ -124,14 +130,17 @@ enum {
   VAR_DECL,
   VAR_DECL_MODIFIERS,
   VAR_DECL_MODIFIER,
-  TYPE_OR_VAR,
   TYPE,
+  TYPE_FN_EXPR,
+  TYPE_ARR_EXPR,
+  TYPE_TERM,
   PRIMITIVE_TYPE,
-  TYPE_OR_VOID,
+  RETURN_TYPE,
   TYPE_LIST,
   TYPE_LIST_NONEMPTY,
   VAR_INIT_LIST,
   VAR_INIT,
+  VAR_NAME,
   EXPR,
   EXPR_TERNARY,
   EXPR_LOGIC_OR,
@@ -153,6 +162,7 @@ enum {
   METHOD_DECL,
   METHOD_DECL_PREFIX,
   METHOD_DECL_BODY,
+  BODY,
   PARAM_LIST,
   PARAM_LIST_NONEMPTY,
   PARAM,
@@ -257,8 +267,11 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, rbrace_, RegexFromLetter('}'));
     ADD_REGEX_CHAIN(chain, static_, RegexFromString("static"));
     ADD_REGEX_CHAIN(chain, semicol_, RegexFromLetter(';'));
+    ADD_REGEX_CHAIN(chain, col_, RegexFromLetter(':'));
+    ADD_REGEX_CHAIN(chain, arrow_, RegexFromString("->"));
     ADD_REGEX_CHAIN(chain, const_, RegexFromString("const"));
     ADD_REGEX_CHAIN(chain, var_, RegexFromString("var"));
+    ADD_REGEX_CHAIN(chain, fn_, RegexFromString("fn"));
     ADD_REGEX_CHAIN(chain, lbrack_, RegexFromLetter('['));
     ADD_REGEX_CHAIN(chain, rbrack_, RegexFromLetter(']'));
     ADD_REGEX_CHAIN(chain, lparen_, RegexFromLetter('('));
@@ -382,6 +395,9 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, false_, RegexFromString("false"));
     ADD_REGEX_CHAIN(chain, this_, RegexFromString("this"));
     ADD_REGEX_CHAIN(chain, for_, RegexFromString("for"));
+    ADD_REGEX_CHAIN(chain, while_, RegexFromString("while"));
+    ADD_REGEX_CHAIN(chain, break_, RegexFromString("break"));
+    ADD_REGEX_CHAIN(chain, return_, RegexFromString("return"));
     ADD_REGEX_CHAIN(chain, null_literal_, RegexFromString("null"));
     RegexRange *newlineRange = RegexRangeFromLetter('\n');
     RegexCharacterClass *newlineClass = RegexCharacterClassFromRanges(1,
@@ -438,8 +454,11 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, rbrace_) == RBRACE);
     assert(LexerConfigAddRegex(lexerConfig, static_) == STATIC);
     assert(LexerConfigAddRegex(lexerConfig, semicol_) == SEMICOL);
+    assert(LexerConfigAddRegex(lexerConfig, col_) == COL);
+    assert(LexerConfigAddRegex(lexerConfig, arrow_) == ARROW);
     assert(LexerConfigAddRegex(lexerConfig, const_) == CONST);
     assert(LexerConfigAddRegex(lexerConfig, var_) == VAR);
+    assert(LexerConfigAddRegex(lexerConfig, fn_) == FN);
     assert(LexerConfigAddRegex(lexerConfig, lbrack_) == LBRACK);
     assert(LexerConfigAddRegex(lexerConfig, rbrack_) == RBRACK);
     assert(LexerConfigAddRegex(lexerConfig, lparen_) == LPAREN);
@@ -492,6 +511,9 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, false_) == FALSE_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, this_) == THIS);
     assert(LexerConfigAddRegex(lexerConfig, for_) == FOR);
+    assert(LexerConfigAddRegex(lexerConfig, while_) == WHILE);
+    assert(LexerConfigAddRegex(lexerConfig, break_) == BREAK);
+    assert(LexerConfigAddRegex(lexerConfig, return_) == RETURN);
     assert(LexerConfigAddRegex(lexerConfig, null_literal_) == NULL_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, identifier_) == IDENTIFIER);
     LexerConfigSetIgnoreRegex(lexerConfig, ignore_);
@@ -537,14 +559,17 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == VAR_DECL);
       assert(CFGAddVariable(cfg) == VAR_DECL_MODIFIERS);
       assert(CFGAddVariable(cfg) == VAR_DECL_MODIFIER);
-      assert(CFGAddVariable(cfg) == TYPE_OR_VAR);
       assert(CFGAddVariable(cfg) == TYPE);
+      assert(CFGAddVariable(cfg) == TYPE_FN_EXPR);
+      assert(CFGAddVariable(cfg) == TYPE_ARR_EXPR);
+      assert(CFGAddVariable(cfg) == TYPE_TERM);
       assert(CFGAddVariable(cfg) == PRIMITIVE_TYPE);
-      assert(CFGAddVariable(cfg) == TYPE_OR_VOID);
+      assert(CFGAddVariable(cfg) == RETURN_TYPE);
       assert(CFGAddVariable(cfg) == TYPE_LIST);
       assert(CFGAddVariable(cfg) == TYPE_LIST_NONEMPTY);
       assert(CFGAddVariable(cfg) == VAR_INIT_LIST);
       assert(CFGAddVariable(cfg) == VAR_INIT);
+      assert(CFGAddVariable(cfg) == VAR_NAME);
       assert(CFGAddVariable(cfg) == EXPR);
       assert(CFGAddVariable(cfg) == EXPR_TERNARY);
       assert(CFGAddVariable(cfg) == EXPR_LOGIC_OR);
@@ -566,6 +591,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == METHOD_DECL);
       assert(CFGAddVariable(cfg) == METHOD_DECL_PREFIX);
       assert(CFGAddVariable(cfg) == METHOD_DECL_BODY);
+      assert(CFGAddVariable(cfg) == BODY);
       assert(CFGAddVariable(cfg) == PARAM_LIST);
       assert(CFGAddVariable(cfg) == PARAM_LIST_NONEMPTY);
       assert(CFGAddVariable(cfg) == PARAM);
@@ -625,11 +651,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclStmt,
           VAR_DECL_STMT, 2, VAR_DECL, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDecl,
-          VAR_DECL, 3, VAR_DECL_MODIFIERS, TYPE_OR_VAR, VAR_INIT_LIST);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          TYPE_OR_VAR, 1, TYPE);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVar,
-          TYPE_OR_VAR, 1, VAR);
+          VAR_DECL, 3, VAR_DECL_MODIFIERS, VAR, VAR_INIT_LIST);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
           VAR_DECL_MODIFIERS, 2, VAR_DECL_MODIFIERS, VAR_DECL_MODIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarDeclModifiers,
@@ -639,13 +661,21 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           VAR_DECL_MODIFIER, 1, CONST);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          TYPE, 1, PRIMITIVE_TYPE);
+          TYPE, 1, TYPE_FN_EXPR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
-          TYPE, 1, MODULE_PATH);
+          TYPE_FN_EXPR, 5, FN, LPAREN, TYPE_LIST, RPAREN, RETURN_TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_FN_EXPR, 1, TYPE_ARR_EXPR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
-          TYPE, 3, TYPE, LBRACK, RBRACK);
+          TYPE_ARR_EXPR, 3, TYPE_ARR_EXPR, LBRACK, RBRACK);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_ARR_EXPR, 1, TYPE_TERM);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          TYPE_TERM, 1, PRIMITIVE_TYPE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerType,
-          TYPE, 4, TYPE_OR_VOID, LPAREN, TYPE_LIST, RPAREN);
+          TYPE_TERM, 1, MODULE_PATH);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenTerm,
+          TYPE_TERM, 3, LPAREN, TYPE, RPAREN);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
           PRIMITIVE_TYPE, 1, I64);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
@@ -670,10 +700,10 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           PRIMITIVE_TYPE, 1, BOOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
           PRIMITIVE_TYPE, 1, ANY);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          TYPE_OR_VOID, 1, TYPE);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPrimitiveType,
-          TYPE_OR_VOID, 1, VOID);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnType,
+          RETURN_TYPE, 2, ARROW, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnType,
+          RETURN_TYPE, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           TYPE_LIST, 1, TYPE_LIST_NONEMPTY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerTypeList,
@@ -687,9 +717,13 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInitList,
           VAR_INIT_LIST, 1, VAR_INIT);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInit,
-          VAR_INIT, 3, IDENTIFIER, EQ, EXPR);
+          VAR_INIT, 3, VAR_NAME, EQ, EXPR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarInit,
-          VAR_INIT, 1, IDENTIFIER);
+          VAR_INIT, 1, VAR_NAME);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarName,
+          VAR_NAME, 3, IDENTIFIER, COL, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarName,
+          VAR_NAME, 1, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR, 1, EXPR_TERNARY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprTernary,
@@ -803,27 +837,25 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           TERM, 1, CHAR_LITERAL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVariable,
           TERM, 1, IDENTIFIER);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenExpr,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParenTerm,
           TERM, 3, LPAREN, EXPR, RPAREN);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
           METHOD_DECLS, 2, METHOD_DECLS, METHOD_DECL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
           METHOD_DECLS, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecl,
-          METHOD_DECL, 6, METHOD_DECL_PREFIX,
-          IDENTIFIER, LPAREN, PARAM_LIST, RPAREN, METHOD_DECL_BODY);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclPrefix,
-          METHOD_DECL_PREFIX, 2, METHOD_DECL_MODIFIERS, TYPE_OR_VOID);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclPrefix,
-          METHOD_DECL_PREFIX, 0);
+          METHOD_DECL, 7, METHOD_DECL_MODIFIERS,
+          IDENTIFIER, LPAREN, PARAM_LIST, RPAREN, RETURN_TYPE, METHOD_DECL_BODY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
-          METHOD_DECL_MODIFIERS, 1, STATIC);
+          METHOD_DECL_MODIFIERS, 1, FN);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
           METHOD_DECL_MODIFIERS, 0);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclBody,
-          METHOD_DECL_BODY, 3, LBRACE, STMTS, RBRACE);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclBody,
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          METHOD_DECL_BODY, 1, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerNull,
           METHOD_DECL_BODY, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerBody,
+          BODY, 3, LBRACE, STMTS, RBRACE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           PARAM_LIST, 1, PARAM_LIST_NONEMPTY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParamList,
@@ -835,13 +867,108 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerParam,
           PARAM, 2, TYPE, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerStmts,
+          STMTS, 2, STMTS, STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerStmts,
           STMTS, 0);
-      /*
-<stmts>
-    ::= <stmts> <stmt>
-      |
-      */
-      // TODO: continue here
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, VAR_DECL_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, EXPR_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, ASSIGN_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, IF_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, SWITCH_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, FOR_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, WHILE_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, BREAK_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, RETURN_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          EXPR_STMT, 2, EXPR, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ASSIGN_STMT, 2, ASSIGN, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ASSIGN, 3, ASSIGN, OP_ASSIGN, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ASSIGN, 3, EXPR, OP_ASSIGN, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, ADD_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, SUB_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, MUL_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, DIV_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, MOD_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, LSHIFT_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, RSHIFT_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, BIT_AND_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, BIT_XOR_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          OP_ASSIGN, 1, BIT_OR_EQ);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          IF_STMT, 5, IF, EXPR, BODY, ELSE_IF_BODIES, ELSE_BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ELSE_IF_BODIES, 5, ELSE_IF_BODIES, ELSE, IF, EXPR, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ELSE_IF_BODIES, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ELSE_BODY, 2, ELSE, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          ELSE_BODY, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          SWITCH_STMT, 5, SWITCH, EXPR, LBRACE, CASES, RBRACE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          CASES, 3, CASES, CASE_COND, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          CASES, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          CASE_COND, 2, CASE, EXPR_LIST_NONEMPTY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          CASE_COND, 1, DEFAULT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          FOR_STMT, 7, FOR, FOR_INIT, SEMICOL, FOR_COND, SEMICOL,
+          FOR_ITER, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_INIT, 1, VAR_DECL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_INIT, 1, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_INIT, 1, ASSIGN);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          FOR_INIT, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_COND, 1, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          FOR_COND, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_ITER, 1, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          FOR_ITER, 1, ASSIGN);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          FOR_ITER, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          WHILE_STMT, 3, WHILE, EXPR, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          BREAK_STMT, 2, BREAK, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          BREAK_STMT, 3, BREAK, INT_LITERAL, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          RETURN_STMT, 2, RETURN, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
+          RETURN_STMT, 3, RETURN, EXPR, SEMICOL);
       
       // Create parser
       parser = ParserFromConfig(parserConfig);
