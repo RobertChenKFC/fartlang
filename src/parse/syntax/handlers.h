@@ -1,7 +1,8 @@
 #include "parse/parser/handler.h"
 
-ParserDeclareHandler(SyntaxHandlerPlaceholder, rhs);
+ParserDeclareHandler(SyntaxHandlerUnimplemented, rhs);
 ParserDeclareHandler(SyntaxHandlerNull, rhs);
+ParserDeclareHandler(SyntaxHandlerPlaceholder, rhs);
 ParserDeclareHandler(SyntaxHandlerModule, rhs);
 ParserDeclareHandler(SyntaxHandlerImportDecls, rhs);
 ParserDeclareHandler(SyntaxHandlerImportDecl, rhs);
@@ -29,7 +30,7 @@ ParserDeclareHandler(SyntaxHandlerExprBitXor, rhs);
 ParserDeclareHandler(SyntaxHandlerExprBitAnd, rhs);
 ParserDeclareHandler(SyntaxHandlerExprLt, rhs);
 ParserDeclareHandler(SyntaxHandlerExprLeq, rhs);
-ParserDeclareHandler(SyntaxHandlerExprEq, rhs);
+ParserDeclareHandler(SyntaxHandlerExprEqEq, rhs);
 ParserDeclareHandler(SyntaxHandlerExprNeq, rhs);
 ParserDeclareHandler(SyntaxHandlerExprGt, rhs);
 ParserDeclareHandler(SyntaxHandlerExprGeq, rhs);
@@ -68,3 +69,18 @@ ParserDeclareHandler(SyntaxHandlerBody, rhs);
 ParserDeclareHandler(SyntaxHandlerParamList, rhs);
 ParserDeclareHandler(SyntaxHandlerParam, rhs);
 ParserDeclareHandler(SyntaxHandlerStmts, rhs);
+ParserDeclareHandler(SyntaxHandlerExprStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerAssignStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerAssign, rhs);
+ParserDeclareHandler(SyntaxHandlerOpAssign, rhs);
+ParserDeclareHandler(SyntaxHandlerIfStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerElseIfBodies, rhs);
+ParserDeclareHandler(SyntaxHandlerElseBody, rhs);
+ParserDeclareHandler(SyntaxHandlerSwitchStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerSwitchCases, rhs);
+ParserDeclareHandler(SyntaxHandlerSwitchCase, rhs);
+ParserDeclareHandler(SyntaxHandlerCaseCond, rhs);
+ParserDeclareHandler(SyntaxHandlerForStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerWhileStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerBreakStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerReturnStmt, rhs);

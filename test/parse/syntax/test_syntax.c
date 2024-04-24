@@ -124,10 +124,18 @@ void PrintAST(FILE *file, SyntaxAST *node, int indentation) {
       PrintLiteral(file, node);
       break;
     case SYNTAX_AST_KIND_OP:
+    case SYNTAX_AST_KIND_ASSIGN:
       fprintf(file, "op: %s: ", SYNTAX_OP_STRS[node->op]);
       break;
     case SYNTAX_AST_KIND_MEMBER_ACCESS:
       fprintf(file, "member: %s: ", node->string);
+      break;
+    case SYNTAX_AST_KIND_METHOD_DECL:
+      fprintf(file, "type: %s, name: %s: ",
+          SYNTAX_METHOD_TYPE_STRS[node->method.type], node->method.name);
+      break;
+    case SYNTAX_AST_KIND_PARAM:
+      fprintf(file, "name: %s: ", node->string);
       break;
   }
   fprintf(file, "\n");
@@ -248,4 +256,7 @@ int main(void) {
   FloatTest("float");
   AstTest("term");
   AstTest("expr");
+  AstTest("methoddecl");
+  AstTest("stmt");
+  AstTest("test");
 }

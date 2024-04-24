@@ -241,7 +241,7 @@
     ::= <assign> ";"
 
 <assign>
-    ::= <assign> <op-assign> <expr>
+    ::= <expr> <op-assign> <assign>
       | <expr> <op-assign> <expr>
 
 <op-assign>

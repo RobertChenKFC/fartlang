@@ -41,8 +41,8 @@ $(TESTS): %.test: %.out %.ref
 
 $(OUT_FILES): $(BIN)
 	# DEBUG
-	# $(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
-	$(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
+	# $(BIN)
 
 .PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:

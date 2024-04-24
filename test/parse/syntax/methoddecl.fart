@@ -1,0 +1,12 @@
+class MethodDecl {
+    MethodDecl() {}
+
+    someFancyMethod(x: u32, y: MethodDecl, z: i32) -> bool[] {
+    }
+
+    fn externalFunction(arr: i32[], length: i32) -> fn (i32) -> i32
+
+    otherMethod() {}
+
+    otherMethod2() -> MethodDecl {}
+}

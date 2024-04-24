@@ -1,0 +1,42 @@
+SYNTAX_AST_KIND_MODULE: 1:1~12:1: 
+    SYNTAX_AST_KIND_IMPORT_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 
+    SYNTAX_AST_KIND_CLASS_DECLS: 1:1~12:1: 
+        SYNTAX_AST_KIND_CLASS_DECL: 1:1~12:1: 
+            SYNTAX_AST_KIND_STMTS: -2147483648:-2147483648~-2147483647:-2147483647: 
+            SYNTAX_AST_KIND_METHOD_DECLS: 4:21~11:32: 
+                SYNTAX_AST_KIND_METHOD_DECL: -2147483648:-2147483648~-2147483647:-2147483647: type: SYNTAX_METHOD_TYPE_METHOD, name: MethodDecl: 
+                    SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VOID, array levels: 0, child types: 
+                    SYNTAX_AST_KIND_PARAM_LIST: -2147483648:-2147483648~-2147483647:-2147483647: 
+                    SYNTAX_AST_KIND_STMTS: -2147483648:-2147483648~-2147483647:-2147483647: 
+                SYNTAX_AST_KIND_METHOD_DECL: 4:21~4:60: type: SYNTAX_METHOD_TYPE_METHOD, name: someFancyMethod: 
+                    SYNTAX_AST_KIND_TYPE: 4:55~4:60: base type: SYNTAX_TYPE_BOOL, array levels: 1, child types: 
+                    SYNTAX_AST_KIND_PARAM_LIST: 4:21~4:49: 
+                        SYNTAX_AST_KIND_PARAM: 4:21~4:26: name: x: 
+                            SYNTAX_AST_KIND_TYPE: 4:24~4:26: base type: SYNTAX_TYPE_U32, array levels: 0, child types: 
+                        SYNTAX_AST_KIND_PARAM: 4:29~4:41: name: y: 
+                            SYNTAX_AST_KIND_TYPE: 4:32~4:41: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_MODULE_PATH: 4:32~4:41: 
+                                    SYNTAX_AST_KIND_IDENTIFIER: 4:32~4:41: MethodDecl: 
+                        SYNTAX_AST_KIND_PARAM: 4:44~4:49: name: z: 
+                            SYNTAX_AST_KIND_TYPE: 4:47~4:49: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                    SYNTAX_AST_KIND_STMTS: -2147483648:-2147483648~-2147483647:-2147483647: 
+                SYNTAX_AST_KIND_METHOD_DECL: 7:8~7:48: type: SYNTAX_METHOD_TYPE_FN, name: externalFunction: 
+                    SYNTAX_AST_KIND_TYPE: 7:53~7:60: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
+                        SYNTAX_AST_KIND_TYPE: 7:65~7:67: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                        SYNTAX_AST_KIND_TYPE_LIST: 7:57~7:59: 
+                            SYNTAX_AST_KIND_TYPE: 7:57~7:59: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                    SYNTAX_AST_KIND_PARAM_LIST: 7:25~7:47: 
+                        SYNTAX_AST_KIND_PARAM: 7:25~7:34: name: arr: 
+                            SYNTAX_AST_KIND_TYPE: 7:30~7:34: base type: SYNTAX_TYPE_I32, array levels: 1, child types: 
+                        SYNTAX_AST_KIND_PARAM: 7:37~7:47: name: length: 
+                            SYNTAX_AST_KIND_TYPE: 7:45~7:47: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                SYNTAX_AST_KIND_METHOD_DECL: -2147483648:-2147483648~-2147483647:-2147483647: type: SYNTAX_METHOD_TYPE_METHOD, name: otherMethod: 
+                    SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VOID, array levels: 0, child types: 
+                    SYNTAX_AST_KIND_PARAM_LIST: -2147483648:-2147483648~-2147483647:-2147483647: 
+                    SYNTAX_AST_KIND_STMTS: -2147483648:-2147483648~-2147483647:-2147483647: 
+                SYNTAX_AST_KIND_METHOD_DECL: 11:23~11:32: type: SYNTAX_METHOD_TYPE_METHOD, name: otherMethod2: 
+                    SYNTAX_AST_KIND_TYPE: 11:23~11:32: base type: SYNTAX_TYPE_MODULE_PATH, array levels: 0, child types: 
+                        SYNTAX_AST_KIND_MODULE_PATH: 11:23~11:32: 
+                            SYNTAX_AST_KIND_IDENTIFIER: 11:23~11:32: MethodDecl: 
+                    SYNTAX_AST_KIND_PARAM_LIST: -2147483648:-2147483648~-2147483647:-2147483647: 
+                    SYNTAX_AST_KIND_STMTS: -2147483648:-2147483648~-2147483647:-2147483647: 

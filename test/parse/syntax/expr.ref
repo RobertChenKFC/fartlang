@@ -84,7 +84,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~19:1:
                             SYNTAX_AST_KIND_OP: 7:11~7:79: op: SYNTAX_OP_GE: 
                                 SYNTAX_AST_KIND_OP: 7:11~7:67: op: SYNTAX_OP_GT: 
                                     SYNTAX_AST_KIND_OP: 7:11~7:56: op: SYNTAX_OP_NEQ: 
-                                        SYNTAX_AST_KIND_OP: 7:11~7:45: op: SYNTAX_OP_EQ: 
+                                        SYNTAX_AST_KIND_OP: 7:11~7:45: op: SYNTAX_OP_EQEQ: 
                                             SYNTAX_AST_KIND_OP: 7:11~7:35: op: SYNTAX_OP_LE: 
                                                 SYNTAX_AST_KIND_OP: 7:11~7:25: op: SYNTAX_OP_LT: 
                                                     SYNTAX_AST_KIND_OP: 7:11~7:16: op: SYNTAX_OP_LSHIFT: 

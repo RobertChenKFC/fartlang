@@ -1,6 +1,7 @@
 class Term {
   # Integer literal base 10
   var uvar1 = 123456789876543210u64;
+  var uvar1 = 0u64;
   # Integer literal base 16
   var uvar2 = 0xdeadbeefu32;
   # Integer literal base 2

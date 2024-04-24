@@ -1,0 +1,76 @@
+class Stmt {
+  Stmt() {
+    # Expr
+    someInterestingFunctionCall();
+    abc++;
+    arr[5](abc, abc + 1, abc + 2).hello.world.function();
+
+    # Assign
+    a = b += c[3] -= d.e *= f().member /= g[h][i] %= j;
+    a <<= b >>= c |= d ^= e &= f;
+
+    # If
+    if x - 3 == 7 {
+      x++;
+    } else if x and y or x and z {
+      x--;
+    } else if Stmt.hello(x) {
+      x *= 5;
+    } else {
+      x /= 5;
+    }
+    if x {
+      x++;
+    }
+    if not x {
+    } else {
+      x--;
+    }
+    if x == 3 {
+    } else if x == 5 {
+    }
+
+    # Switch
+    switch x % 5 {
+      case 0, 1, 2 {
+        x += 1;
+      }
+      case 3 {
+        x -= 2;
+      }
+      default {
+        x = 3;
+      }
+    }
+
+    # For
+    for var i = 0; i < 100; i++ {}
+    for ;; {}
+    for node = list.head; node != null; node = node.next {
+      x += node.val;
+    }
+    for init(); ; nextIter() {
+      x += node.val;
+    }
+
+    # While
+    while 100 <= x < 110 {
+      x *= 10;
+    }
+    while 100 <= x < 110 {}
+
+    # Break
+    while true {
+      break;
+    }
+    for ; ; {
+      while true {
+        break 2;
+      }
+    }
+
+    # Return
+    return 123+456*789%101112;
+    return;
+  }
+}

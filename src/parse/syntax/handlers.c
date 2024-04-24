@@ -65,8 +65,8 @@ SyntaxAST *SyntaxHandlerLiteral(
 // pointed by "p" is unchanged, and returns -1
 char SyntaxNextCharacter(char **p);
 
-ParserDeclareHandler(SyntaxHandlerPlaceholder, rhs) {
-  fprintf(stderr, "replace the placeholder handler!\n");
+ParserDeclareHandler(SyntaxHandlerUnimplemented, rhs) {
+  fprintf(stderr, "calling unimplemented handler!\n");
   abort();
 }
 
@@ -85,6 +85,11 @@ ParserDeclareHandler(SyntaxHandlerModule, rhs) {
 ParserDeclareHandler(SyntaxHandlerNull, rhs) {
   assert(rhs->size == 0);
   return NULL;
+}
+
+ParserDeclareHandler(SyntaxHandlerPlaceholder, rhs) {
+  assert(rhs->size == 0);
+  return SyntaxASTNew(SYNTAX_AST_KIND_PLACEHOLDER);
 }
 
 ParserDeclareHandler(SyntaxHandlerImportDecls, rhs) {
@@ -484,8 +489,8 @@ ParserDeclareHandler(SyntaxHandlerExprLeq, rhs) {
   return SyntaxHandlerBinaryOp(rhs, LEQ, SYNTAX_OP_LE);
 }
 
-ParserDeclareHandler(SyntaxHandlerExprEq, rhs) {
-  return SyntaxHandlerBinaryOp(rhs, EQEQ, SYNTAX_OP_EQ);
+ParserDeclareHandler(SyntaxHandlerExprEqEq, rhs) {
+  return SyntaxHandlerBinaryOp(rhs, EQEQ, SYNTAX_OP_EQEQ);
 }
 
 ParserDeclareHandler(SyntaxHandlerExprNeq, rhs) {
@@ -637,7 +642,7 @@ ParserDeclareHandler(SyntaxHandlerExprMemberAccess, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerExprInc, rhs) {
-  return SyntaxHandlerPostfixOp(rhs, ADD_ADD, SYNTAX_OP_INC);
+    return SyntaxHandlerPostfixOp(rhs, ADD_ADD, SYNTAX_OP_INC);
 }
 
 ParserDeclareHandler(SyntaxHandlerExprDec, rhs) {
@@ -676,9 +681,8 @@ ParserDeclareHandler(SyntaxHandlerIntLiteral, rhs) {
         }
         val += digit;
       }
-    } else {
+    } else if (str[1] == 'x') {
       // Hexadecimal
-      assert(str[1] == 'x');
       for (i = 2;
            ('0' <= str[i] && str[i] <= '9') ||
            ('A' <= str[i] && str[i] <= 'F') ||
@@ -700,6 +704,9 @@ ParserDeclareHandler(SyntaxHandlerIntLiteral, rhs) {
         }
         val += digit;
       }
+    } else {
+      // Decimal 0
+      i = 1;
     }
   } else {
     // Decimal
@@ -722,6 +729,7 @@ ParserDeclareHandler(SyntaxHandlerIntLiteral, rhs) {
   char postfix[4] = "i32";
   int length = intToken->length;
   if (i < intToken->length) {
+    assert(intToken->length - i <= 3);
     char c = str[length];
     str[length] = '\0';
     strcpy(postfix, str + i);
@@ -1315,6 +1323,10 @@ ParserDeclareHandler(SyntaxHandlerParenTerm, rhs) {
   return term;
 }
 
+ParserDeclareHandler(SyntaxHandlerMethodDecls, rhs) {
+  return SyntaxHandlerList(rhs, SYNTAX_AST_KIND_METHOD_DECLS);
+}
+
 ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
   assert(rhs->size == 7);
   SyntaxAST *method = rhs->arr[0];
@@ -1331,14 +1343,17 @@ ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
   assert(rParen_ && rParen_->tokenID == RPAREN);
   assert(returnType);
 
-  method->string = strndup(identifier_->str, identifier_->length);
+  method->method.name = strndup(identifier_->str, identifier_->length);
   method->loc.from = SourcePointMax(&method->loc.from, &identifier_->loc.from);
-  SyntaxASTAppend(method, paramList);
   SyntaxASTAppend(method, returnType);
+  SyntaxASTAppend(method, paramList);
   if (body)
     SyntaxASTAppend(method, body);
   else
     method->loc.to = rParen_->loc.to;
+  LexerTokenDelete(identifier_);
+  LexerTokenDelete(lParen_);
+  LexerTokenDelete(rParen_);
   return method;
 }
 
@@ -1377,17 +1392,20 @@ ParserDeclareHandler(SyntaxHandlerParamList, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerParam, rhs) {
-  assert(rhs->size == 2);
-  SyntaxAST *type = rhs->arr[0];
-  LexerToken *identifier_ = rhs->arr[1];
-  assert(type);
+  assert(rhs->size == 3);
+  LexerToken *identifier_ = rhs->arr[0];
+  LexerToken *col_ = rhs->arr[1];
+  SyntaxAST *type = rhs->arr[2];
   assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+  assert(col_ && col_->tokenID == COL);
+  assert(type);
 
   SyntaxAST *param = SyntaxASTNew(SYNTAX_AST_KIND_PARAM);
-  SyntaxASTAppend(param, type);
+  param->loc.from = identifier_->loc.from;
   param->string = strndup(identifier_->str, identifier_->length);
-  param->loc.to = identifier_->loc.to;
+  SyntaxASTAppend(param, type);
   LexerTokenDelete(identifier_);
+  LexerTokenDelete(col_);
   return param;
 }
 
@@ -1402,6 +1420,302 @@ SyntaxAST *SyntaxASTNew(int kind) {
   node->loc.from.lineNo = node->loc.from.charNo = INT_MAX;
   node->loc.to.lineNo = node->loc.to.charNo = INT_MIN;
   return node;
+}
+
+ParserDeclareHandler(SyntaxHandlerExprStmt, rhs) {
+  assert(rhs->size == 2);
+  SyntaxAST *expr = rhs->arr[0];
+  LexerToken *semicol_ = rhs->arr[1];
+  assert(expr);
+  assert(semicol_ && semicol_->tokenID == SEMICOL);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_EXPR_STMT);
+  SyntaxASTAppend(stmt, expr);
+  stmt->loc.to = semicol_->loc.to;
+  LexerTokenDelete(semicol_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerAssignStmt, rhs) {
+  assert(rhs->size == 2);
+  SyntaxAST *assign = rhs->arr[0];
+  LexerToken *semicol_ = rhs->arr[1];
+  assert(assign);
+  assert(semicol_ && semicol_->tokenID == SEMICOL);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_ASSIGN_STMT);
+  SyntaxASTAppend(stmt, assign);
+  stmt->loc.to = semicol_->loc.to;
+  LexerTokenDelete(semicol_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerAssign, rhs) {
+  assert(rhs->size == 3);
+  SyntaxAST *expr1 = rhs->arr[0];
+  SyntaxAST *assign = rhs->arr[1];
+  SyntaxAST *expr2 = rhs->arr[2];
+  assert(expr1);
+  assert(assign);
+  assert(expr2);
+
+  SyntaxASTAppend(assign, expr1);
+  SyntaxASTAppend(assign, expr2);
+  return assign;
+}
+
+ParserDeclareHandler(SyntaxHandlerOpAssign, rhs) {
+  assert(rhs->size == 1);
+  LexerToken *op = rhs->arr[0];
+  SyntaxAST *assign = SyntaxASTNew(SYNTAX_AST_KIND_ASSIGN);
+  switch (op->tokenID) {
+    case EQ:
+      assign->op = SYNTAX_OP_EQ;
+      break;
+    case ADD_EQ:
+      assign->op = SYNTAX_OP_ADD_EQ;
+      break;
+    case SUB_EQ:
+      assign->op = SYNTAX_OP_SUB_EQ;
+      break;
+    case MUL_EQ:
+      assign->op = SYNTAX_OP_MUL_EQ;
+      break;
+    case DIV_EQ:
+      assign->op = SYNTAX_OP_DIV_EQ;
+      break;
+    case MOD_EQ:
+      assign->op = SYNTAX_OP_MOD_EQ;
+      break;
+    case LSHIFT_EQ:
+      assign->op = SYNTAX_OP_LSHIFT_EQ;
+      break;
+    case RSHIFT_EQ:
+      assign->op = SYNTAX_OP_RSHIFT_EQ;
+      break;
+    case BIT_AND_EQ:
+      assign->op = SYNTAX_OP_BIT_AND_EQ;
+      break;
+    case BIT_XOR_EQ:
+      assign->op = SYNTAX_OP_BIT_XOR_EQ;
+      break;
+    case BIT_OR_EQ:
+      assign->op = SYNTAX_OP_BIT_OR_EQ;
+      break;
+  }
+  LexerTokenDelete(op);
+  return assign;
+}
+
+ParserDeclareHandler(SyntaxHandlerIfStmt, rhs) {
+  assert(rhs->size == 5);
+  LexerToken *if_ = rhs->arr[0]; 
+  SyntaxAST *expr = rhs->arr[1]; 
+  SyntaxAST *body = rhs->arr[2]; 
+  SyntaxAST *stmt = rhs->arr[3]; 
+  SyntaxAST *elseBody = rhs->arr[4]; 
+  assert(if_ && if_->tokenID == IF);
+
+  stmt->loc.from = if_->loc.from;
+  SyntaxASTPrepend(stmt, body);
+  SyntaxASTPrepend(stmt, expr);
+  if (elseBody)
+    SyntaxASTAppend(stmt, elseBody);
+  LexerTokenDelete(if_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerElseIfBodies, rhs) {
+  SyntaxAST *stmt;
+  if (rhs->size == 5) {
+    stmt = rhs->arr[0];
+    LexerToken *else_ = rhs->arr[1];
+    LexerToken *if_ = rhs->arr[2];
+    SyntaxAST *expr = rhs->arr[3];
+    SyntaxAST *body = rhs->arr[4];
+    assert(stmt);
+    assert(else_ && else_->tokenID == ELSE);
+    assert(if_ && if_->tokenID == IF);
+    assert(expr);
+    assert(body);
+
+    SyntaxASTAppend(stmt, expr);
+    SyntaxASTAppend(stmt, body);
+    LexerTokenDelete(else_);
+    LexerTokenDelete(if_);
+  } else {
+    stmt = SyntaxASTNew(SYNTAX_AST_KIND_IF_STMT);
+  }
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerElseBody, rhs) {
+  assert(rhs->size == 2);
+  LexerToken *else_ = rhs->arr[0];
+  SyntaxAST *body = rhs->arr[1];
+  assert(else_ && else_->tokenID == ELSE);
+
+  LexerTokenDelete(else_);
+  return body;
+}
+
+ParserDeclareHandler(SyntaxHandlerSwitchStmt, rhs) {
+  assert(rhs->size == 5);
+  LexerToken *switch_ = rhs->arr[0];
+  SyntaxAST *expr = rhs->arr[1];
+  LexerToken *lbrace_ = rhs->arr[2];
+  SyntaxAST *stmt = rhs->arr[3];
+  LexerToken *rbrace_ = rhs->arr[4];
+  assert(switch_ && switch_->tokenID == SWITCH);
+  assert(expr);
+  assert(lbrace_ && lbrace_->tokenID == LBRACE);
+  assert(stmt);
+  assert(rbrace_ && rbrace_->tokenID == RBRACE);
+
+  stmt->loc.from = switch_->loc.from;
+  stmt->loc.to = rbrace_->loc.to;
+  SyntaxASTPrepend(stmt, expr);
+  LexerTokenDelete(switch_);
+  LexerTokenDelete(lbrace_);
+  LexerTokenDelete(rbrace_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerSwitchCases, rhs) {
+  return SyntaxHandlerList(rhs, SYNTAX_AST_KIND_SWITCH_STMT);
+}
+
+ParserDeclareHandler(SyntaxHandlerSwitchCase, rhs) {
+  assert(rhs->size == 2);
+  SyntaxAST *switchCase = rhs->arr[0];
+  SyntaxAST *body = rhs->arr[1];
+  assert(switchCase);
+  assert(body);
+
+  SyntaxASTAppend(switchCase, body);
+  return switchCase;
+}
+
+ParserDeclareHandler(SyntaxHandlerCaseCond, rhs) {
+  SyntaxAST *switchCase = SyntaxASTNew(SYNTAX_AST_KIND_CASE);
+  if (rhs->size == 2) {
+    LexerToken *case_ = rhs->arr[0];
+    SyntaxAST *exprList = rhs->arr[1];
+    assert(case_ && case_->tokenID == CASE);
+    assert(exprList);
+
+    SyntaxASTAppend(switchCase, exprList);
+    LexerTokenDelete(case_);
+  } else {
+    assert(rhs->size == 1);
+    LexerToken *default_ = rhs->arr[0];
+    assert(default_ && default_->tokenID == DEFAULT);
+    LexerTokenDelete(default_);
+  }
+  return switchCase;
+}
+
+ParserDeclareHandler(SyntaxHandlerForStmt, rhs) {
+  assert(rhs->size == 7);
+  LexerToken *for_ = rhs->arr[0];
+  SyntaxAST *init = rhs->arr[1];
+  LexerToken *semicol_1 = rhs->arr[2];
+  SyntaxAST *expr = rhs->arr[3];
+  LexerToken *semicol_2 = rhs->arr[4];
+  SyntaxAST *iter = rhs->arr[5];
+  SyntaxAST *body = rhs->arr[6];
+  assert(for_ && for_->tokenID == FOR);
+  assert(init);
+  assert(semicol_1 && semicol_1->tokenID == SEMICOL);
+  assert(expr);
+  assert(semicol_2 && semicol_2->tokenID == SEMICOL);
+  assert(iter);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_FOR_STMT);
+  stmt->loc.from = for_->loc.from;
+  SyntaxASTAppend(stmt, init);
+  SyntaxASTAppend(stmt, expr);
+  stmt->loc.to = semicol_2->loc.to;
+  SyntaxASTAppend(stmt, iter);
+  if (body)
+    SyntaxASTAppend(stmt, body);
+  LexerTokenDelete(for_);
+  LexerTokenDelete(semicol_1);
+  LexerTokenDelete(semicol_2);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerWhileStmt, rhs) {
+  assert(rhs->size == 3);
+  LexerToken *while_ = rhs->arr[0];
+  SyntaxAST *expr = rhs->arr[1];
+  SyntaxAST *body = rhs->arr[2];
+  assert(while_ && while_->tokenID == WHILE);
+  assert(expr);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_WHILE_STMT);
+  stmt->loc.from = while_->loc.from;
+  SyntaxASTAppend(stmt, expr);
+  if (body)
+    SyntaxASTAppend(stmt, body);
+  LexerTokenDelete(while_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerBreakStmt, rhs) {
+  LexerToken *break_;
+  SyntaxAST *intLiteral;
+  LexerToken *semicol_;
+  if (rhs->size == 3) {
+    break_ = rhs->arr[0];
+    intLiteral = rhs->arr[1];
+    semicol_ = rhs->arr[2];
+    assert(intLiteral);
+  } else {
+    assert(rhs->size == 2);
+    break_ = rhs->arr[0];
+    intLiteral = NULL;
+    semicol_ = rhs->arr[1];
+  }
+  assert(break_ && break_->tokenID == BREAK);
+  assert(semicol_ && semicol_->tokenID == SEMICOL);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_BREAK_STMT);
+  stmt->loc.from = break_->loc.from;
+  stmt->loc.to = semicol_->loc.to;
+  if (intLiteral)
+    SyntaxASTAppend(stmt, intLiteral);
+  LexerTokenDelete(break_);
+  LexerTokenDelete(semicol_);
+  return stmt;
+}
+
+ParserDeclareHandler(SyntaxHandlerReturnStmt, rhs) {
+  LexerToken *return_;
+  SyntaxAST *expr;
+  LexerToken *semicol_;
+  if (rhs->size == 3) {
+    return_ = rhs->arr[0];
+    expr = rhs->arr[1];
+    semicol_ = rhs->arr[2];
+    assert(expr);
+  } else {
+    assert(rhs->size == 2);
+    return_ = rhs->arr[0];
+    expr = NULL;
+    semicol_ = rhs->arr[1];
+  }
+  assert(return_ && return_->tokenID == RETURN);
+  assert(semicol_ && semicol_->tokenID == SEMICOL);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_RETURN_STMT);
+  stmt->loc.from = return_->loc.from;
+  stmt->loc.to = semicol_->loc.to;
+  if (expr)
+    SyntaxASTAppend(stmt, expr);
+  LexerTokenDelete(return_);
+  LexerTokenDelete(semicol_);
+  return stmt;
 }
 
 void SyntaxASTPrepend(SyntaxAST *node, SyntaxAST *child) {
@@ -1514,10 +1828,6 @@ SyntaxAST *SyntaxHandlerLiteral(
   literal->loc = literalToken->loc;
   LexerTokenDelete(literalToken);
   return literal;
-}
-
-ParserDeclareHandler(SyntaxHandlerMethodDecls, rhs) {
-  return SyntaxHandlerList(rhs, SYNTAX_AST_KIND_METHOD_DECLS);
 }
 
 char SyntaxNextCharacter(char **p) {

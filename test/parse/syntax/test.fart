@@ -1,63 +1,63 @@
 import std.dbg.Dbg.*;
 
 class Array {
-    const u64 DEFUALT_CAPACITY = 1;
-    any[] _arr;
-    u64 _size, _capacity;
+    const var DEFUALT_CAPACITY = 1u64;
+    var _arr: any[];
+    var _size: u64, _capacity: u64;
 
     Array() {
-        _arr = any[DEFAULT_CAPACITY];
+        _arr = any[](DEFAULT_CAPACITY);
         _size = 0;
         _capacity = DEFAULT_CAPACITY;
     }
 
-    any get(u64 i) {
+    get(i: u64) -> any {
         assert(0 <= i < _size);
         return _arr[i];
     }
 
-    void set(u64 i, any val) {
+    set(i: u64, val: any) {
         assert(0 <= i < _size);
         _arr[i] = val;
     }
 
-    void push(any val) {
+    push(val: u64) {
         if _size == _capacity {
             _capacity *= 2;
-            var arr = new any[_capacity];
-            for var i = 0; i < _size; ++i {
+            var arr = any[](_capacity);
+            for var i = 0; i < _size; i++ {
                 arr[i] = _arr[i];
             }
             _arr = arr;
         }
         arr[_size] = val;
-        ++_size;
+        _size++;
     }
 
-    any pop() {
+    pop() -> any {
         assert(_size > 0);
-        --_size;
+        _size--;
         return _arr[_size];
     }
 
-    u64 size() {
+    size() -> u64 {
         return _size;
     }
 
-    void clear() {
+    clear() {
         _size = 0;
     }
 }
 
 class Algorithm {
-    type LessThan = bool(any, any);
-
-    static void sort(Array arr, LessThan lt) {
+    fn sort(arr: Array, lt: fn (any, any) -> bool) {
         var buf = Array();
         _sort(arr, 0, arr.size(), buf, lt);
     }
 
-    static void _sort(Array arr, u64 from, u64 to, Array buf, LessThan lt) {
+    fn _sort(
+            arr: Array, from: u64, to: u64, buf: Array,
+            lt: fn (any, any) -> bool) {
         ##
         Classic merge sort implementation:
 
@@ -70,105 +70,105 @@ class Algorithm {
         }
 
         # Recursive calls
-        u64 mid = from + (to - from) / 2;
+        var mid = from + (to - from) / 2;
         _sort(from, mid);
         _sort(mid, to);
 
         # Merge two partitions to buf
-        u64 i = from, j = mid;
+        var i = from, j = mid;
         buf.clear();
         while i < mid and j < to {
             if lt(arr.get(i), arr.get(j)) {
                 buf.push(arr.get(i));
-                ++i;
+                i++;
             } else {
                 buf.push(arr.get(j));
             }
         }
         while i < mid {
             buf.push(arr.get(i));
-            ++i;
+            i++;
         }
         while j < mid {
             buf.push(arr.get(j));
-            ++j;
+            j++;
         }
 
         # Copy buf to arr
-        for i = 0; i < buf.size(); ++i {
+        for i = 0; i < buf.size(); i++ {
             arr.set(from + i, buf.get(i));
         }
     }
 }
 
 class String {
-    const u64 DEFAULT_CAPACITY = 8;
-    u8[] _arr;
-    u64 _size, _capacity;
+    const var DEFAULT_CAPACITY = 8u64;
+    var _arr: u8[];
+    var _size: u64, _capacity: u64;
 
     String() {
-        _arr = new u8[DEFAULT_CAPACITY];
+        _arr = u8[](DEFAULT_CAPACITY);
         _arr[0] = '\0';
         _size = 1;
         _capacity = DEFAULT_CAPACITY;
     }
 
-    void push(u8 char) {
+    push(char: u8) {
         _arr[_size - 1] = char;
         if _size == _capacity {
             _capacity *= 2;
-            var arr = new u8[_capacity];
-            for var i = 0; i < _size; ++i {
+            var arr = u8[](_capacity);
+            for var i = 0; i < _size; i++ {
                 arr[i] = _arr[i];
             }
             _arr = arr;
         }
         _arr[_size] = '\0';
-        ++_size;
+        _size++;
     }
 
-	u64 length() {
+	length() -> u64 {
 		return _size;
 	} 
 
-	u64 toUnsigned() {
+	toUnsigned() -> u64 {
 		return StringView(_arr).toUnsigned();
 	}
 
-	u8 get(u64 i) {
+	get(i: u64) -> u8 {
 		assert(0 <= i < _size);
 		return _arr[i];
 	}
 
-	StringView view(u64 l, u64 r) {
+	view(l: u64, r: u64) -> StringView {
 		assert(0 <= l <= r <= _size);
 		return StringView(_arr, l, r);
 	}
 }
 
 class StringView {
-	u8[] _arr;
-	u64 _l, _r;
+	var _arr: u8[];
+	var _l: u64, _r: u64;
 
-	static StringView(u8[] arr) {
-		u64 len = 0;
-		for ; arr[len] != '\0'; ++len {}
+	fn StringView(arr: u8[]) -> StringView {
+		var len = 0u64;
+		for ; arr[len] != '\0'; len++ {}
 		return StringView(arr, 0, len);
 	}
 
-	StringView(u8[] arr, u64 l, u64 r) {
+	StringView(arr: u8[], l: u64, r: u64) {
 		_arr = arr;
 		_l = l;
 		_r = r;
 	}
 
-	u64 length() {
+	length() -> u64 {
 		return _size;
 	}
 
-	u64 toUnsigned() {
-		u64 unsigned = 0;
-		for var i = _l; i < _r; ++i {
+	toUnsigned() -> u64 {
+		var unsigned = 0u64;
+		for var i = _l; i < _r; i++ {
 			assert('0' <= _arr[i] <= '9');
 			unsigned = unsigned * 10 + _arr[i] - '0';
 		}
@@ -177,7 +177,7 @@ class StringView {
 }
 
 class Utility {
-    u64 getExactFileSize(String fileSize) {
+    getExactFileSize(fileSize: String) -> u64 {
 		var len = fileSize.length();
 		assert(len >= 3);
 		assert(fileSize.get(len - 1) == 'B');
