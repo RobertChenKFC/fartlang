@@ -8,6 +8,8 @@
 // Forward declarations
 typedef struct SyntaxAST SyntaxAST;
 
+#include "sema/sema.h"
+
 // Macros for convenient definition of enums and their strings
 #define SYNTAX_GEN_ENUM(ENUM) ENUM,
 #define SYNTAX_GEN_STR(ENUM) #ENUM,
@@ -189,6 +191,9 @@ struct SyntaxAST {
       char *name;
     } method;
   };
+
+  // Information for semantic analysis
+  SemaInfo semaInfo;
 };
 
 // Parse a fartlang source "file" with name "filename" into an AST
