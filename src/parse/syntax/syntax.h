@@ -196,6 +196,11 @@ struct SyntaxAST {
   SemaInfo semaInfo;
 };
 
+// Create the lexer and parser and save them to files so that later parsing
+// would have the files already created. Note that SyntaxParseFile does the same
+// thing, so this is only useful if you want to create the lexer and parser
+// ahead of time
+void SyntaxSetupParser(void);
 // Parse a fartlang source "file" with name "filename" into an AST
 SyntaxAST *SyntaxParseFile(FILE *file, const char *filename);
 // Deletes an entire AST (the "node" and all its successors) created from

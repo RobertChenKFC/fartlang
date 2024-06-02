@@ -998,6 +998,13 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
    return parser;
 }
 
+void SyntaxSetupParser(void) {
+  Lexer *lexer = SyntaxCreateLexer();
+  Parser *parser = SyntaxCreateParser(lexer);
+  LexerDelete(lexer);
+  ParserDelete(parser);
+}
+
 SyntaxAST *SyntaxParseFile(FILE *file, const char *filename) {
   Lexer *lexer = SyntaxCreateLexer();
   Parser *parser = SyntaxCreateParser(lexer);

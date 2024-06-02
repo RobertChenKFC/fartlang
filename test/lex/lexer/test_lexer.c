@@ -153,6 +153,31 @@ int main() {
   RegexDelete(whitespace);
   LexerConfigDelete(config);
   LexerDelete(lexer);
+
+  // 9. Test file with no newline
+  config = LexerConfigNew();
+  Regex *a = RegexFromLetter('a');
+  LexerConfigAddRegex(config, a);
+  lexer = LexerFromConfig(config);
+  file = fopen("9.in", "r");
+  LexerSetInputFile(lexer, file, "9.in");
+  fclose(file);
+  file = fopen("9.out", "w");
+  noErrors = ReadTokenUntilEOF(lexer, file);
+  assert(noErrors);
+  fclose(file);
+
+  // 10. Test empty file
+  file = fopen("10.in", "r");
+  LexerSetInputFile(lexer, file, "10.in");
+  fclose(file);
+  file = fopen("10.out", "w");
+  noErrors = ReadTokenUntilEOF(lexer, file);
+  assert(noErrors);
+  fclose(file);
+  RegexDelete(a);
+  LexerDelete(lexer);
+  LexerConfigDelete(config);
 }
 
 bool ReadTokenUntilEOF(Lexer *lexer, FILE *file) {
