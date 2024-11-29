@@ -42,6 +42,11 @@ class Stmt {
         x = 3;
       }
     }
+    switch x {
+      case 0 {
+        x += 5;
+      }
+    }
 
     # For
     for var i = 0; i < 100; i++ {}
@@ -63,11 +68,13 @@ class Stmt {
     while true {
       break;
     }
+    [a]
     for ; ; {
       while true {
-        break 2;
+        break b;
       }
     }
+    [b]
 
     # Return
     return 123+456*789%101112;

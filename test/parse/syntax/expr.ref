@@ -138,62 +138,62 @@ SYNTAX_AST_KIND_MODULE: 1:1~19:1:
                                 SYNTAX_AST_KIND_OP: 9:27~9:31: op: SYNTAX_OP_MOD: 
                                     SYNTAX_AST_KIND_LITERAL: 9:27~9:27: type SYNTAX_TYPE_I32, value 5
                                     SYNTAX_AST_KIND_LITERAL: 9:31~9:31: type SYNTAX_TYPE_I32, value 6
-                SYNTAX_AST_KIND_VAR_DECL: 10:3~10:51: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 10:7~10:50: 
-                        SYNTAX_AST_KIND_VAR_INIT: 10:7~10:50: variable: x: 
+                SYNTAX_AST_KIND_VAR_DECL: 10:3~10:53: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 10:7~10:52: 
+                        SYNTAX_AST_KIND_VAR_INIT: 10:7~10:52: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 10:11~10:50: op: SYNTAX_OP_MOD: 
-                                SYNTAX_AST_KIND_OP: 10:11~10:40: op: SYNTAX_OP_DIV: 
+                            SYNTAX_AST_KIND_OP: 10:11~10:52: op: SYNTAX_OP_MOD: 
+                                SYNTAX_AST_KIND_OP: 10:11~10:42: op: SYNTAX_OP_DIV: 
                                     SYNTAX_AST_KIND_OP: 10:11~10:29: op: SYNTAX_OP_MUL: 
-                                        SYNTAX_AST_KIND_OP: 10:11~10:18: op: SYNTAX_OP_CAST: 
+                                        SYNTAX_AST_KIND_OP: 10:11~10:18: op: SYNTAX_OP_CAST_IS: 
                                             SYNTAX_AST_KIND_LITERAL: 10:11~10:11: type SYNTAX_TYPE_I32, value 1
                                             SYNTAX_AST_KIND_TYPE: 10:16~10:18: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
-                                        SYNTAX_AST_KIND_OP: 10:22~10:29: op: SYNTAX_OP_CAST: 
+                                        SYNTAX_AST_KIND_OP: 10:22~10:29: op: SYNTAX_OP_CAST_AS: 
                                             SYNTAX_AST_KIND_LITERAL: 10:22~10:22: type SYNTAX_TYPE_I32, value 2
                                             SYNTAX_AST_KIND_TYPE: 10:27~10:29: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
-                                    SYNTAX_AST_KIND_OP: 10:33~10:40: op: SYNTAX_OP_CAST: 
+                                    SYNTAX_AST_KIND_OP: 10:33~10:42: op: SYNTAX_OP_CAST_INTO: 
                                         SYNTAX_AST_KIND_LITERAL: 10:33~10:33: type SYNTAX_TYPE_I32, value 3
-                                        SYNTAX_AST_KIND_TYPE: 10:38~10:40: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
-                                SYNTAX_AST_KIND_OP: 10:44~10:50: op: SYNTAX_OP_CAST: 
-                                    SYNTAX_AST_KIND_LITERAL: 10:44~10:44: type SYNTAX_TYPE_I32, value 4
-                                    SYNTAX_AST_KIND_TYPE: 10:49~10:50: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_TYPE: 10:40~10:42: base type: SYNTAX_TYPE_I16, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_OP: 10:46~10:52: op: SYNTAX_OP_CAST_AS: 
+                                    SYNTAX_AST_KIND_LITERAL: 10:46~10:46: type SYNTAX_TYPE_I32, value 4
+                                    SYNTAX_AST_KIND_TYPE: 10:51~10:52: base type: SYNTAX_TYPE_I8, array levels: 0, child types: 
                 SYNTAX_AST_KIND_VAR_DECL: 11:3~11:20: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 11:7~11:19: 
                         SYNTAX_AST_KIND_VAR_INIT: 11:7~11:19: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 11:12~11:19: op: SYNTAX_OP_CAST: 
-                                SYNTAX_AST_KIND_OP: 11:12~11:12: op: SYNTAX_OP_NEG: 
+                            SYNTAX_AST_KIND_OP: 11:11~11:19: op: SYNTAX_OP_CAST_IS: 
+                                SYNTAX_AST_KIND_OP: 11:11~11:12: op: SYNTAX_OP_NEG: 
                                     SYNTAX_AST_KIND_LITERAL: 11:12~11:12: type SYNTAX_TYPE_I32, value 1
                                 SYNTAX_AST_KIND_TYPE: 11:17~11:19: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
                 SYNTAX_AST_KIND_VAR_DECL: 12:3~12:28: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 12:7~12:27: 
                         SYNTAX_AST_KIND_VAR_INIT: 12:7~12:27: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 12:15~12:27: op: SYNTAX_OP_CAST: 
-                                SYNTAX_AST_KIND_OP: 12:15~12:19: op: SYNTAX_OP_NOT: 
+                            SYNTAX_AST_KIND_OP: 12:11~12:27: op: SYNTAX_OP_CAST_AS: 
+                                SYNTAX_AST_KIND_OP: 12:11~12:19: op: SYNTAX_OP_NOT: 
                                     SYNTAX_AST_KIND_LITERAL: 12:15~12:19: type SYNTAX_TYPE_BOOL, value false
                                 SYNTAX_AST_KIND_TYPE: 12:24~12:27: base type: SYNTAX_TYPE_BOOL, array levels: 0, child types: 
-                SYNTAX_AST_KIND_VAR_DECL: 13:3~13:20: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 13:7~13:19: 
-                        SYNTAX_AST_KIND_VAR_INIT: 13:7~13:19: variable: x: 
+                SYNTAX_AST_KIND_VAR_DECL: 13:3~13:22: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 13:7~13:21: 
+                        SYNTAX_AST_KIND_VAR_INIT: 13:7~13:21: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 13:12~13:19: op: SYNTAX_OP_CAST: 
-                                SYNTAX_AST_KIND_OP: 13:12~13:12: op: SYNTAX_OP_BIT_NOT: 
+                            SYNTAX_AST_KIND_OP: 13:11~13:21: op: SYNTAX_OP_CAST_INTO: 
+                                SYNTAX_AST_KIND_OP: 13:11~13:12: op: SYNTAX_OP_BIT_NOT: 
                                     SYNTAX_AST_KIND_LITERAL: 13:12~13:12: type SYNTAX_TYPE_I32, value 1
-                                SYNTAX_AST_KIND_TYPE: 13:17~13:19: base type: SYNTAX_TYPE_U64, array levels: 0, child types: 
-                SYNTAX_AST_KIND_VAR_DECL: 14:3~14:20: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 14:7~14:19: 
-                        SYNTAX_AST_KIND_VAR_INIT: 14:7~14:19: variable: x: 
+                                SYNTAX_AST_KIND_TYPE: 13:19~13:21: base type: SYNTAX_TYPE_U64, array levels: 0, child types: 
+                SYNTAX_AST_KIND_VAR_DECL: 14:3~14:22: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 14:7~14:21: 
+                        SYNTAX_AST_KIND_VAR_INIT: 14:7~14:21: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 14:12~14:19: op: SYNTAX_OP_CAST: 
-                                SYNTAX_AST_KIND_OP: 14:12~14:12: op: SYNTAX_OP_NEG: 
+                            SYNTAX_AST_KIND_OP: 14:11~14:21: op: SYNTAX_OP_CAST_INTO: 
+                                SYNTAX_AST_KIND_OP: 14:11~14:12: op: SYNTAX_OP_NEG: 
                                     SYNTAX_AST_KIND_LITERAL: 14:12~14:12: type SYNTAX_TYPE_I32, value 1
-                                SYNTAX_AST_KIND_TYPE: 14:17~14:19: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
+                                SYNTAX_AST_KIND_TYPE: 14:19~14:21: base type: SYNTAX_TYPE_I64, array levels: 0, child types: 
                 SYNTAX_AST_KIND_VAR_DECL: 15:3~15:27: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 15:7~15:26: 
                         SYNTAX_AST_KIND_VAR_INIT: 15:7~15:26: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 15:12~15:26: op: SYNTAX_OP_NEG: 
+                            SYNTAX_AST_KIND_OP: 15:11~15:26: op: SYNTAX_OP_NEG: 
                                 SYNTAX_AST_KIND_OP: 15:12~15:26: op: SYNTAX_OP_CALL: 
                                     SYNTAX_AST_KIND_OP: 15:12~15:17: op: SYNTAX_OP_CALL: 
                                         SYNTAX_AST_KIND_OP: 15:12~15:14: op: SYNTAX_OP_CALL: 
@@ -209,7 +209,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~19:1:
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 16:7~16:20: 
                         SYNTAX_AST_KIND_VAR_INIT: 16:7~16:20: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 16:15~16:20: op: SYNTAX_OP_NOT: 
+                            SYNTAX_AST_KIND_OP: 16:11~16:20: op: SYNTAX_OP_NOT: 
                                 SYNTAX_AST_KIND_OP: 16:15~16:20: op: SYNTAX_OP_ARRAY_TYPE: 
                                     SYNTAX_AST_KIND_OP: 16:15~16:18: op: SYNTAX_OP_ARRAY_ACCESS: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 16:15~16:15: f: 
@@ -218,16 +218,16 @@ SYNTAX_AST_KIND_MODULE: 1:1~19:1:
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 17:7~17:16: 
                         SYNTAX_AST_KIND_VAR_INIT: 17:7~17:16: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 17:12~17:16: op: SYNTAX_OP_BIT_NOT: 
+                            SYNTAX_AST_KIND_OP: 17:11~17:16: op: SYNTAX_OP_BIT_NOT: 
                                 SYNTAX_AST_KIND_MEMBER_ACCESS: 17:12~17:16: member: h: 
                                     SYNTAX_AST_KIND_MEMBER_ACCESS: 17:12~17:14: member: g: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 17:12~17:12: f: 
                 SYNTAX_AST_KIND_VAR_DECL: 18:3~18:17: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:12: 
-                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:12: variable: x: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:16: 
+                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:16: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 18:12~18:12: op: SYNTAX_OP_NEG: 
-                                SYNTAX_AST_KIND_OP: 18:12~18:12: op: SYNTAX_OP_DEC: 
-                                    SYNTAX_AST_KIND_OP: 18:12~18:12: op: SYNTAX_OP_INC: 
+                            SYNTAX_AST_KIND_OP: 18:11~18:16: op: SYNTAX_OP_NEG: 
+                                SYNTAX_AST_KIND_OP: 18:12~18:16: op: SYNTAX_OP_DEC: 
+                                    SYNTAX_AST_KIND_OP: 18:12~18:14: op: SYNTAX_OP_INC: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 18:12~18:12: f: 
             SYNTAX_AST_KIND_METHOD_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 

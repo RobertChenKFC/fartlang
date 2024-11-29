@@ -64,6 +64,13 @@ ParserLookaheadAction *ParserLookaheadActionNew(int lookahead, int action);
 // Compare function for ParserLookaheadAction, which compares two of them
 // first using their lookaheads, then using their actions; can be used in qsort
 int ParserLookaheadActionCmp(const void *a, const void *b);
+// Print the set of LR(1) items in the "state" to stderr using the "lhsStrings"
+// and "rhsStrings" to print the LHS and RHS of each rule. The strings for each
+// rule are stored in vectors, and the index for each rule is stored in the
+// table "toRuleNo". The "prefix" string is printed before each line
+void ParserLR1StatePrint(LR1State *state, HashTable *toRuleNo,
+                         Vector *lhsStrings, Vector *rhsStrings,
+                         const char *prefix);
 
 ParserObject *ParserObjectFromToken(LexerToken *token) {
   ParserObject *parserObj = malloc(sizeof(ParserObject));
@@ -454,30 +461,8 @@ Parser *ParserFromConfig(ParserConfig *config) {
                     "items:\n", from);
             HashTableEntry *stateEntry = stateNoToStateEntry->arr[from];
             LR1State *stateFrom = stateEntry->key;
-            for (HashTableEntry *itemEntry = stateFrom->items->head; itemEntry;
-                 itemEntry = itemEntry->nextInTable) {
-              LR1SymbolString *string = itemEntry->key;
-              CFGRule *rule = string->rule;
-              HashTableEntry *ruleEntry = HashTableEntryRetrieve(
-                  toRuleNo, rule);
-              assert(ruleEntry);
-              int ruleNo = (int)(long long)ruleEntry->value;
-              int numRhs = rule->numRHS;
-              int dot = string->dot;
-              char *lhsString = lhsStrings->arr[ruleNo];
-              char *rhsString = rhsStrings->arr[ruleNo];
-              fprintf(stderr, "  %s ->", lhsString);
-              for (int j = 0, offset = 0; j < numRhs; ++j) {
-                if (j == dot)
-                  fprintf(stderr, " •");
-                fprintf(stderr, " %s", rhsString + offset);
-                offset += strlen(rhsString + offset) + 1;
-              }
-              if (dot == numRhs)
-                fprintf(stderr, " •");
-              fprintf(stderr, "\n");
-            }
-            hasConflicts = true;
+            ParserLR1StatePrint(stateFrom, toRuleNo, lhsStrings, rhsStrings,
+                                /*prefix=*/"  ");
           }
           // Then, print the conflicting actions
           fprintf(stderr, "(%d) Conflict on lookahead token \"%s\":\n",
@@ -491,8 +476,12 @@ Parser *ParserFromConfig(ParserConfig *config) {
               // conflicts, so there will only be one shift action, and thus
               // we (probably) don't have to provide too much information about
               // the state that this goes to.
-              fprintf(stderr, "  (%d) shift and go to state %d\n",
-                      option, PARSER_SHIFT_ACTION_TO_STATE_NO(action));
+              int to = PARSER_SHIFT_ACTION_TO_STATE_NO(action);
+              fprintf(stderr, "  (%d) shift and go to state %d\n", option, to);
+              HashTableEntry *stateEntry = stateNoToStateEntry->arr[to];
+              LR1State *stateTo = stateEntry->key;
+              ParserLR1StatePrint(stateTo, toRuleNo, lhsStrings, rhsStrings,
+                                  /*prefix=*/"    ");
             } else {
               int action = lookaheadAction->action;
               int ruleNo = PARSER_REDUCE_ACTION_TO_RULE_NO(action);
@@ -897,3 +886,30 @@ void *ParserParse(Parser *parser) {
   return userObj;
 }
 
+void ParserLR1StatePrint(LR1State *state, HashTable *toRuleNo,
+                         Vector *lhsStrings, Vector *rhsStrings,
+                         const char *prefix) {
+  for (HashTableEntry *itemEntry = state->items->head; itemEntry;
+       itemEntry = itemEntry->nextInTable) {
+    LR1SymbolString *string = itemEntry->key;
+    CFGRule *rule = string->rule;
+    HashTableEntry *ruleEntry = HashTableEntryRetrieve(
+        toRuleNo, rule);
+    assert(ruleEntry);
+    int ruleNo = (int)(long long)ruleEntry->value;
+    int numRhs = rule->numRHS;
+    int dot = string->dot;
+    char *lhsString = lhsStrings->arr[ruleNo];
+    char *rhsString = rhsStrings->arr[ruleNo];
+    fprintf(stderr, "%s%s ->", prefix, lhsString);
+    for (int j = 0, offset = 0; j < numRhs; ++j) {
+      if (j == dot)
+        fprintf(stderr, " •");
+      fprintf(stderr, " %s", rhsString + offset);
+      offset += strlen(rhsString + offset) + 1;
+    }
+    if (dot == numRhs)
+      fprintf(stderr, " •");
+    fprintf(stderr, "\n");
+  }
+}

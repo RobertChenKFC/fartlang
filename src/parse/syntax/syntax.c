@@ -44,7 +44,9 @@ enum {
   BIT_XOR_EQ,
   BIT_OR_EQ,
   IMPORT,
+  IS,
   AS,
+  INTO,
   DOT,
   CLASS,
   LBRACE,
@@ -179,7 +181,8 @@ enum {
   SWITCH_STMT,
   SWITCH_CASES,
   SWITCH_CASE,
-  CASE_COND,
+  SWITCH_DEFAULT,
+  LABEL,
   FOR_STMT,
   FOR_INIT,
   FOR_COND,
@@ -262,7 +265,9 @@ Lexer *SyntaxCreateLexer(void) {
         letterOrUnderscore_,
         RegexZeroOrMore(RegexFromUnion(2, letterOrUnderscore_, REGEX_DIGITS))));
     ADD_REGEX_CHAIN(chain, import_, RegexFromString("import"));
+    ADD_REGEX_CHAIN(chain, is_, RegexFromString("is"));
     ADD_REGEX_CHAIN(chain, as_, RegexFromString("as"));
+    ADD_REGEX_CHAIN(chain, into_, RegexFromString("into"));
     ADD_REGEX_CHAIN(chain, dot_, RegexFromLetter('.'));
     ADD_REGEX_CHAIN(chain, class_, RegexFromString("class"));
     ADD_REGEX_CHAIN(chain, lbrace_, RegexFromLetter('{'));
@@ -449,7 +454,9 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, bit_xor_eq_) == BIT_XOR_EQ);
     assert(LexerConfigAddRegex(lexerConfig, bit_or_eq_) == BIT_OR_EQ);
     assert(LexerConfigAddRegex(lexerConfig, import_) == IMPORT);
+    assert(LexerConfigAddRegex(lexerConfig, is_) == IS);
     assert(LexerConfigAddRegex(lexerConfig, as_) == AS);
+    assert(LexerConfigAddRegex(lexerConfig, into_) == INTO);
     assert(LexerConfigAddRegex(lexerConfig, dot_) == DOT);
     assert(LexerConfigAddRegex(lexerConfig, class_) == CLASS);
     assert(LexerConfigAddRegex(lexerConfig, lbrace_) == LBRACE);
@@ -610,7 +617,8 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == SWITCH_STMT);
       assert(CFGAddVariable(cfg) == SWITCH_CASES);
       assert(CFGAddVariable(cfg) == SWITCH_CASE);
-      assert(CFGAddVariable(cfg) == CASE_COND);
+      assert(CFGAddVariable(cfg) == SWITCH_DEFAULT);
+      assert(CFGAddVariable(cfg) == LABEL);
       assert(CFGAddVariable(cfg) == FOR_STMT);
       assert(CFGAddVariable(cfg) == FOR_INIT);
       assert(CFGAddVariable(cfg) == FOR_COND);
@@ -622,7 +630,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
 
       // Add all CFG rules
       ParserConfig *parserConfig = ParserConfigNew(
-          lexer, cfg, true, SyntaxASTDelete);
+          lexer, cfg, /*useLALR1=*/true, SyntaxASTDelete);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerModule,
           MODULE, 2, IMPORT_DECLS, CLASS_DECLS);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerImportDecls,
@@ -790,7 +798,11 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_MUL, 1, EXPR_CAST_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
+          EXPR_CAST_OP, 3, EXPR_UNARY_OP, IS, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
           EXPR_CAST_OP, 3, EXPR_UNARY_OP, AS, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprCast,
+          EXPR_CAST_OP, 3, EXPR_UNARY_OP, INTO, TYPE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_CAST_OP, 1, EXPR_UNARY_OP);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprNeg,
@@ -937,20 +949,25 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerNull,
           ELSE_BODY, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchStmt,
-          SWITCH_STMT, 5, SWITCH, EXPR, LBRACE, SWITCH_CASES, RBRACE);
+          SWITCH_STMT, 6, SWITCH, EXPR, LBRACE, SWITCH_CASES, SWITCH_DEFAULT,
+          RBRACE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchCases,
           SWITCH_CASES, 2, SWITCH_CASES, SWITCH_CASE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchCases,
-          SWITCH_CASES, 0);
+          SWITCH_CASES, 1, SWITCH_CASE);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchCase,
-          SWITCH_CASE, 2, CASE_COND, BODY);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerCaseCond,
-          CASE_COND, 2, CASE, EXPR_LIST_NONEMPTY);
-      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerCaseCond,
-          CASE_COND, 1, DEFAULT);
+          SWITCH_CASE, 3, CASE, EXPR_LIST_NONEMPTY, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchDefault,
+          SWITCH_DEFAULT, 2, DEFAULT, BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchDefault,
+          SWITCH_DEFAULT, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
+          LABEL, 3, LBRACK, IDENTIFIER, RBRACK);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
+          LABEL, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerForStmt,
-          FOR_STMT, 7, FOR, FOR_INIT, SEMICOL, FOR_COND, SEMICOL,
-          FOR_ITER, BODY);
+          FOR_STMT, 8, FOR, FOR_INIT, SEMICOL, FOR_COND, SEMICOL,
+          FOR_ITER, BODY, LABEL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           FOR_INIT, 1, VAR_DECL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
@@ -970,11 +987,11 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerPlaceholder,
           FOR_ITER, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerWhileStmt,
-          WHILE_STMT, 3, WHILE, EXPR, BODY);
+          WHILE_STMT, 4, WHILE, EXPR, BODY, LABEL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerBreakStmt,
           BREAK_STMT, 2, BREAK, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerBreakStmt,
-          BREAK_STMT, 3, BREAK, INT_LITERAL_TERM, SEMICOL);
+          BREAK_STMT, 3, BREAK, IDENTIFIER, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnStmt,
           RETURN_STMT, 2, RETURN, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnStmt,
@@ -1031,6 +1048,7 @@ void SyntaxASTDelete(void *p) {
     case SYNTAX_AST_KIND_VAR_INIT:
     case SYNTAX_AST_KIND_MEMBER_ACCESS:
     case SYNTAX_AST_KIND_PARAM:
+    case SYNTAX_AST_KIND_LABEL:
       free(node->string);
       break;
     case SYNTAX_AST_KIND_IMPORT_DECL:

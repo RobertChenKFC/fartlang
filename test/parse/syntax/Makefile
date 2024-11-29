@@ -40,9 +40,7 @@ $(TESTS): %.test: %.out %.ref
 	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
 $(OUT_FILES): $(BIN)
-	# DEBUG
 	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
-	# $(BIN)
 
 .PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:
