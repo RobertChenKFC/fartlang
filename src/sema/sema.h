@@ -1,8 +1,8 @@
 #ifndef SEMA_H
 #define SEMA_H
 
-#include "parse/syntax/syntax.h"
 #include "util/vector/vector.h"
+#include "util/hashtable/hashtable.h"
 #include <stdio.h>
 
 // Forward declarations
@@ -11,6 +11,7 @@ typedef struct SemaSymInfo SemaSymInfo;
 typedef struct SemaInfo SemaInfo;
 typedef struct SemaFileCtx SemaFileCtx;
 typedef struct SemaCtx SemaCtx;
+typedef struct SyntaxAST SyntaxAST;
 
 // Representing the different kinds of type. See SemaType for more detail
 typedef enum {
@@ -97,11 +98,13 @@ struct SemaInfo {
   SemaSymInfo symInfo;
 };
 
+#include "parse/syntax/syntax.h"
+
 // The context of a file when performing semantic analysis. The function of
 // each field is described below:
 struct SemaFileCtx {
   // The path of the source file
-  const char *path;
+  char *path;
   // A file handle of the source file
   FILE *file;
   // The AST of the source file

@@ -1,5 +1,7 @@
 #include "sema.h"
 #include "parse/parser/parser.h"
+#include <stdlib.h>
+#include <assert.h>
 
 // Helper functions
 // Initializes all fields of SemaCtx "ctx"
@@ -30,16 +32,20 @@ SemaFileCtx *SemaFileCtxNew(
   FILE *file = fopen(path, "r");
   if (!file) {
     if (importDecl) {
-      SourceLocation *loc = &importDecl->loc;
+      SyntaxAST *modulePath = importDecl->firstChild;
+      assert(modulePath);
+      SourceLocation *loc = &modulePath->loc;
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET" %s:%d: ",
               importFilePath, loc->from.lineNo + 1);
       fprintf(stderr, "imported file does not exist\n");
-      Source *source = SourceFromFile(importFilePath);
+      FILE *importFile = fopen(importFilePath, "r");
+      Source *source = SourceFromFile(importFile);
       SourceLocationPrint(source, 1, SOURCE_COLOR_RED, loc);
       SourceDelete(source);
+      fclose(importFile);
     } else {
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET);
-      fprintf(stderr, " compilation file %s does not exist\n");
+      fprintf(stderr, " compilation file %s does not exist\n", path);
     }
     return NULL;
   }
@@ -51,7 +57,7 @@ SemaFileCtx *SemaFileCtxNew(
   }
 
   SemaFileCtx *fileCtx = malloc(sizeof(SemaFileCtx));
-  fileCtx->path = path;
+  fileCtx->path = strdup(path);
   fileCtx->file = file;
   fileCtx->node = node;
   fileCtx->symbolTable = HashTableNew(
@@ -61,13 +67,17 @@ SemaFileCtx *SemaFileCtxNew(
 
 void SemaFileCtxDelete(void *p) {
   SemaFileCtx *fileCtx = p;
-  fclose(file);
+  free(fileCtx->path);
+  fclose(fileCtx->file);
   SyntaxASTDelete(fileCtx->node);
   HashTableDelete(fileCtx->symbolTable);
   free(fileCtx);
 }
 
 bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
+  // Initialize the context
+  SemaNew(ctx);
+
   // Add the root file
   SemaFileCtx *fileCtx = SemaFileCtxNew(path, NULL, NULL);
   if (!fileCtx)
@@ -75,29 +85,35 @@ bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
   Vector *fileCtxs = ctx->fileCtxs;
   VectorAdd(fileCtxs, fileCtx);
 
+  bool success = true;
   // Record the set of imported file paths so that we do not import the same
   // file twice
   HashTable *importedFiles = HashTableNew(
       ParserStringHash, ParserStringEqual, NULL, NULL);
-  HashTableEntryAdd(importedFiles, path, NULL);
-  // Maintain a stack of AST nodes of files whose imports have yet to be
-  // processed
-  Vector *stack = VectorNew();
-  VectorAdd(stack, fileCtx->node);
-  // Process until stack is empty
-  while (stack->size != 0) {
+  HashTableEntryAdd(importedFiles, (void*)path, NULL);
+  // A heap-allocated buffer with expandable capacity to store the path of the
+  // imported file
+  int capacity = 16;
+  char *importPath = malloc(capacity);
+  // Process until no more new imports
+  for (int idx = 0; idx < fileCtxs->size; ++idx) {
+    fileCtx = fileCtxs->arr[idx];
+    SyntaxAST *node = fileCtx->node;
     SyntaxAST *importDecls = node->firstChild;
     assert(importDecls);
+
     // Iterate through all import declarations
     for (SyntaxAST *importDecl = importDecls->firstChild; importDecl;
          importDecl = importDecl->sibling) {
       // Convert module path to real import path (a string)
       // TODO: provide functionality import files from separate directories
+      // TODO: it doesn't seem like wildcard imports are necessary, as import
+      // statements imports all classes in the file
       SyntaxAST *modulePath = importDecl->firstChild;
       assert(modulePath);
-      int capacity = 16, length = 0;
-      char *importPath = malloc(capacity);
+
       importPath[0] = '\0';
+      int length = 0;
       for (SyntaxAST *identifier = modulePath->firstChild; identifier;
            identifier = identifier->sibling) {
         int identifierLength = strlen(identifier->string);
@@ -111,18 +127,43 @@ bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
         strcpy(importPath + length, identifier->string);
         length += identifierLength;
       }
+      strcpy(importPath + length, ".fart");
 
-      // TODO: continue here
+      // Check if the file has already been added
+      HashTableEntry *entry = HashTableEntryRetrieve(importedFiles, importPath);
+      if (entry)
+        continue;
+      // Parse the file
+      SemaFileCtx *newFileCtx = SemaFileCtxNew(
+          importPath, importDecl, fileCtx->path);
+      if (!newFileCtx) {
+        success = false;
+        goto CLEANUP;
+      }
+      // Add the file to the hash table and stack
+      HashTableEntryAdd(importedFiles, importPath, NULL);
+      VectorAdd(fileCtxs, newFileCtx);
     }
   }
 
+CLEANUP:
   // Cleanup
   HashTableDelete(importedFiles);
+  free(importPath);
 
-  return true;
+  return success;
 }
 
 bool SemaCheck(SemaCtx *ctx, const char *path) {
   if (!SemaAddAllFiles(ctx, path))
     return false;
+  return true;
+}
+
+void SemaCtxDelete(SemaCtx *ctx) {
+  Vector *fileCtxs = ctx->fileCtxs;
+  int n = fileCtxs->size;
+  for (int i = 0; i < n; ++i)
+    SemaFileCtxDelete(fileCtxs->arr[i]);
+  VectorDelete(fileCtxs);
 }
