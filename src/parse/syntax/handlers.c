@@ -183,6 +183,7 @@ ParserDeclareHandler(SyntaxHandlerClassDecl, rhs) {
   classDecl->loc.from = class_->loc.from;
   classDecl->loc.to = rbrace_->loc.to;
   classDecl->string = strndup(identifier_->str, identifier_->length);
+  classDecl->stringLoc = identifier_->loc;
 
   LexerTokenDelete(class_);
   LexerTokenDelete(identifier_);
@@ -433,6 +434,7 @@ ParserDeclareHandler(SyntaxHandlerVarName, rhs) {
   varInit->loc.from = identifier_->loc.from;
   varInit->loc.to = SourcePointMax(&varInit->loc.to, &identifier_->loc.to);
   varInit->string = strndup(identifier_->str, identifier_->length);
+  varInit->stringLoc = identifier_->loc;
   SyntaxASTAppend(varInit, type);
   LexerTokenDelete(identifier_);
   return varInit;
@@ -648,6 +650,7 @@ ParserDeclareHandler(SyntaxHandlerExprMemberAccess, rhs) {
   SyntaxAST *access = SyntaxASTNew(SYNTAX_AST_KIND_MEMBER_ACCESS);
   access->loc.to = identifier_->loc.to;
   access->string = strndup(identifier_->str, identifier_->length);
+  access->stringLoc = identifier_->loc;
 
   SyntaxASTAppend(access, expr);
   LexerTokenDelete(dot_);
@@ -1420,6 +1423,7 @@ ParserDeclareHandler(SyntaxHandlerParam, rhs) {
   SyntaxAST *param = SyntaxASTNew(SYNTAX_AST_KIND_PARAM);
   param->loc.from = identifier_->loc.from;
   param->string = strndup(identifier_->str, identifier_->length);
+  param->stringLoc = identifier_->loc;
   SyntaxASTAppend(param, type);
   LexerTokenDelete(identifier_);
   LexerTokenDelete(col_);
@@ -1655,6 +1659,7 @@ ParserDeclareHandler(SyntaxHandlerLabel, rhs) {
     char c = identifier_->str[identifier_->length];
     identifier_->str[identifier_->length] = '\0';
     label->string = strdup(identifier_->str);
+    label->stringLoc = identifier_->loc;
     identifier_->str[identifier_->length] = c;
     label->loc.from = lbrack_->loc.from;
     label->loc.to = rbrack_->loc.to;

@@ -22,6 +22,18 @@ SemaFileCtx *SemaFileCtxNew(
 // Destructor for SemaFileCtx "p" created by SemaFileCtxNew. Can be used as
 // hash table destructors
 void SemaFileCtxDelete(void *p);
+// Populates the symbol tables of each SemaFileCtx in "ctx" with the classes
+// declared in the file. Returns true if and only if the class names declared
+// in each file are unique
+bool SemaPopulateClassSymbols(SemaCtx *ctx);
+// Destructor for SemaSymInfo "p". Can be used as hash table destructors
+void SemaSymInfoDelete(void *p);
+// Frees the contents of the SemaType "type" but does not deallocate the memory
+// used by "type" itself
+void SemaTypeDeleteContent(SemaType *type);
+// Initializes all the SemaInfo stored in the AST "node" and recursively
+// initializes all descendants
+void SemaASTInit(SyntaxAST *node);
 
 void SemaNew(SemaCtx *ctx) {
   ctx->fileCtxs = VectorNew();
@@ -55,13 +67,15 @@ SemaFileCtx *SemaFileCtxNew(
     fclose(file);
     return NULL;
   }
+  SemaASTInit(node);
 
   SemaFileCtx *fileCtx = malloc(sizeof(SemaFileCtx));
   fileCtx->path = strdup(path);
   fileCtx->file = file;
+  fileCtx->source = SourceFromFile(file);
   fileCtx->node = node;
   fileCtx->symbolTable = HashTableNew(
-      ParserStringHash, ParserStringEqual, free, SemaFileCtxDelete);
+      ParserStringHash, ParserStringEqual, NULL, SemaSymInfoDelete);
   return fileCtx;
 }
 
@@ -69,6 +83,7 @@ void SemaFileCtxDelete(void *p) {
   SemaFileCtx *fileCtx = p;
   free(fileCtx->path);
   fclose(fileCtx->file);
+  SourceDelete(fileCtx->source);
   SyntaxASTDelete(fileCtx->node);
   HashTableDelete(fileCtx->symbolTable);
   free(fileCtx);
@@ -106,9 +121,7 @@ bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
     for (SyntaxAST *importDecl = importDecls->firstChild; importDecl;
          importDecl = importDecl->sibling) {
       // Convert module path to real import path (a string)
-      // TODO: provide functionality import files from separate directories
-      // TODO: it doesn't seem like wildcard imports are necessary, as import
-      // statements imports all classes in the file
+      // TODO: provide functionality to import files from separate directories
       SyntaxAST *modulePath = importDecl->firstChild;
       assert(modulePath);
 
@@ -155,8 +168,12 @@ CLEANUP:
 }
 
 bool SemaCheck(SemaCtx *ctx, const char *path) {
-  if (!SemaAddAllFiles(ctx, path))
+  if (!SemaAddAllFiles(ctx, path)) {
     return false;
+  }
+  if (!SemaPopulateClassSymbols(ctx)) {
+    return false;
+  }
   return true;
 }
 
@@ -166,4 +183,75 @@ void SemaCtxDelete(SemaCtx *ctx) {
   for (int i = 0; i < n; ++i)
     SemaFileCtxDelete(fileCtxs->arr[i]);
   VectorDelete(fileCtxs);
+}
+
+bool SemaPopulateClassSymbols(SemaCtx *ctx) {
+  Vector *fileCtxs = ctx->fileCtxs;
+  int n = fileCtxs->size;
+  bool success = true;
+  for (int i = 0; i < n; ++i) {
+    SemaFileCtx *fileCtx = fileCtxs->arr[i];
+    HashTable *symbolTable = fileCtx->symbolTable;
+
+    SyntaxAST *module = fileCtx->node;
+    assert(module && module->kind == SYNTAX_AST_KIND_MODULE);
+    SyntaxAST *classDecls = module->lastChild;
+    assert(classDecls && classDecls->kind == SYNTAX_AST_KIND_CLASS_DECLS);
+    for (SyntaxAST *classDecl = classDecls->firstChild; classDecl;
+         classDecl = classDecl->sibling) {
+      assert(classDecl->kind == SYNTAX_AST_KIND_CLASS_DECL);
+      char *className = classDecl->string;
+
+      HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, className);
+      if (entry) {
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET" %s:%d: ",
+                fileCtx->path, classDecl->loc.from.lineNo + 1);
+        fprintf(stderr, "redeclaration of class \"%s\" in the current module\n",
+                className);
+        SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
+                            &classDecl->stringLoc);
+        classDecl->semaInfo.skipAnalysis = true;
+        success = false;
+      } else {
+        SemaSymInfo *classInfo = malloc(sizeof(SemaSymInfo));
+        classInfo->type.kind = SEMA_TYPE_KIND_CLASS;
+        classInfo->type.memberTable = HashTableNew(
+            ParserStringHash, ParserStringEqual, NULL, SemaSymInfoDelete);
+        HashTableEntryAdd(symbolTable, className, classInfo);
+        entry = HashTableEntryRetrieve(symbolTable, className);
+        assert(entry);
+        classInfo->entry = entry;
+        classInfo->decl = classDecl;
+      }
+    }
+  }
+  return success;
+}
+
+void SemaSymInfoDelete(void *p) {
+  SemaSymInfo *symInfo = p;
+  SemaTypeDeleteContent(&symInfo->type);
+  free(symInfo);
+}
+
+void SemaTypeDeleteContent(SemaType *type) {
+  switch (type->kind) {
+    case SEMA_TYPE_KIND_FN:
+      VectorDelete(type->paramTypes);
+      break;
+    case SEMA_TYPE_KIND_CLASS:
+      HashTableDelete(type->memberTable);
+      break;
+    default:
+      break;
+  }
+}
+
+void SemaASTInit(SyntaxAST *node) {
+  SemaInfo *info = &node->semaInfo;
+  info->skipAnalysis = false;
+
+  for (SyntaxAST *cur = node->firstChild; cur; cur = cur->sibling) {
+    SemaASTInit(cur);
+  }
 }

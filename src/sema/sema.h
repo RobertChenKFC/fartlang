@@ -18,7 +18,8 @@ typedef enum {
   SEMA_TYPE_KIND_ARRAY,
   SEMA_TYPE_KIND_FN,
   SEME_TYPE_KIND_PRIM_TYPE,
-  SEMA_TYPE_KIND_CLASS
+  SEMA_TYPE_KIND_CLASS,
+  SEMA_TYPE_KIND_NAMESPACE
 } SemaTypeKind;
 
 // The primitive types
@@ -51,16 +52,23 @@ struct SemaType {
   // as described below:
   SemaTypeKind kind;
   union {
-    // For type kind SEMA_TYPE_KIND_ARRAY: the array dimension. For instance,
-    // the type u8[][][] will have arrayLevels = 3
-    int arrayLevels;
-    // For type kind SEMA_TYPE_KIND_FN: the function return and parameter types.
-    // The function return type will be this type's first child, and the rest of
-    // the parameters will be this type's remaining children, in the order of
-    // the parameters. For instance, the type fn (u8[], u64) -> Vector will have
-    // the type Vector as the first child, the type u8[] as the second, and the
-    // type u64 as the third
-    SemaType *firstChild, *lastChild, *sibling;
+    // For type kind SEMA_TYPE_KIND_ARRAY: records the type of each array
+    // element in "baseType", and records the number of array dimensions in
+    // "arrayLevels". For example, the type u8[][][] will have "baseType" set
+    // to u8 and "arrayLevels" set to 3
+    struct {
+      SemaType *baseType;
+      int arrayLevels;
+    };
+    // For type kind SEMA_TYPE_KIND_FN: the function return type (or NULL, if
+    // the function does not have a return type) is stored in "retType", while
+    // the function parameter types are stored in the vector "paramTypes". For
+    // instance, the type fn (u8[], u64) -> Vector will have "retType" set to
+    // Vector and "paramTypes" set to the contents [u8[], u64]
+    struct {
+      SemaType *retType;
+      Vector *paramTypes;
+    };
     // For type kind SEMA_TYPE_KIND_PRIM_TYPE: which primitive type this is
     SemaPrimType primType;
     // For type kind SEMA_TYPE_KIND_CLASS: a table from the symbol of each
@@ -95,7 +103,13 @@ struct SemaSymInfo {
 // All information recorded for semantic analysis. This information is stored
 // in each SyntaxAST node
 struct SemaInfo {
-  SemaSymInfo symInfo;
+  union {
+    // Information if the AST node is a symbol
+    SemaSymInfo symInfo;
+  };
+  // Skip semantic analysis for the next analysis pass. Used when the current
+  // analysis pass already detects errors for this AST node
+  bool skipAnalysis;
 };
 
 #include "parse/syntax/syntax.h"
@@ -107,6 +121,8 @@ struct SemaFileCtx {
   char *path;
   // A file handle of the source file
   FILE *file;
+  // The source code of the file used for error printing
+  Source *source;
   // The AST of the source file
   SyntaxAST *node;
   // The symbol table of the file. The table reflects the declared symbols

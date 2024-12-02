@@ -165,7 +165,10 @@ struct SyntaxAST {
     // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_CLASS_DECL,
     // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_MEMBER_ACCESS,
     // SYNTAX_AST_KIND_PARAM, SYNTAX_AST_KIND_LABEL,
-    char *string; 
+    struct {
+      char *string; 
+      SourceLocation stringLoc;
+    };
     // SYNTAX_AST_KIND_IMPORT_DECL
     struct {
       char *namespace;
