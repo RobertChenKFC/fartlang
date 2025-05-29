@@ -1,1 +1,1 @@
-import dir1.file2;
+import dir1.file2; # Error

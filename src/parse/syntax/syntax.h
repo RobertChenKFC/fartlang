@@ -173,6 +173,7 @@ struct SyntaxAST {
     struct {
       char *namespace;
       bool isWildcard;
+      SourceLocation extLoc;
     } import;
     // SYNTAX_AST_KIND_VAR_DECL
     unsigned varDeclModifiers;
@@ -195,6 +196,7 @@ struct SyntaxAST {
     struct {
       SyntaxMethodType type;
       char *name;
+      SourceLocation nameLoc;
     } method;
   };
 

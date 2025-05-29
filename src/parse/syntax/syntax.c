@@ -1042,6 +1042,8 @@ void SyntaxASTDelete(void *p) {
   SyntaxASTDelete(node->firstChild);
   SyntaxASTDelete(node->sibling);
 
+  SemaDeleteASTSemaInfo(node);
+
   switch (node->kind) {
     case SYNTAX_AST_KIND_IDENTIFIER:
     case SYNTAX_AST_KIND_CLASS_DECL:

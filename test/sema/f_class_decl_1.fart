@@ -1,20 +1,20 @@
-class Foo {
+class Foo { # Ok
 }
 
-class Bar {
+class Bar { # Ok
 }
 
-class Foo {
+class Foo { # Error
 }
 
-class Foo2 {
+class Foo2 { # Ok
 }
 
-class Bar2 {
+class Bar2 { # Ok
 }
 
-class Foo2 {
+class Foo2 { # Error
 }
 
-class Foo2 {
+class Foo2 { # Error
 }

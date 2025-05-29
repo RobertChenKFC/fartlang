@@ -7,6 +7,7 @@
 
 // Forward declarations
 typedef struct SemaType SemaType;
+typedef struct SemaTypeInfo SemaTypeInfo;
 typedef struct SemaSymInfo SemaSymInfo;
 typedef struct SemaInfo SemaInfo;
 typedef struct SemaFileCtx SemaFileCtx;
@@ -17,9 +18,10 @@ typedef struct SyntaxAST SyntaxAST;
 typedef enum {
   SEMA_TYPE_KIND_ARRAY,
   SEMA_TYPE_KIND_FN,
-  SEME_TYPE_KIND_PRIM_TYPE,
+  SEMA_TYPE_KIND_PRIM_TYPE,
   SEMA_TYPE_KIND_CLASS,
-  SEMA_TYPE_KIND_NAMESPACE
+  SEMA_TYPE_KIND_NAMESPACE,
+  SEMA_TYPE_KIND_PLACEHOLDER
 } SemaTypeKind;
 
 // The primitive types
@@ -32,8 +34,11 @@ typedef enum {
   SEMA_PRIM_TYPE_I16,
   SEMA_PRIM_TYPE_U8,
   SEMA_PRIM_TYPE_I8,
+  SEMA_PRIM_TYPE_F64,
+  SEMA_PRIM_TYPE_F32,
   SEMA_PRIM_TYPE_BOOL,
-  SEMA_PRIM_TYPE_ANY
+  SEMA_PRIM_TYPE_ANY,
+  SEMA_PRIM_TYPE_VOID
 } SemaPrimType;
 
 // Attributes of each symbol
@@ -52,12 +57,19 @@ struct SemaType {
   // as described below:
   SemaTypeKind kind;
   union {
+    // Recursive types: SEMA_TYPE_KIND_ARRAY and SEMA_TYPE_KIND_FN. Recursive
+    // types are types constructed from other types. Therefore, recursive
+    // pointers to other SemaType are stored. In addition, a boolean type owner
+    // flag will accompany each recursive pointer, indicating whether this
+    // SemaType is the owner of the recursive types or not
+    //
     // For type kind SEMA_TYPE_KIND_ARRAY: records the type of each array
     // element in "baseType", and records the number of array dimensions in
     // "arrayLevels". For example, the type u8[][][] will have "baseType" set
     // to u8 and "arrayLevels" set to 3
     struct {
       SemaType *baseType;
+      bool isBaseTypeOwner;
       int arrayLevels;
     };
     // For type kind SEMA_TYPE_KIND_FN: the function return type (or NULL, if
@@ -68,34 +80,61 @@ struct SemaType {
     struct {
       SemaType *retType;
       Vector *paramTypes;
+      bool isRetTypeOwner;
+      Vector *isParamTypeOwner;
     };
+
     // For type kind SEMA_TYPE_KIND_PRIM_TYPE: which primitive type this is
     SemaPrimType primType;
-    // For type kind SEMA_TYPE_KIND_CLASS: a table from the symbol of each
-    // member to their types. For instance, the following class:
-    //   class A {
-    //     var variable: u64;
-    //     fn function() -> i32 {}
-    //   }
-    // would have two entries in its memberTable:
-    //   - "variable": u64
-    //   - "function": fn () -> i32
-    // The table key is of type char*, and value is of type SemaSymInfo*
+    // (1) For type kind SEMA_TYPE_KIND_CLASS: a table from the symbol of each
+    //     member to their types. For instance, the following class:
+    //
+    //     class A {
+    //       var variable: u64;
+    //       fn function() -> i32 {}
+    //     }
+    //
+    //     would have two entries in its memberTable:
+    //       - "variable": u64
+    //       - "function": fn () -> i32
+    //
+    // (2) For type kind SEMA_TYPE_KIND_NAMESPACE: a table from the symbol of
+    //     each class to the symbol info of the class
+    //
+    // In either case, the table key is of type char*, and value is of type
+    // SemaSymInfo*
     HashTable *memberTable;
   };
+};
+
+// Representing the type of an AST node
+struct SemaTypeInfo {
+  // The type of this AST node
+  SemaType *type;
+  // Used to record whether or not "type" was allocated by this SemaTypeInfo
+  bool isTypeOwner;
 };
 
 // Representing the information of a symbol. Each information field is
 // described below:
 struct SemaSymInfo {
   // The type of this symbol
-  SemaType type;
-  // The attributes of the declared symbol
-  SemaAttr attr;
+  SemaTypeInfo typeInfo;
+
+  union {
+    // SYNTAX_AST_KIND_VAR_INIT
+    struct {
+      // The attributes of the declared symbol
+      SemaAttr attr;
+      // The next symbol in the same scope
+      SemaSymInfo *nextInScope;
+    };
+    // SYNTAX_AST_KIND_IMPORT_DECL
+    SemaFileCtx *importFileCtx;
+  };
+
   // The entry of this symbol in the symbol table
   HashTableEntry *entry;
-  // The next symbol in the same scope
-  SemaSymInfo *nextInScope;
   // The AST node that declared this symbol
   SyntaxAST *decl;
 };
@@ -104,12 +143,25 @@ struct SemaSymInfo {
 // in each SyntaxAST node
 struct SemaInfo {
   union {
-    // Information if the AST node is a symbol
-    SemaSymInfo symInfo;
+    // A pointer to SemaSymInfo is stored for the following kinds of AST nodes:
+    // SYNTAX_AST_KIND_CLASS_DECL, SYNTAX_AST_KIND_IMPORT_DECL,
+    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_METHOD_DECL,
+    // SYNTAX_AST_KIND_IDENTIFIER
+    // Note that the AST node that declares the symbol will be the owner of
+    // "symInfo", so in the case of variable initialization and uses, the
+    // initialization will be the owner of "symInfo".
+    SemaSymInfo *symInfo;
+
+    // A pointer to SemaTypeInfo is stored for the following kinds of AST nodes:
+    // SYNTAX_AST_KIND_LITERAL
+    SemaTypeInfo typeInfo;
   };
+
   // Skip semantic analysis for the next analysis pass. Used when the current
   // analysis pass already detects errors for this AST node
   bool skipAnalysis;
+  // The file that this AST node belongs to
+  SemaFileCtx *fileCtx;
 };
 
 #include "parse/syntax/syntax.h"
@@ -163,5 +215,7 @@ struct SemaCtx {
 bool SemaCheck(SemaCtx *ctx, const char *path);
 // Deletes all resources allocated in "ctx" when running SemaCheck
 void SemaCtxDelete(SemaCtx *ctx);
+// Deletes all resources allocated in the SemaInfo of AST "node"
+void SemaDeleteASTSemaInfo(SyntaxAST *node);
 
 #endif // SEMA_H

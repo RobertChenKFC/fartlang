@@ -1,0 +1,11 @@
+# import dir1.file7;
+
+class Main {
+  f1() {} # Ok
+  f1(x: i32) {} # Error
+
+  f2(x: Hello) {} # Error
+  f2(x: Bar) -> file7 {} # Error
+  f2() -> file7.Bar {} # Error
+  f2(x: Main) {} # Ok
+}

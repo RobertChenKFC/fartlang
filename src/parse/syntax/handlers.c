@@ -134,6 +134,7 @@ ParserDeclareHandler(SyntaxHandlerModulePathExt, rhs) {
       identifier_->str[identifier_->length] = '\0';
       importDecl->import.namespace = strdup(identifier_->str);
       importDecl->import.isWildcard = false;
+      importDecl->import.extLoc = identifier_->loc;
 
       identifier_->str[identifier_->length] = c;
       LexerTokenDelete(identifier_);
@@ -144,6 +145,8 @@ ParserDeclareHandler(SyntaxHandlerModulePathExt, rhs) {
 
       importDecl->import.namespace = NULL;
       importDecl->import.isWildcard = true;
+      importDecl->import.extLoc.from = token->loc.from;
+      importDecl->import.extLoc.to = mul_->loc.to;
 
       LexerTokenDelete(mul_);
     }
@@ -1361,6 +1364,7 @@ ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
   assert(returnType);
 
   method->method.name = strndup(identifier_->str, identifier_->length);
+  method->method.nameLoc = identifier_->loc;
   method->loc.from = SourcePointMin(&method->loc.from, &identifier_->loc.from);
   SyntaxASTAppend(method, returnType);
   SyntaxASTAppend(method, paramList);
@@ -1818,6 +1822,7 @@ SyntaxAST *SyntaxTokenToAST(LexerToken *token, int kind) {
   SyntaxAST *node = SyntaxASTNew(kind);
   node->loc = token->loc;
   node->string = strndup(token->str, token->length);
+  node->stringLoc = token->loc;
   LexerTokenDelete(token);
   return node;
 }

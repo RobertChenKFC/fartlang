@@ -1,0 +1,7 @@
+class Main {
+  var x1 = 5;
+  var x2 = 10.;
+  var x3 = 3 if true else 5;
+  var x4 = 3 if 4 else 5; # error
+  var x5 = 3 if true else 5.; # error
+}
