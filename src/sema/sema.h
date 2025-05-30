@@ -86,24 +86,28 @@ struct SemaType {
 
     // For type kind SEMA_TYPE_KIND_PRIM_TYPE: which primitive type this is
     SemaPrimType primType;
-    // (1) For type kind SEMA_TYPE_KIND_CLASS: a table from the symbol of each
-    //     member to their types. For instance, the following class:
-    //
-    //     class A {
-    //       var variable: u64;
-    //       fn function() -> i32 {}
-    //     }
-    //
-    //     would have two entries in its memberTable:
-    //       - "variable": u64
-    //       - "function": fn () -> i32
-    //
-    // (2) For type kind SEMA_TYPE_KIND_NAMESPACE: a table from the symbol of
-    //     each class to the symbol info of the class
-    //
-    // In either case, the table key is of type char*, and value is of type
-    // SemaSymInfo*
-    HashTable *memberTable;
+    struct {
+      // (1) For type kind SEMA_TYPE_KIND_CLASS: a table from the symbol of each
+      //     member to their types. For instance, the following class:
+      //
+      //     class A {
+      //       var variable: u64;
+      //       fn function() -> i32 {}
+      //     }
+      //
+      //     would have two entries in its memberTable:
+      //       - "variable": u64
+      //       - "function": fn () -> i32
+      //
+      // (2) For type kind SEMA_TYPE_KIND_NAMESPACE: a table from the symbol of
+      //     each class to the symbol info of the class
+      //
+      // In either case, the table key is of type char*, and value is of type
+      // SemaSymInfo*
+      HashTable *memberTable;
+      // The AST node that declared this type
+      SyntaxAST *node;
+    };
   };
 };
 
