@@ -52,6 +52,16 @@ typedef enum {
   SEMA_ATTR_METHOD,
 } SemaAttr;
 
+// Different stages of the semantic analysis
+typedef enum {
+  SEMA_STAGE_SYNTAX,
+  SEMA_STAGE_ADD_ALL_FILES,
+  SEMA_STAGE_POPULATE_CLASS_SYMBOLS,
+  SEMA_STAGE_POPULATE_IMPORT_SYMBOLS,
+  SEMA_STAGE_POPULATE_MEMBERS,
+  SEMA_STAGE_TYPE_CHECK,
+} SemaStage;
+
 struct SemaType {
   // Which kind of type this is. Each type kind stores different information
   // as described below:
@@ -161,6 +171,10 @@ struct SemaInfo {
     SemaTypeInfo typeInfo;
   };
 
+  // The stage of the analysis that the current SyntaxAST has gone through.
+  // This ensures that we only delete the resources in SemaInfo if we have
+  // already reached the stage of allocating them
+  SemaStage stage;
   // Skip semantic analysis for the next analysis pass. Used when the current
   // analysis pass already detects errors for this AST node
   bool skipAnalysis;
@@ -211,6 +225,9 @@ struct SemaCtx {
   Vector *fileCtxs;
 };
 
+// Initializes all fields in SemaInfo. This is used in SyntaxASTNew to properly
+// initialize the SemaInfo struct inside SyntaxAST
+void SemaInfoInit(SemaInfo *info);
 // Perform semantic check on the file pointed to by "path" and the files that
 // are (recursively) imported. Assumes that "ctx" is either uninitialized or was
 // deleted by calling SemaCtxDelete, and modifies "ctx" before returning, which

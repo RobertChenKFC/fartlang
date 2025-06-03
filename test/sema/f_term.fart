@@ -1,19 +1,29 @@
 class Main {
-  var x1 = 5;
-  var x2 = 10.;
-  var x3 = 3 if true else 5;
+  # Simple terms with auto type deduction
+  var s_i32 = 5;
+  var s_f32 = 10.;
 
   # Print all the primitive types
-  var x4 = 3 if 4u64 else 5; # error
-  var x5 = 3 if 4i64 else 5; # error
-  var x6 = 3 if 4u32 else 5; # error
-  var x7 = 3 if 4 else 5; # error
-  var x8 = 3 if 4u16 else 5; # error
-  var x9 = 3 if 4i16 else 5; # error
-  var x10 = 3 if 4u8 else 5; # error
-  var x11 = 3 if 4i8 else 5; # error
-  var x12 = 3 if "hello" else 5; # error
-  var x13 = 3 if 'h' else 5; # error
+  var p_u64: bool = 4u64; # error
+  var p_i64: bool = 4i64; # error
+  var p_u32: bool = 4u32; # error
+  var p_i32: bool = 4; # error
+  var p_u16: bool = 4u16; # error
+  var p_i16: bool = 4i16; # error
+  var p_u8: bool = 4u8; # error
+  var p_i8: bool = 4i8; # error
+  var p_f64: bool = 4f64; # error
+  var p_f32: bool = 4.; # error
+  var p_bool: i32 = true; # error
+  var p_str: bool = "hello"; # error
+  var p_char: bool = 'h'; # error
 
-  var x20 = 3 if true else 5.; # error
+  # Any should be able take on any value
+  var any_str: any = "goodbye";
+  var any_char: any = 'h';
+
+  # Ternary operator
+  var tern = 3 if true else 5;
+  var tern_cond = 3 if 4 else 5.; # error
+  var tern_mismatch = 3 if true else 5.; # error
 }

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 // Helper functions
 // Initializes all fields of SemaCtx "ctx"
@@ -33,10 +34,13 @@ void SemaSymInfoDelete(void *p);
 // Destructor for SemaType "type"
 void SemaTypeDelete(SemaType *type);
 // Initializes all the SemaInfo stored in the AST "node" and recursively
-// initializes all descendants. The initialization includes:
-// - Setting "node->semaInfo.skipAnalysis" to false
-// - Setting "node->semaInfo.fileCtx" to the provided "fileCtx"
-void SemaASTInit(SyntaxAST *node, SemaFileCtx *fileCtx);
+// initializes all descendants using the "init" function. The remaining
+// arguments to the function are passed into the "init" function as a va_list
+// every time it is called
+typedef void (*SemaASTInitFn)(SemaInfo*, va_list);
+void SemaASTInit(SyntaxAST *node, SemaASTInitFn init, ...);
+// Same as SemaASTInit, but takes in a va_list for the remaining arguments
+void SemaASTInitV(SyntaxAST *node, SemaASTInitFn init, va_list args);
 // Populates the symbol tables of each SemaFileCtx in "ctx" with the imported
 // namespace and class symbols. Returns true if and only if the imported symbols
 // do not collide with existing symbols
@@ -84,6 +88,36 @@ void SemaTypeInfoDelete(SemaTypeInfo *typeInfo);
 void SemaTypePrint(FILE *file, SemaType *type);
 // Checks if "type1" and "type2" are exactly the same
 bool SemaTypeEqual(SemaType *type1, SemaType *type2);
+// Initializes "info" after SemaAddAllFiles. This init function takes in
+// an additional argument "SemaFileCtx *fileCtx". In particular, this init
+// function sets the stage of "info" to "SEMA_STAGE_ADD_ALL_FILES" and the
+// fileCtx of "info" to "fileCtx"
+void SemaASTInitAddAllFiles(SemaInfo *info, va_list arg);
+// Initializes "info" after SemaPopulateClassSymbols. This init function takes
+// no additional arguments. In particular, this init function sets the stage of
+// "info" to "SEMA_STAGE_POPULATE_CLASS_SYMBOLS"
+void SemaASTInitPopulateClassSymbols(SemaInfo *info, va_list arg);
+// Initializes "info" after SemaPopulateImportSymbols. This init function takes
+// no additional arguments. In particular, this init function sets the stage of
+// "info" to "SEMA_STAGE_POPULATE_IMPORT_SYMBOLS"
+void SemaASTInitPopulateImportSymbols(SemaInfo *info, va_list arg);
+// Initializes "info" after SemaPopulateMembers. This init function takes
+// no additional arguments. In particular, this init function sets the stage of
+// "info" to "SEMA_STAGE_POPULATE_MEMBERS"
+void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg);
+// Initializes "info" after SemaTypeCheck. This init function takes
+// no additional arguments. In particular, this init function sets the stage of
+// "info" to "SEMA_STAGE_TYPE_CHECK"
+void SemaASTInitTypeCheck(SemaInfo *info, va_list arg);
+// Checks if the an instance of the "right" type can be assigned to an instance
+// of the "left" type. This returns true if and only if (1) the "left" type is
+// "any" or (2) the "left" and "right" types are the same
+bool SemaTypeIsAssignable(SemaType *left, SemaType *right);
+
+void SemaInfoInit(SemaInfo *info) {
+  info->stage = SEMA_STAGE_SYNTAX;
+  info->skipAnalysis = false;
+}
 
 void SemaNew(SemaCtx *ctx) {
   ctx->fileCtxs = VectorNew();
@@ -126,7 +160,7 @@ SemaFileCtx *SemaFileCtxNew(
   fileCtx->node = node;
   fileCtx->symbolTable = HashTableNew(
       ParserStringHash, ParserStringEqual, NULL, NULL);
-  SemaASTInit(node, fileCtx);
+  SemaASTInit(node, SemaASTInitAddAllFiles, fileCtx);
   return fileCtx;
 }
 
@@ -297,6 +331,7 @@ bool SemaPopulateClassSymbols(SemaCtx *ctx) {
         classInfo->decl = classDecl;
       }
     }
+    SemaASTInit(module, SemaASTInitPopulateClassSymbols);
   }
   return success;
 }
@@ -335,13 +370,18 @@ void SemaTypeDelete(SemaType *type) {
   free(type);
 }
 
-void SemaASTInit(SyntaxAST *node, SemaFileCtx *fileCtx) {
-  SemaInfo *info = &node->semaInfo;
-  info->skipAnalysis = false;
-  info->fileCtx = fileCtx;
+void SemaASTInit(SyntaxAST *node, SemaASTInitFn init, ...) {
+  va_list args;
+  va_start(args, init);
+  SemaASTInitV(node, init, args);
+  va_end(args);
+}
 
+void SemaASTInitV(SyntaxAST *node, SemaASTInitFn init, va_list args) {
+  SemaInfo *info = &node->semaInfo;
+  init(info, args);
   for (SyntaxAST *cur = node->firstChild; cur; cur = cur->sibling) {
-    SemaASTInit(cur, fileCtx);
+    SemaASTInitV(cur, init, args);
   }
 }
 
@@ -433,6 +473,7 @@ bool SemaPopulateImportSymbols(SemaCtx *ctx) {
         symInfo->entry = HashTableEntryRetrieve(symbolTable, namespace);
       }
     }
+    SemaASTInit(module, SemaASTInitPopulateImportSymbols);
   }
   return success;
 }
@@ -503,10 +544,6 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
             varInit->semaInfo.skipAnalysis = true;
             continue;
           }
-
-          // DEBUG
-          printf("Adding %s to symbol table %p\n", varIdentifier, symbolTable);
-
           varTypeInfo->type = semaType;
           HashTableEntryAdd(memberTable, varIdentifier, varInfo);
         }
@@ -553,6 +590,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
         HashTableEntryAdd(memberTable, methodIdentifier, methodInfo);
       }
     }
+    SemaASTInit(module, SemaASTInitPopulateMembers);
   }
   return success;
 }
@@ -813,23 +851,33 @@ METHOD_TYPE_CLEANUP:
 void SemaDeleteASTSemaInfo(SyntaxAST *node) {
   bool deleteSymInfo = true;
   SemaInfo *info = &node->semaInfo;
+  SemaStage stage = info->stage;
   switch (node->kind) {
     case SYNTAX_AST_KIND_IMPORT_DECL:
-      deleteSymInfo = !node->import.isWildcard;
+      deleteSymInfo =
+          !node->import.isWildcard &&
+          stage >= SEMA_STAGE_POPULATE_IMPORT_SYMBOLS;
+      goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_CLASS_DECL:
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
+      goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_VAR_INIT:
+      // TODO: handle var init for member variables and inside methods
+      // separately
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+    DELETE_SYM_INFO:
     case SYNTAX_AST_KIND_METHOD_DECL:
-      if (deleteSymInfo) {
+      if (deleteSymInfo && !info->skipAnalysis) {
         SemaSymInfo *symInfo = info->symInfo;
-        if (!info->skipAnalysis) {
-          SemaTypeInfo *typeInfo = &symInfo->typeInfo;
-          SemaTypeInfoDelete(typeInfo);
-        }
+        SemaTypeInfo *typeInfo = &symInfo->typeInfo;
+        SemaTypeInfoDelete(typeInfo);
         free(symInfo);
       }
       break;
     case SYNTAX_AST_KIND_LITERAL:
-      SemaTypeInfoDelete(&info->typeInfo);
+      if (stage >= SEMA_STAGE_TYPE_CHECK) {
+        SemaTypeInfoDelete(&info->typeInfo);
+      }
       break;
   }
 }
@@ -840,6 +888,7 @@ void SemaTypeFromSemaPrimType(SemaType *type, SemaPrimType primType) {
 }
 
 bool SemaTypeCheck(SemaCtx *ctx) {
+  bool success = true;
   Vector *fileCtxs = ctx->fileCtxs;
   int n = fileCtxs->size;
   for (int i = 0; i < n; ++i) {
@@ -879,6 +928,7 @@ bool SemaTypeCheck(SemaCtx *ctx) {
             SemaType *initExprType = SemaTypeFromExpr(
                 initExpr, symbolTable, fileCtx);
             if (!initExprType) {
+              success = false;
               continue;
             }
             if (varTypeInfo->type->kind == SEMA_TYPE_KIND_PLACEHOLDER) {
@@ -888,12 +938,29 @@ bool SemaTypeCheck(SemaCtx *ctx) {
                 SemaTypeDelete(varTypeInfo->type);
               }
               varTypeInfo->type = initExprType;
-              varTypeInfo->isTypeOwner =
-                  initExpr->semaInfo.typeInfo.isTypeOwner;
+              varTypeInfo->isTypeOwner = false;
             } else {
               // This variable is declared with a type, so must check if the
               // types match
-              assert(false);
+              if (!SemaTypeIsAssignable(varTypeInfo->type, initExprType)) {
+                SyntaxAST *varType = varInit->firstChild;
+                SourceLocation *varTypeLoc = &varType->loc;
+                SourceLocation *initExprLoc = &initExpr->loc;
+                fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                        " %s:%d: ", fileCtx->path,
+                        initExprLoc->from.lineNo + 1);
+                fprintf(stderr, "expected expression to be of type "
+                        SOURCE_COLOR_GREEN);
+                SemaTypePrint(stderr, varTypeInfo->type);
+                fprintf(stderr, SOURCE_COLOR_RESET", got type "
+                        SOURCE_COLOR_RED);
+                SemaTypePrint(stderr, initExprType);
+                fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+                SourceLocationPrint(
+                    fileCtx->source, 2, SOURCE_COLOR_GREEN, varTypeLoc,
+                    SOURCE_COLOR_RED, initExprLoc);
+                success = false;
+              }
             }
           } else {
             assert(varTypeInfo->type->kind != SEMA_TYPE_KIND_PLACEHOLDER);
@@ -901,7 +968,9 @@ bool SemaTypeCheck(SemaCtx *ctx) {
         }
       }
     }
+    SemaASTInit(module, SemaASTInitTypeCheck);
   }
+  return success;
 }
 
 SemaType *SemaTypeFromTerm(
@@ -945,17 +1014,6 @@ SemaType *SemaTypeFromTerm(
     } case SYNTAX_AST_KIND_IDENTIFIER: {
       char *varName = term->string;
       HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, varName);
-
-      // DEBUG
-      printf("Trying to retrieve %s from symbol table %p\n",
-             varName, symbolTable);
-      printf("Symbol table currently has the following entries:\n");
-      for (HashTableEntry *curEntry = symbolTable->head; curEntry;
-           curEntry = curEntry->nextInTable) {
-        printf("- entry: %s\n", (char*)curEntry->key);
-      }
-      printf("====== end of entries =====\n");
-
       if (!entry) {
         SourceLocation *loc = &term->stringLoc;
         fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
@@ -1012,6 +1070,7 @@ SemaType *SemaTypeFromExpr(
         SemaTypePrint(stderr, condType);
         fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
         SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+        return NULL;
       }
       if (!SemaTypeEqual(trueType, falseType)) {
         SourceLocation *trueLoc = &trueNode->loc;
@@ -1028,8 +1087,9 @@ SemaType *SemaTypeFromExpr(
         SourceLocationPrint(
             fileCtx->source, 2, SOURCE_COLOR_BLUE, &trueNode->loc,
             SOURCE_COLOR_YELLOW, &falseNode->loc);
+        return NULL;
       }
-      break;
+      return trueType;
     } default: {
       assert(false);
     }
@@ -1159,6 +1219,9 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       assert(namespace);
       fprintf(file, "%s", namespace);
     } default: {
+      // DEBUG
+      printf("Sema type kind: %d\n", type->kind);
+
       assert(false);
     }
   }
@@ -1191,4 +1254,34 @@ bool SemaTypeEqual(SemaType *type1, SemaType *type2) {
     case SEMA_TYPE_KIND_NAMESPACE:
       return type1->node == type2->node;
   }
+}
+
+void SemaASTInitAddAllFiles(SemaInfo *info, va_list arg) {
+  SemaFileCtx *fileCtx = va_arg(arg, SemaFileCtx*);
+  info->stage = SEMA_STAGE_ADD_ALL_FILES;
+  info->fileCtx = fileCtx;
+}
+
+void SemaASTInitPopulateClassSymbols(SemaInfo *info, va_list arg) {
+  info->stage = SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
+}
+
+void SemaASTInitPopulateImportSymbols(SemaInfo *info, va_list arg) {
+  info->stage = SEMA_STAGE_POPULATE_IMPORT_SYMBOLS;
+}
+
+void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg) {
+  info->stage = SEMA_STAGE_POPULATE_MEMBERS;
+}
+
+void SemaASTInitTypeCheck(SemaInfo *info, va_list arg) {
+  info->stage = SEMA_STAGE_TYPE_CHECK;
+}
+
+bool SemaTypeIsAssignable(SemaType *left, SemaType *right) {
+  if (left->kind == SEMA_TYPE_KIND_PRIM_TYPE &&
+      left->primType == SEMA_PRIM_TYPE_ANY) {
+    return true;
+  }
+  return SemaTypeEqual(left, right);
 }
