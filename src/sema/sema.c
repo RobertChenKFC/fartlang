@@ -113,6 +113,18 @@ void SemaASTInitTypeCheck(SemaInfo *info, va_list arg);
 // of the "left" type. This returns true if and only if (1) the "left" type is
 // "any" or (2) the "left" and "right" types are the same
 bool SemaTypeIsAssignable(SemaType *left, SemaType *right);
+// Checks if "type" is a signed type
+bool SemaTypeIsSigned(SemaType *type);
+// Checks if "type" is an unsigned type
+bool SemaTypeIsUnsigned(SemaType *type);
+// Returns the bitwidth of "type"
+int SemaTypeBitwidth(SemaType *type);
+// Checks if all the operands of the bitwise expression expressed
+// in the AST node "expr" are all the signed or all unsigned types, and all have
+// the same bitwidth. If so, return the result type, otherwise return NULL.
+// The "symbolTable" and "ctx" are used to recursively type check the operands
+SemaType *SemaTypeCheckBitwiseOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *ctx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -865,7 +877,7 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
       // TODO: handle var init for member variables and inside methods
       // separately
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
-    DELETE_SYM_INFO:
+DELETE_SYM_INFO:
     case SYNTAX_AST_KIND_METHOD_DECL:
       if (deleteSymInfo && !info->skipAnalysis) {
         SemaSymInfo *symInfo = info->symInfo;
@@ -874,8 +886,9 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
         free(symInfo);
       }
       break;
+    case SYNTAX_AST_KIND_OP:
     case SYNTAX_AST_KIND_LITERAL:
-      if (stage >= SEMA_STAGE_TYPE_CHECK) {
+      if (stage >= SEMA_STAGE_TYPE_CHECK && !info->skipAnalysis) {
         SemaTypeInfoDelete(&info->typeInfo);
       }
       break;
@@ -1056,10 +1069,19 @@ SemaType *SemaTypeFromExpr(
       SyntaxAST *falseNode = condNode->sibling;
       SemaType *condType = SemaTypeFromExpr(
           condNode, symbolTable, fileCtx);
+      if (!condType) {
+        goto TERNARY_OP_SKIP_COND;
+      }
       SemaType *trueType = SemaTypeFromExpr(
           trueNode, symbolTable, fileCtx);
+      if (!trueType) {
+        goto TERNARY_OP_SKIP_TRUE;
+      }
       SemaType *falseType = SemaTypeFromExpr(
           falseNode, symbolTable, fileCtx);
+      if (!trueType) {
+        goto TERNARY_OP_SKIP_FALSE;
+      }
       if (condType->kind != SEMA_TYPE_KIND_PRIM_TYPE ||
           condType->primType != SEMA_PRIM_TYPE_BOOL) {
         SourceLocation *loc = &condNode->loc;
@@ -1090,6 +1112,29 @@ SemaType *SemaTypeFromExpr(
         return NULL;
       }
       return trueType;
+TERNARY_OP_SKIP_COND:
+      condNode->semaInfo.skipAnalysis = true;
+
+      // DEBUG
+      printf("Skip condition\n");
+TERNARY_OP_SKIP_TRUE:
+      trueNode->semaInfo.skipAnalysis = true;
+
+      // DEBUG
+      printf("Skip true\n");
+TERNARY_OP_SKIP_FALSE:
+      falseNode->semaInfo.skipAnalysis = true;
+      expr->semaInfo.skipAnalysis = true;
+
+      // DEBUG
+      printf("Skip false\n");
+      return NULL;
+    }
+    case SYNTAX_OP_BIT_OR:
+    case SYNTAX_OP_BIT_AND:
+    case SYNTAX_OP_BIT_XOR:
+    case SYNTAX_OP_BIT_NOT: {
+      return SemaTypeCheckBitwiseOp(expr, symbolTable, fileCtx);
     } default: {
       assert(false);
     }
@@ -1284,4 +1329,107 @@ bool SemaTypeIsAssignable(SemaType *left, SemaType *right) {
     return true;
   }
   return SemaTypeEqual(left, right);
+}
+
+bool SemaTypeIsSigned(SemaType *type) {
+  if (type->kind != SEMA_TYPE_KIND_PRIM_TYPE) {
+    return false;
+  }
+  switch (type->primType) {
+    case SEMA_PRIM_TYPE_I64:
+    case SEMA_PRIM_TYPE_I32:
+    case SEMA_PRIM_TYPE_I16:
+    case SEMA_PRIM_TYPE_I8:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool SemaTypeIsUnsigned(SemaType *type) {
+  if (type->kind != SEMA_TYPE_KIND_PRIM_TYPE) {
+    return false;
+  }
+  switch (type->primType) {
+    case SEMA_PRIM_TYPE_U64:
+    case SEMA_PRIM_TYPE_U32:
+    case SEMA_PRIM_TYPE_U16:
+    case SEMA_PRIM_TYPE_U8:
+      return true;
+    default:
+      return false;
+  }
+}
+
+int SemaTypeBitwidth(SemaType *type) {
+  if (type->kind != SEMA_TYPE_KIND_PRIM_TYPE) {
+    return 64;
+  }
+  switch (type->primType) {
+    case SEMA_PRIM_TYPE_F64:
+    case SEMA_PRIM_TYPE_U64:
+    case SEMA_PRIM_TYPE_I64:
+    case SEMA_PRIM_TYPE_ANY:
+      return 64;
+    case SEMA_PRIM_TYPE_F32:
+    case SEMA_PRIM_TYPE_U32:
+    case SEMA_PRIM_TYPE_I32:
+      return 32;
+    case SEMA_PRIM_TYPE_U16:
+    case SEMA_PRIM_TYPE_I16:
+      return 16;
+    case SEMA_PRIM_TYPE_U8:
+    case SEMA_PRIM_TYPE_I8:
+    case SEMA_PRIM_TYPE_BOOL:
+      return 8;
+    default:
+      assert(false);
+  }
+}
+
+SemaType *SemaTypeCheckBitwiseOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *firstOperand = expr->firstChild;
+  SemaType *firstOperandType = SemaTypeFromExpr(
+      firstOperand, symbolTable, fileCtx);
+  if (!firstOperandType) {
+    goto CLEANUP;
+  }
+  if (!SemaTypeIsSigned(firstOperandType) &&
+      !SemaTypeIsUnsigned(firstOperandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, firstOperand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected signed or unsigned type for bitwise operand, "
+            "got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, firstOperandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &firstOperand->loc);
+    goto CLEANUP;
+  }
+  SyntaxAST *operand;
+  for (operand = firstOperand->sibling; operand; operand = operand->sibling) {
+    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    if (!operandType) {
+      goto CLEANUP;
+    }
+    if (!SemaTypeEqual(firstOperandType, operandType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, firstOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "bitwise operand of type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr,
+              SOURCE_COLOR_RESET" does not match first operand of type ");
+      SemaTypePrint(stderr, firstOperandType);
+      fprintf(stderr, "\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+      goto CLEANUP;
+    }
+  }
+CLEANUP:
+  for (; operand; operand = operand->sibling) {
+    operand->semaInfo.skipAnalysis = true;
+  }
+  return NULL;
 }

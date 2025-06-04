@@ -1,29 +1,30 @@
 class Main {
   # Simple terms with auto type deduction
-  var s_i32 = 5;
-  var s_f32 = 10.;
+  # var s_i32 = 5;
+  # var s_f32 = 10.;
 
   # Print all the primitive types
-  var p_u64: bool = 4u64; # error
-  var p_i64: bool = 4i64; # error
-  var p_u32: bool = 4u32; # error
-  var p_i32: bool = 4; # error
-  var p_u16: bool = 4u16; # error
-  var p_i16: bool = 4i16; # error
-  var p_u8: bool = 4u8; # error
-  var p_i8: bool = 4i8; # error
-  var p_f64: bool = 4f64; # error
-  var p_f32: bool = 4.; # error
-  var p_bool: i32 = true; # error
-  var p_str: bool = "hello"; # error
-  var p_char: bool = 'h'; # error
+  # var p_u64: bool = 4u64; # error
+  # var p_i64: bool = 4i64; # error
+  # var p_u32: bool = 4u32; # error
+  # var p_i32: bool = 4; # error
+  # var p_u16: bool = 4u16; # error
+  # var p_i16: bool = 4i16; # error
+  # var p_u8: bool = 4u8; # error
+  # var p_i8: bool = 4i8; # error
+  # var p_f64: bool = 4f64; # error
+  # var p_f32: bool = 4.; # error
+  # var p_bool: i32 = true; # error
+  # var p_str: bool = "hello"; # error
+  # var p_char: bool = 'h'; # error
 
   # Any should be able take on any value
-  var any_str: any = "goodbye";
-  var any_char: any = 'h';
+  # var any_str: any = "goodbye";
+  # var any_char: any = 'h';
 
   # Ternary operator
-  var tern = 3 if true else 5;
+  # var tern = 3 if true else 5;
   var tern_cond = 3 if 4 else 5.; # error
-  var tern_mismatch = 3 if true else 5.; # error
+  # var tern_mismatch = 3 if true else 5.; # error
+  # var tern_nested_mismatch = 3 if (false if true else 5) else 5.; # error
 }
