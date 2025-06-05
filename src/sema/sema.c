@@ -113,6 +113,8 @@ void SemaASTInitTypeCheck(SemaInfo *info, va_list arg);
 // of the "left" type. This returns true if and only if (1) the "left" type is
 // "any" or (2) the "left" and "right" types are the same
 bool SemaTypeIsAssignable(SemaType *left, SemaType *right);
+// Checks if "type" is a float type
+bool SemaTypeIsFloat(SemaType *type);
 // Checks if "type" is a signed type
 bool SemaTypeIsSigned(SemaType *type);
 // Checks if "type" is an unsigned type
@@ -124,7 +126,25 @@ int SemaTypeBitwidth(SemaType *type);
 // the same bitwidth. If so, return the result type, otherwise return NULL.
 // The "symbolTable" and "ctx" are used to recursively type check the operands
 SemaType *SemaTypeCheckBitwiseOp(
-    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *ctx);
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if the condition of ternary "expr" is of type bool, and the true and
+// false branches of the expression evaluate to the same type. If so, return
+// the type of the true branch, otherwise, return NULL. Remaining arguments are
+// used in the same way as above
+SemaType *SemaTypeCheckTernaryOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if all operands of the logic "expr" is of type bool. If so, return
+// the type of the last operand, otherwise return NULL. Remaining arguments
+// are used in the same way as above
+SemaType *SemaTypeCheckLogicOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if all operands are float types, all are signed types or all are
+// unsigned types. If so, return the type with the largest bitwidth, otherwise
+// return NULL. Remaining arguments are used in the same way as above
+SemaType *SemaTypeCheckComparisonOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if "type" is a primitive type of kind "primType"
+bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1063,81 +1083,25 @@ SemaType *SemaTypeFromExpr(
     return SemaTypeFromTerm(expr, symbolTable, fileCtx);
   }
   switch (expr->op) {
-    case SYNTAX_OP_TERNARY: {
-      SyntaxAST *trueNode = expr->firstChild;
-      SyntaxAST *condNode = trueNode->sibling;
-      SyntaxAST *falseNode = condNode->sibling;
-      SemaType *condType = SemaTypeFromExpr(
-          condNode, symbolTable, fileCtx);
-      if (!condType) {
-        goto TERNARY_OP_SKIP_COND;
-      }
-      SemaType *trueType = SemaTypeFromExpr(
-          trueNode, symbolTable, fileCtx);
-      if (!trueType) {
-        goto TERNARY_OP_SKIP_TRUE;
-      }
-      SemaType *falseType = SemaTypeFromExpr(
-          falseNode, symbolTable, fileCtx);
-      if (!trueType) {
-        goto TERNARY_OP_SKIP_FALSE;
-      }
-      if (condType->kind != SEMA_TYPE_KIND_PRIM_TYPE ||
-          condType->primType != SEMA_PRIM_TYPE_BOOL) {
-        SourceLocation *loc = &condNode->loc;
-        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-        fprintf(stderr, "expected condition to be of type bool, got type "
-                SOURCE_COLOR_RED);
-        SemaTypePrint(stderr, condType);
-        fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
-        SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
-        return NULL;
-      }
-      if (!SemaTypeEqual(trueType, falseType)) {
-        SourceLocation *trueLoc = &trueNode->loc;
-        SourceLocation *falseLoc = &falseNode->loc;
-        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-                " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
-        fprintf(stderr, "mismatch types "SOURCE_COLOR_BLUE);
-        SemaTypePrint(stderr, trueType);
-        fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_YELLOW);
-        SemaTypePrint(stderr, falseType);
-        fprintf(stderr, SOURCE_COLOR_RESET" for ternary operator\n");
-        // TODO: improve type printing by also sourcing the location of where
-        // each type is declared if the types happen to have the same name
-        SourceLocationPrint(
-            fileCtx->source, 2, SOURCE_COLOR_BLUE, &trueNode->loc,
-            SOURCE_COLOR_YELLOW, &falseNode->loc);
-        return NULL;
-      }
-      return trueType;
-TERNARY_OP_SKIP_COND:
-      condNode->semaInfo.skipAnalysis = true;
-
-      // DEBUG
-      printf("Skip condition\n");
-TERNARY_OP_SKIP_TRUE:
-      trueNode->semaInfo.skipAnalysis = true;
-
-      // DEBUG
-      printf("Skip true\n");
-TERNARY_OP_SKIP_FALSE:
-      falseNode->semaInfo.skipAnalysis = true;
-      expr->semaInfo.skipAnalysis = true;
-
-      // DEBUG
-      printf("Skip false\n");
-      return NULL;
-    }
+    case SYNTAX_OP_TERNARY:
+      return SemaTypeCheckTernaryOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_LOGIC_OR:
+    case SYNTAX_OP_LOGIC_AND:
+      return SemaTypeCheckLogicOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_BIT_OR:
     case SYNTAX_OP_BIT_AND:
     case SYNTAX_OP_BIT_XOR:
-    case SYNTAX_OP_BIT_NOT: {
+    case SYNTAX_OP_BIT_NOT:
       return SemaTypeCheckBitwiseOp(expr, symbolTable, fileCtx);
-    } default: {
+    case SYNTAX_OP_LT:
+    case SYNTAX_OP_LE:
+    case SYNTAX_OP_EQEQ:
+    case SYNTAX_OP_NEQ:
+    case SYNTAX_OP_GT:
+    case SYNTAX_OP_GE:
+      return SemaTypeCheckComparisonOp(expr, symbolTable, fileCtx);
+    default:
       assert(false);
-    }
   }
 }
 
@@ -1331,6 +1295,19 @@ bool SemaTypeIsAssignable(SemaType *left, SemaType *right) {
   return SemaTypeEqual(left, right);
 }
 
+bool SemaTypeIsFloat(SemaType *type) {
+  if (type->kind != SEMA_TYPE_KIND_PRIM_TYPE) {
+    return false;
+  }
+  switch (type->primType) {
+    case SEMA_PRIM_TYPE_F64:
+    case SEMA_PRIM_TYPE_F32:
+      return true;
+    default:
+      return false;
+  }
+}
+
 bool SemaTypeIsSigned(SemaType *type) {
   if (type->kind != SEMA_TYPE_KIND_PRIM_TYPE) {
     return false;
@@ -1389,7 +1366,7 @@ int SemaTypeBitwidth(SemaType *type) {
 
 SemaType *SemaTypeCheckBitwiseOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
-  SyntaxAST *firstOperand = expr->firstChild;
+  SyntaxAST *firstOperand = expr->firstChild, *operand = firstOperand;
   SemaType *firstOperandType = SemaTypeFromExpr(
       firstOperand, symbolTable, fileCtx);
   if (!firstOperandType) {
@@ -1405,9 +1382,9 @@ SemaType *SemaTypeCheckBitwiseOp(
     fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
     SourceLocationPrint(
         fileCtx->source, 1, SOURCE_COLOR_RED, &firstOperand->loc);
+    operand = operand->sibling;
     goto CLEANUP;
   }
-  SyntaxAST *operand;
   for (operand = firstOperand->sibling; operand; operand = operand->sibling) {
     SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
     if (!operandType) {
@@ -1418,18 +1395,194 @@ SemaType *SemaTypeCheckBitwiseOp(
               " %s:%d: ", fileCtx->path, firstOperand->loc.from.lineNo + 1);
       fprintf(stderr, "bitwise operand of type "SOURCE_COLOR_RED);
       SemaTypePrint(stderr, operandType);
-      fprintf(stderr,
-              SOURCE_COLOR_RESET" does not match first operand of type ");
+      fprintf(stderr, SOURCE_COLOR_RESET" does not match first operand of type "
+              SOURCE_COLOR_GREEN);
       SemaTypePrint(stderr, firstOperandType);
-      fprintf(stderr, "\n");
+      fprintf(stderr, SOURCE_COLOR_RESET"\n");
       SourceLocationPrint(
-          fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &firstOperand->loc,
+          SOURCE_COLOR_RED, &operand->loc);
+      operand = operand->sibling;
       goto CLEANUP;
     }
   }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = firstOperandType;
+  typeInfo->isTypeOwner = false;
+  return firstOperandType;
 CLEANUP:
   for (; operand; operand = operand->sibling) {
     operand->semaInfo.skipAnalysis = true;
   }
+  expr->semaInfo.skipAnalysis = true;
   return NULL;
+}
+
+SemaType *SemaTypeCheckTernaryOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *trueNode = expr->firstChild;
+  SyntaxAST *condNode = trueNode->sibling;
+  SyntaxAST *falseNode = condNode->sibling;
+  SemaType *condType = SemaTypeFromExpr(
+      condNode, symbolTable, fileCtx);
+  if (!condType) {
+    goto TERNARY_OP_SKIP_COND;
+  }
+  SemaType *trueType = SemaTypeFromExpr(trueNode, symbolTable, fileCtx);
+  if (!trueType) {
+    goto TERNARY_OP_SKIP_TRUE;
+  }
+  SemaType *falseType = SemaTypeFromExpr(falseNode, symbolTable, fileCtx);
+  if (!trueType) {
+    goto TERNARY_OP_SKIP_FALSE;
+  }
+  if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+    SourceLocation *loc = &condNode->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected condition to be of type bool, got type "
+            SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, condType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto TERNARY_OP_SKIP_EXPR;
+  }
+  if (!SemaTypeEqual(trueType, falseType)) {
+    SourceLocation *trueLoc = &trueNode->loc;
+    SourceLocation *falseLoc = &falseNode->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
+    fprintf(stderr, "mismatch types "SOURCE_COLOR_BLUE);
+    SemaTypePrint(stderr, trueType);
+    fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_YELLOW);
+    SemaTypePrint(stderr, falseType);
+    fprintf(stderr, SOURCE_COLOR_RESET" for ternary operator\n");
+    // TODO: improve type printing by also sourcing the location of where
+    // each type is declared if the types happen to have the same name
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_BLUE, &trueNode->loc,
+        SOURCE_COLOR_YELLOW, &falseNode->loc);
+    goto TERNARY_OP_SKIP_EXPR;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = trueType;
+  typeInfo->isTypeOwner = false;
+  return trueType;
+TERNARY_OP_SKIP_COND:
+  condNode->semaInfo.skipAnalysis = true;
+TERNARY_OP_SKIP_TRUE:
+  trueNode->semaInfo.skipAnalysis = true;
+TERNARY_OP_SKIP_FALSE:
+  falseNode->semaInfo.skipAnalysis = true;
+TERNARY_OP_SKIP_EXPR:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeCheckLogicOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *operand;
+  SemaType *operandType;
+  for (operand = expr->firstChild; operand; operand = operand->sibling) {
+    operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    if (!operandType) {
+      goto CLEANUP;
+    }
+    if (!SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_BOOL)) {
+      SourceLocation *loc = &operand->loc;
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+      fprintf(stderr, "expected operand of logical operator to be of type "
+              "bool, got type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+      operand = operand->sibling;
+      goto CLEANUP;
+    }
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = operandType;
+  typeInfo->isTypeOwner = false;
+  return operandType;
+CLEANUP:
+  for (; operand; operand = operand->sibling) {
+    operand->semaInfo.skipAnalysis = true;
+  }
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeCheckComparisonOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  typedef enum {
+    FLOAT,
+    SIGNED,
+    UNSIGNED,
+    NON_NUMERIC
+  } TypeGroup;
+
+  SyntaxAST *operand, *firstOperand;
+  TypeGroup typeGroup;
+  for (operand = firstOperand = expr->firstChild; operand;
+       operand = operand->sibling) {
+    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    if (!operandType) {
+      goto CLEANUP;
+    }
+    TypeGroup curTypeGroup;
+    if (SemaTypeIsFloat(operandType)) {
+      curTypeGroup = FLOAT;
+    } else if (SemaTypeIsSigned(operandType)) {
+      curTypeGroup = SIGNED;
+    } else if (SemaTypeIsUnsigned(operandType)) {
+      curTypeGroup = UNSIGNED;
+    } else {
+      curTypeGroup = NON_NUMERIC;
+    }
+    if (operand != firstOperand && curTypeGroup != typeGroup) {
+      SourceLocation *loc = &operand->loc;
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+      fprintf(stderr, " operand of "SOURCE_COLOR_RED);
+      switch (curTypeGroup) {
+        case FLOAT:    fprintf(stderr, "float"); break;
+        case SIGNED:   fprintf(stderr, "signed"); break;
+        case UNSIGNED: fprintf(stderr, "unsigned"); break;
+        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
+      }
+      fprintf(stderr, SOURCE_COLOR_RESET" type does not match operand of "
+              SOURCE_COLOR_GREEN);
+      switch (typeGroup) {
+        case FLOAT:    fprintf(stderr, "float"); break;
+        case SIGNED:   fprintf(stderr, "signed"); break;
+        case UNSIGNED: fprintf(stderr, "unsigned"); break;
+        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
+      }
+      fprintf(stderr, SOURCE_COLOR_RESET" type\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &firstOperand->loc,
+          SOURCE_COLOR_RED, loc);
+      operand = operand->sibling;
+      goto CLEANUP;
+    }
+    typeGroup = curTypeGroup;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  SemaType *boolType = malloc(sizeof(SemaType));
+  SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
+  typeInfo->type = boolType;
+  typeInfo->isTypeOwner = true;
+  return boolType;
+CLEANUP:
+  for (; operand; operand = operand->sibling) {
+    operand->semaInfo.skipAnalysis = true;
+  }
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType) {
+  return type->kind == SEMA_TYPE_KIND_PRIM_TYPE &&
+         type->primType == primType;
 }
