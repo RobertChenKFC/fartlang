@@ -422,7 +422,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                 SYNTAX_AST_KIND_OP: 111:9~111:15: op: SYNTAX_OP_ARRAY_ACCESS: 
                                     SYNTAX_AST_KIND_IDENTIFIER: 111:9~111:12: _arr: 
                                     SYNTAX_AST_KIND_LITERAL: 111:14~111:14: type SYNTAX_TYPE_I32, value 0
-                                SYNTAX_AST_KIND_LITERAL: 111:19~111:22: type SYNTAX_TYPE_I8, value 0
+                                SYNTAX_AST_KIND_LITERAL: 111:19~111:22: type SYNTAX_TYPE_U8, value 0
                         SYNTAX_AST_KIND_ASSIGN_STMT: 112:9~112:18: 
                             SYNTAX_AST_KIND_ASSIGN: 112:9~112:17: op: SYNTAX_OP_EQ: 
                                 SYNTAX_AST_KIND_IDENTIFIER: 112:9~112:13: _size: 
@@ -492,7 +492,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                 SYNTAX_AST_KIND_OP: 126:9~126:19: op: SYNTAX_OP_ARRAY_ACCESS: 
                                     SYNTAX_AST_KIND_IDENTIFIER: 126:9~126:12: _arr: 
                                     SYNTAX_AST_KIND_IDENTIFIER: 126:14~126:18: _size: 
-                                SYNTAX_AST_KIND_LITERAL: 126:23~126:26: type SYNTAX_TYPE_I8, value 0
+                                SYNTAX_AST_KIND_LITERAL: 126:23~126:26: type SYNTAX_TYPE_U8, value 0
                         SYNTAX_AST_KIND_EXPR_STMT: 127:9~127:16: 
                             SYNTAX_AST_KIND_OP: 127:9~127:15: op: SYNTAX_OP_INC: 
                                 SYNTAX_AST_KIND_IDENTIFIER: 127:9~127:13: _size: 
@@ -593,7 +593,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                 SYNTAX_AST_KIND_OP: 155:9~155:16: op: SYNTAX_OP_ARRAY_ACCESS: 
                                     SYNTAX_AST_KIND_IDENTIFIER: 155:9~155:11: arr: 
                                     SYNTAX_AST_KIND_IDENTIFIER: 155:13~155:15: len: 
-                                SYNTAX_AST_KIND_LITERAL: 155:21~155:24: type SYNTAX_TYPE_I8, value 0
+                                SYNTAX_AST_KIND_LITERAL: 155:21~155:24: type SYNTAX_TYPE_U8, value 0
                             SYNTAX_AST_KIND_OP: 155:27~155:31: op: SYNTAX_OP_INC: 
                                 SYNTAX_AST_KIND_IDENTIFIER: 155:27~155:29: len: 
                             SYNTAX_AST_KIND_STMTS: 155:33~155:34: 
@@ -659,11 +659,11 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                         SYNTAX_AST_KIND_EXPR_LIST: 172:11~172:31: 
                                             SYNTAX_AST_KIND_OP: 172:11~172:31: op: SYNTAX_OP_LE: 
                                                 SYNTAX_AST_KIND_OP: 172:11~172:24: op: SYNTAX_OP_LE: 
-                                                    SYNTAX_AST_KIND_LITERAL: 172:11~172:13: type SYNTAX_TYPE_I8, value 48
+                                                    SYNTAX_AST_KIND_LITERAL: 172:11~172:13: type SYNTAX_TYPE_U8, value 48
                                                     SYNTAX_AST_KIND_OP: 172:18~172:24: op: SYNTAX_OP_ARRAY_ACCESS: 
                                                         SYNTAX_AST_KIND_IDENTIFIER: 172:18~172:21: _arr: 
                                                         SYNTAX_AST_KIND_IDENTIFIER: 172:23~172:23: i: 
-                                                SYNTAX_AST_KIND_LITERAL: 172:29~172:31: type SYNTAX_TYPE_I8, value 57
+                                                SYNTAX_AST_KIND_LITERAL: 172:29~172:31: type SYNTAX_TYPE_U8, value 57
                                 SYNTAX_AST_KIND_ASSIGN_STMT: 173:4~173:44: 
                                     SYNTAX_AST_KIND_ASSIGN: 173:4~173:43: op: SYNTAX_OP_EQ: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 173:4~173:11: unsigned: 
@@ -675,7 +675,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                                 SYNTAX_AST_KIND_OP: 173:31~173:37: op: SYNTAX_OP_ARRAY_ACCESS: 
                                                     SYNTAX_AST_KIND_IDENTIFIER: 173:31~173:34: _arr: 
                                                     SYNTAX_AST_KIND_IDENTIFIER: 173:36~173:36: i: 
-                                            SYNTAX_AST_KIND_LITERAL: 173:41~173:43: type SYNTAX_TYPE_I8, value 48
+                                            SYNTAX_AST_KIND_LITERAL: 173:41~173:43: type SYNTAX_TYPE_U8, value 48
                         SYNTAX_AST_KIND_RETURN_STMT: 175:3~175:18: 
                             SYNTAX_AST_KIND_IDENTIFIER: 175:10~175:17: unsigned: 
         SYNTAX_AST_KIND_CLASS_DECL: 179:1~202:1: 
@@ -716,7 +716,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                                 SYNTAX_AST_KIND_OP: 183:23~183:29: op: SYNTAX_OP_SUB: 
                                                     SYNTAX_AST_KIND_IDENTIFIER: 183:23~183:25: len: 
                                                     SYNTAX_AST_KIND_LITERAL: 183:29~183:29: type SYNTAX_TYPE_I32, value 1
-                                        SYNTAX_AST_KIND_LITERAL: 183:35~183:37: type SYNTAX_TYPE_I8, value 66
+                                        SYNTAX_AST_KIND_LITERAL: 183:35~183:37: type SYNTAX_TYPE_U8, value 66
                         SYNTAX_AST_KIND_VAR_DECL: 184:3~184:71: 
                             SYNTAX_AST_KIND_VAR_INIT_LIST: 184:7~184:70: 
                                 SYNTAX_AST_KIND_VAR_INIT: 184:7~184:70: variable: digitsLen: 
@@ -733,7 +733,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                                     SYNTAX_AST_KIND_OP: 184:43~184:49: op: SYNTAX_OP_SUB: 
                                                         SYNTAX_AST_KIND_IDENTIFIER: 184:43~184:45: len: 
                                                         SYNTAX_AST_KIND_LITERAL: 184:49~184:49: type SYNTAX_TYPE_I32, value 2
-                                            SYNTAX_AST_KIND_LITERAL: 184:55~184:57: type SYNTAX_TYPE_I8, value 105
+                                            SYNTAX_AST_KIND_LITERAL: 184:55~184:57: type SYNTAX_TYPE_U8, value 105
                                         SYNTAX_AST_KIND_OP: 184:64~184:70: op: SYNTAX_OP_SUB: 
                                             SYNTAX_AST_KIND_IDENTIFIER: 184:64~184:66: len: 
                                             SYNTAX_AST_KIND_LITERAL: 184:70~184:70: type SYNTAX_TYPE_I32, value 2
@@ -758,7 +758,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                     SYNTAX_AST_KIND_LITERAL: 186:25~186:25: type SYNTAX_TYPE_I32, value 3
                             SYNTAX_AST_KIND_CASE: 187:4~189:4: 
                                 SYNTAX_AST_KIND_EXPR_LIST: 187:9~187:11: 
-                                    SYNTAX_AST_KIND_LITERAL: 187:9~187:11: type SYNTAX_TYPE_I8, value 84
+                                    SYNTAX_AST_KIND_LITERAL: 187:9~187:11: type SYNTAX_TYPE_U8, value 84
                                 SYNTAX_AST_KIND_STMTS: 187:13~189:4: 
                                     SYNTAX_AST_KIND_ASSIGN_STMT: 188:5~188:22: 
                                         SYNTAX_AST_KIND_ASSIGN: 188:5~188:21: op: SYNTAX_OP_MUL_EQ: 
@@ -766,7 +766,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                             SYNTAX_AST_KIND_LITERAL: 188:18~188:21: type SYNTAX_TYPE_F32, value 1.00000000000000000000e+12
                             SYNTAX_AST_KIND_CASE: 190:4~192:4: 
                                 SYNTAX_AST_KIND_EXPR_LIST: 190:9~190:11: 
-                                    SYNTAX_AST_KIND_LITERAL: 190:9~190:11: type SYNTAX_TYPE_I8, value 71
+                                    SYNTAX_AST_KIND_LITERAL: 190:9~190:11: type SYNTAX_TYPE_U8, value 71
                                 SYNTAX_AST_KIND_STMTS: 190:13~192:4: 
                                     SYNTAX_AST_KIND_ASSIGN_STMT: 191:5~191:21: 
                                         SYNTAX_AST_KIND_ASSIGN: 191:5~191:20: op: SYNTAX_OP_MUL_EQ: 
@@ -774,7 +774,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                             SYNTAX_AST_KIND_LITERAL: 191:18~191:20: type SYNTAX_TYPE_F32, value 1.00000000000000000000e+09
                             SYNTAX_AST_KIND_CASE: 193:4~195:4: 
                                 SYNTAX_AST_KIND_EXPR_LIST: 193:9~193:11: 
-                                    SYNTAX_AST_KIND_LITERAL: 193:9~193:11: type SYNTAX_TYPE_I8, value 77
+                                    SYNTAX_AST_KIND_LITERAL: 193:9~193:11: type SYNTAX_TYPE_U8, value 77
                                 SYNTAX_AST_KIND_STMTS: 193:13~195:4: 
                                     SYNTAX_AST_KIND_ASSIGN_STMT: 194:5~194:21: 
                                         SYNTAX_AST_KIND_ASSIGN: 194:5~194:20: op: SYNTAX_OP_MUL_EQ: 
@@ -782,7 +782,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                             SYNTAX_AST_KIND_LITERAL: 194:18~194:20: type SYNTAX_TYPE_F32, value 1.00000000000000000000e+06
                             SYNTAX_AST_KIND_CASE: 196:4~198:4: 
                                 SYNTAX_AST_KIND_EXPR_LIST: 196:9~196:11: 
-                                    SYNTAX_AST_KIND_LITERAL: 196:9~196:11: type SYNTAX_TYPE_I8, value 75
+                                    SYNTAX_AST_KIND_LITERAL: 196:9~196:11: type SYNTAX_TYPE_U8, value 75
                                 SYNTAX_AST_KIND_STMTS: 196:13~198:4: 
                                     SYNTAX_AST_KIND_ASSIGN_STMT: 197:5~197:21: 
                                         SYNTAX_AST_KIND_ASSIGN: 197:5~197:20: op: SYNTAX_OP_MUL_EQ: 

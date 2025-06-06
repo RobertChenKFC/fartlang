@@ -10,6 +10,7 @@ DEPS += /parse/cfg
 DEPS += /parse/lr1
 DEPS += /parse/parser
 DEPS += /parse/syntax
+DEPS += /sema
 DEPS += /util/bigint
 DEPS += /util/bitset
 DEPS += /util/hashtable
@@ -31,7 +32,6 @@ OUTPUT_FILES = $(SAVE_FILES) $(OUT_FILES)
 
 $(BIN): test_syntax.c $(ALL_DEPS)
 	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
-	rm -rf $(SAVE_FILES)
 
 .PHONY: test
 test: $(TESTS)

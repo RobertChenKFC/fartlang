@@ -1315,7 +1315,7 @@ ParserDeclareHandler(SyntaxHandlerCharLiteral, rhs) {
   }
 
   SyntaxAST *charLiteral = SyntaxASTNew(SYNTAX_AST_KIND_LITERAL);
-  charLiteral->literal.type = SYNTAX_TYPE_I8;
+  charLiteral->literal.type = SYNTAX_TYPE_U8;
   charLiteral->literal.intVal = charVal;
   charLiteral->loc = charToken->loc;
   LexerTokenDelete(charToken);

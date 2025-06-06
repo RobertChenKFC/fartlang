@@ -1,5 +1,6 @@
 #include "sema.h"
 #include "parse/parser/parser.h"
+#include "util/vector/vector.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
@@ -145,6 +146,8 @@ SemaType *SemaTypeCheckComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is a primitive type of kind "primType"
 bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
+// Checks if "expr" is a comparison expression
+bool SemaIsComparisonExpr(SyntaxAST *expr);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -896,9 +899,9 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
     case SYNTAX_AST_KIND_VAR_INIT:
       // TODO: handle var init for member variables and inside methods
       // separately
+    case SYNTAX_AST_KIND_METHOD_DECL:
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
 DELETE_SYM_INFO:
-    case SYNTAX_AST_KIND_METHOD_DECL:
       if (deleteSymInfo && !info->skipAnalysis) {
         SemaSymInfo *symInfo = info->symInfo;
         SemaTypeInfo *typeInfo = &symInfo->typeInfo;
@@ -1515,6 +1518,31 @@ CLEANUP:
 
 SemaType *SemaTypeCheckComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  // The AST of the expression 3 < 5 > 7 == 9 looks like this:
+  //
+  //         ==
+  //        /
+  //       > - 9
+  //      /
+  //     < - 7
+  //    /
+  //   3 - 5
+  //
+  // Note that we must process all of these operands (3, 5, 7, 9) in one go,
+  // otherwise the comparison operator returns bool, and it won't type check
+  // with the subsequent comparison.
+  //
+  // We will first traverse to the leftmost child of the comparison chain,
+  // and record all of the right children in a stack, then we can type check
+  // each operand in order.
+  
+  Vector *operandsVec = VectorNew();
+  SyntaxAST *rootExpr = expr;
+  for (; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
+    VectorAdd(operandsVec, expr->lastChild);
+  }
+  VectorAdd(operandsVec, expr);
+
   typedef enum {
     FLOAT,
     SIGNED,
@@ -1522,10 +1550,14 @@ SemaType *SemaTypeCheckComparisonOp(
     NON_NUMERIC
   } TypeGroup;
 
-  SyntaxAST *operand, *firstOperand;
+  void **operands = operandsVec->arr;
+  int numOperands = operandsVec->size;
+  int operandIndex;
+  SyntaxAST *firstOperand = operands[numOperands - 1];
+  SyntaxAST *failingOperand;
   TypeGroup typeGroup;
-  for (operand = firstOperand = expr->firstChild; operand;
-       operand = operand->sibling) {
+  for (operandIndex = numOperands - 1; operandIndex >= 0; --operandIndex) {
+    SyntaxAST *operand = failingOperand = operands[operandIndex];
     SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
@@ -1544,7 +1576,7 @@ SemaType *SemaTypeCheckComparisonOp(
       SourceLocation *loc = &operand->loc;
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
               " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-      fprintf(stderr, " operand of "SOURCE_COLOR_RED);
+      fprintf(stderr, "operand of "SOURCE_COLOR_RED);
       switch (curTypeGroup) {
         case FLOAT:    fprintf(stderr, "float"); break;
         case SIGNED:   fprintf(stderr, "signed"); break;
@@ -1563,26 +1595,50 @@ SemaType *SemaTypeCheckComparisonOp(
       SourceLocationPrint(
           fileCtx->source, 2, SOURCE_COLOR_GREEN, &firstOperand->loc,
           SOURCE_COLOR_RED, loc);
-      operand = operand->sibling;
+      --operandIndex;
       goto CLEANUP;
     }
     typeGroup = curTypeGroup;
   }
-  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
   SemaType *boolType = malloc(sizeof(SemaType));
   SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
-  typeInfo->type = boolType;
-  typeInfo->isTypeOwner = true;
+  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
+    SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+    typeInfo->type = boolType;
+    typeInfo->isTypeOwner = expr == rootExpr;
+  }
+  VectorDelete(operandsVec);
   return boolType;
 CLEANUP:
-  for (; operand; operand = operand->sibling) {
+  for (; operandIndex >= 0; --operandIndex) {
+    SyntaxAST *operand = operands[operandIndex];
     operand->semaInfo.skipAnalysis = true;
   }
-  expr->semaInfo.skipAnalysis = true;
+  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
+    expr->semaInfo.skipAnalysis = true;
+  }
+  VectorDelete(operandsVec);
   return NULL;
 }
 
 bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType) {
   return type->kind == SEMA_TYPE_KIND_PRIM_TYPE &&
          type->primType == primType;
+}
+
+bool SemaIsComparisonExpr(SyntaxAST *expr) {
+  if (expr->kind != SYNTAX_AST_KIND_OP) {
+    return false;
+  }
+  switch (expr->op) {
+    case SYNTAX_OP_LT:
+    case SYNTAX_OP_LE:
+    case SYNTAX_OP_EQEQ:
+    case SYNTAX_OP_NEQ:
+    case SYNTAX_OP_GT:
+    case SYNTAX_OP_GE:
+      return true;
+    default:
+      return false;
+  }
 }
