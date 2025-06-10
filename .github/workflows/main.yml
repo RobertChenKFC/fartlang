@@ -1,0 +1,35 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  gen_test_targets:
+    runs-on: ubuntu-latest
+    outputs:
+      test_targets: ${{ steps.generate.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate test targets
+        id: generate
+        run: make test_targets
+
+  test:
+    needs: gen_test_targets
+
+    runs-on: ubuntu-latest
+    container:
+      image: robertchenkfc/fartlang
+
+    strategy:
+      fail-fast: false
+      matrix:
+        test_target: ${{ fromJson(needs.gen_test_targets.outputs.test_targets) }}
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run test ${{ matrix.test_target }}
+      run: make ${{ matrix.test_target }}
