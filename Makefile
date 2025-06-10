@@ -13,3 +13,5 @@ test_targets:
 include $(MK)/clean.mk
 .PHONY: clean
 clean: $(CLEAN)
+
+include $(MK)/mkdir.mk
