@@ -1,0 +1,20 @@
+class Foo { # Ok
+}
+
+class Bar { # Ok
+}
+
+class Foo { # Error
+}
+
+class Foo2 { # Ok
+}
+
+class Bar2 { # Ok
+}
+
+class Foo2 { # Error
+}
+
+class Foo2 { # Error
+}

@@ -13,11 +13,10 @@ Source *SourceFromFile(FILE *file) {
   fread(source->file, 1, size, file);
 
   VectorAdd(source->lines, (void*)0);
-  for (int i = 1; i < size; ++i) {
-    if (source->file[i - 1] == '\n')
-      VectorAdd(source->lines, (void*)(long long)i);
+  for (int i = 0; i < size; ++i) {
+    if (source->file[i] == '\n' || i == size - 1)
+      VectorAdd(source->lines, (void*)(long long)(i + 1));
   }
-  VectorAdd(source->lines, (void*)(long long)size);
   return source;
 }
 

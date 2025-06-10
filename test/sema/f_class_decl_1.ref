@@ -1,0 +1,6 @@
+[31;1m[Error][0m f_class_decl_1.fart:7: redeclaration of class "Foo" in the current module
+    7 | class [31;1mFoo[0m {
+[31;1m[Error][0m f_class_decl_1.fart:16: redeclaration of class "Foo2" in the current module
+   16 | class [31;1mFoo2[0m {
+[31;1m[Error][0m f_class_decl_1.fart:19: redeclaration of class "Foo2" in the current module
+   19 | class [31;1mFoo2[0m {

@@ -8,6 +8,8 @@
 // Forward declarations
 typedef struct SyntaxAST SyntaxAST;
 
+#include "sema/sema.h"
+
 // Macros for convenient definition of enums and their strings
 #define SYNTAX_GEN_ENUM(ENUM) ENUM,
 #define SYNTAX_GEN_STR(ENUM) #ENUM,
@@ -44,6 +46,7 @@ typedef struct SyntaxAST SyntaxAST;
   ENUM(SYNTAX_AST_KIND_IF_STMT) \
   ENUM(SYNTAX_AST_KIND_SWITCH_STMT) \
   ENUM(SYNTAX_AST_KIND_CASE) \
+  ENUM(SYNTAX_AST_KIND_LABEL) \
   ENUM(SYNTAX_AST_KIND_FOR_STMT) \
   ENUM(SYNTAX_AST_KIND_WHILE_STMT) \
   ENUM(SYNTAX_AST_KIND_BREAK_STMT) \
@@ -109,7 +112,9 @@ extern const char *SYNTAX_TYPE_STRS[];
   ENUM(SYNTAX_OP_NEG) \
   ENUM(SYNTAX_OP_NOT) \
   ENUM(SYNTAX_OP_BIT_NOT) \
-  ENUM(SYNTAX_OP_CAST) \
+  ENUM(SYNTAX_OP_CAST_IS) \
+  ENUM(SYNTAX_OP_CAST_AS) \
+  ENUM(SYNTAX_OP_CAST_INTO) \
   ENUM(SYNTAX_OP_CALL) \
   ENUM(SYNTAX_OP_ARRAY_ACCESS) \
   ENUM(SYNTAX_OP_ARRAY_TYPE) \
@@ -159,12 +164,16 @@ struct SyntaxAST {
   union {
     // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_CLASS_DECL,
     // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_MEMBER_ACCESS,
-    // SYNTAX_AST_KIND_PARAM
-    char *string; 
+    // SYNTAX_AST_KIND_PARAM, SYNTAX_AST_KIND_LABEL,
+    struct {
+      char *string; 
+      SourceLocation stringLoc;
+    };
     // SYNTAX_AST_KIND_IMPORT_DECL
     struct {
       char *namespace;
       bool isWildcard;
+      SourceLocation extLoc;
     } import;
     // SYNTAX_AST_KIND_VAR_DECL
     unsigned varDeclModifiers;
@@ -187,10 +196,19 @@ struct SyntaxAST {
     struct {
       SyntaxMethodType type;
       char *name;
+      SourceLocation nameLoc;
     } method;
   };
+
+  // Information for semantic analysis
+  SemaInfo semaInfo;
 };
 
+// Create the lexer and parser and save them to files so that later parsing
+// would have the files already created. Note that SyntaxParseFile does the same
+// thing, so this is only useful if you want to create the lexer and parser
+// ahead of time
+void SyntaxSetupParser(void);
 // Parse a fartlang source "file" with name "filename" into an AST
 SyntaxAST *SyntaxParseFile(FILE *file, const char *filename);
 // Deletes an entire AST (the "node" and all its successors) created from

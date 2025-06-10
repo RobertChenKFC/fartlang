@@ -207,77 +207,77 @@ SYNTAX_AST_KIND_MODULE: 1:1~77:1:
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 58:7~58:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 58:7~58:17: variable: char1: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 58:15~58:17: type SYNTAX_TYPE_I8, value 70
+                            SYNTAX_AST_KIND_LITERAL: 58:15~58:17: type SYNTAX_TYPE_U8, value 70
                 SYNTAX_AST_KIND_VAR_DECL: 59:3~59:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 59:7~59:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 59:7~59:17: variable: char2: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 59:15~59:17: type SYNTAX_TYPE_I8, value 65
+                            SYNTAX_AST_KIND_LITERAL: 59:15~59:17: type SYNTAX_TYPE_U8, value 65
                 SYNTAX_AST_KIND_VAR_DECL: 60:3~60:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 60:7~60:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 60:7~60:17: variable: char3: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 60:15~60:17: type SYNTAX_TYPE_I8, value 82
+                            SYNTAX_AST_KIND_LITERAL: 60:15~60:17: type SYNTAX_TYPE_U8, value 82
                 SYNTAX_AST_KIND_VAR_DECL: 61:3~61:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 61:7~61:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 61:7~61:17: variable: char4: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 61:15~61:17: type SYNTAX_TYPE_I8, value 84
+                            SYNTAX_AST_KIND_LITERAL: 61:15~61:17: type SYNTAX_TYPE_U8, value 84
                 SYNTAX_AST_KIND_VAR_DECL: 63:3~63:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 63:7~63:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 63:7~63:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 63:14~63:17: type SYNTAX_TYPE_I8, value 7
+                            SYNTAX_AST_KIND_LITERAL: 63:14~63:17: type SYNTAX_TYPE_U8, value 7
                 SYNTAX_AST_KIND_VAR_DECL: 64:3~64:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 64:7~64:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 64:7~64:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 64:14~64:17: type SYNTAX_TYPE_I8, value 8
+                            SYNTAX_AST_KIND_LITERAL: 64:14~64:17: type SYNTAX_TYPE_U8, value 8
                 SYNTAX_AST_KIND_VAR_DECL: 65:3~65:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 65:7~65:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 65:7~65:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 65:14~65:17: type SYNTAX_TYPE_I8, value 12
+                            SYNTAX_AST_KIND_LITERAL: 65:14~65:17: type SYNTAX_TYPE_U8, value 12
                 SYNTAX_AST_KIND_VAR_DECL: 66:3~66:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 66:7~66:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 66:7~66:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 66:14~66:17: type SYNTAX_TYPE_I8, value 10
+                            SYNTAX_AST_KIND_LITERAL: 66:14~66:17: type SYNTAX_TYPE_U8, value 10
                 SYNTAX_AST_KIND_VAR_DECL: 67:3~67:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 67:7~67:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 67:7~67:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 67:14~67:17: type SYNTAX_TYPE_I8, value 13
+                            SYNTAX_AST_KIND_LITERAL: 67:14~67:17: type SYNTAX_TYPE_U8, value 13
                 SYNTAX_AST_KIND_VAR_DECL: 68:3~68:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 68:7~68:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 68:7~68:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 68:14~68:17: type SYNTAX_TYPE_I8, value 9
+                            SYNTAX_AST_KIND_LITERAL: 68:14~68:17: type SYNTAX_TYPE_U8, value 9
                 SYNTAX_AST_KIND_VAR_DECL: 69:3~69:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 69:7~69:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 69:7~69:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 69:14~69:17: type SYNTAX_TYPE_I8, value 11
+                            SYNTAX_AST_KIND_LITERAL: 69:14~69:17: type SYNTAX_TYPE_U8, value 11
                 SYNTAX_AST_KIND_VAR_DECL: 70:3~70:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 70:7~70:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 70:7~70:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 70:14~70:17: type SYNTAX_TYPE_I8, value 92
+                            SYNTAX_AST_KIND_LITERAL: 70:14~70:17: type SYNTAX_TYPE_U8, value 92
                 SYNTAX_AST_KIND_VAR_DECL: 71:3~71:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 71:7~71:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 71:7~71:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 71:14~71:17: type SYNTAX_TYPE_I8, value 39
+                            SYNTAX_AST_KIND_LITERAL: 71:14~71:17: type SYNTAX_TYPE_U8, value 39
                 SYNTAX_AST_KIND_VAR_DECL: 72:3~72:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 72:7~72:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 72:7~72:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 72:14~72:17: type SYNTAX_TYPE_I8, value 34
+                            SYNTAX_AST_KIND_LITERAL: 72:14~72:17: type SYNTAX_TYPE_U8, value 34
                 SYNTAX_AST_KIND_VAR_DECL: 73:3~73:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 73:7~73:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 73:7~73:17: variable: char: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 73:14~73:17: type SYNTAX_TYPE_I8, value 0
+                            SYNTAX_AST_KIND_LITERAL: 73:14~73:17: type SYNTAX_TYPE_U8, value 0
                 SYNTAX_AST_KIND_VAR_DECL: 76:3~76:19: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 76:7~76:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 76:7~76:17: variable: expr: 

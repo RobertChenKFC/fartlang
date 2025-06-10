@@ -1,0 +1,37 @@
+import dir1.file5;
+import dir1.file5.*;
+
+class Main {
+  var x : i64; # Ok
+  var x : i64; # Error
+
+  var y1 : i64; # Ok
+  var y2 : u64; # Ok
+  var y3 : i32; # Ok
+  var y4 : u32; # Ok
+  var y5 : i16; # Ok
+  var y6 : u16; # Ok
+  var y7 : i8; # Ok
+  var y8 : u8; # Ok
+  var y9 : f64; # Ok
+  var y10 : f32; # Ok
+  var y11 : bool; # Ok
+  var y12 : any; # Ok
+
+  var x1 : i64; # Ok
+  var x2 : i64[]; # Ok
+  var x3 : i64[][]; # Ok
+
+  var x4 = 5; # Ok
+  var x11; # Error
+
+  var x5 : Foo; # Ok
+  var x6 : Foo.Bar; # Error
+  var x7 : Bar; # Error
+  var x8 : file5.Foo; # Ok
+  var x9 : file5.Bar; # Error
+  var x10 : Foo.x; # Error
+
+  var x12 : fn () -> Foo; # Ok
+  var x13 : fn (Foo); # Ok
+}

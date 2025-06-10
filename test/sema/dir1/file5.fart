@@ -1,0 +1,6 @@
+import f_var_decl.*;
+
+class Foo {
+  var x : i64; # Ok
+  var y : Main.x1; # Error
+}

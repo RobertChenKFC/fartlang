@@ -1,4 +1,4 @@
-BIN = $(BIN_ROOT)/parse/syntax/test_syntax
+BIN = $(BIN_ROOT)/sema/test_sema
 
 # dependencies
 DEPS += /lex/fa
@@ -29,8 +29,9 @@ OUT_FILES = $(REF_FILES:.ref=.out)
 .PRECIOUS: $(OUT_FILES)
 TESTS = $(REF_FILES:.ref=.test)
 OUTPUT_FILES = $(SAVE_FILES) $(OUT_FILES)
+VALGRIND_FLAGS += --log-fd=9
 
-$(BIN): test_syntax.c $(ALL_DEPS)
+$(BIN): test_sema.c $(ALL_DEPS)
 	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
 
 .PHONY: test
@@ -39,8 +40,11 @@ test: $(TESTS)
 $(TESTS): %.test: %.out %.ref
 	$(CMP) $(CMP_FLAGS) $*.out $*.ref
 
-$(OUT_FILES): $(BIN)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
+%.out: %.fart $(BIN) $(SAVE_FILES)
+	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) $< 9>&2 2>$@
+
+$(SAVE_FILES): $(BIN)
+	$(BIN)
 
 .PHONY: $(ALL_DEPS)
 $(ALL_DEPS): %.all:
@@ -48,7 +52,7 @@ $(ALL_DEPS): %.all:
 
 .PHONY: clean
 clean: $(CLEAN_DEPS)
-	rm -rf $(BIN) $(OUTPUT_FILES)
+	rm -rf $(BIN) $(OUTPUT_FILES) $(SAVE_FILES)
 
 .PHONY: $(CLEAN_DEPS)
 $(CLEAN_DEPS): %.clean:

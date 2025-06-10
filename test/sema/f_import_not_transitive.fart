@@ -1,0 +1,12 @@
+import dir1.file6;
+import dir1.file8;
+import dir1.file8.*;
+
+class Main {
+  var x1 = file6.Foo; # Ok
+  var x2 : file6.Bar; # Error
+  var x3 : file8.Hello; # Ok
+  var x4 : file8.file3; # Error
+  var x5 : Hello; # Ok
+  var x6 : file3; # Error
+}

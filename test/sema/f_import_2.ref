@@ -1,0 +1,2 @@
+[31;1m[Error][0m dir1/file1.fart:1: imported file does not exist
+    1 | import [31;1mdir1.file2[0m;

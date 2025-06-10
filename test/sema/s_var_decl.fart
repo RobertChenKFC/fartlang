@@ -1,0 +1,7 @@
+class Main {
+  var x : i32; # Ok
+}
+
+class Foo {
+  var x : f32; # Ok
+}

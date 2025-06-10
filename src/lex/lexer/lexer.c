@@ -250,6 +250,7 @@ LexerToken *LexerNextToken(Lexer *lexer) {
   SourcePoint *point = &lexer->point;
   int lastLine = source->lines->size - 1;
   int ignoreTokenID = lexer->ignoreTokenID;
+
   while (true) {
     if (point->lineNo == lastLine)
       return LEXER_TOKEN_EOF;

@@ -1,0 +1,5 @@
+import dir1.file3; # Ok
+import dir1.file4 as file3; # Error
+import dir2.file3; # Error
+import dir1.file4.*; # Ok
+import dir2.file1.*; # Error
