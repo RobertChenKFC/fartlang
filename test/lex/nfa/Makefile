@@ -7,8 +7,8 @@ DEPS += lex/regex
 DEPS += util/hashtable
 DEPS += util/vector
 include $(MK)/c_cmp_test.mk
-$(OUT_FILES): $(BIN)
-	$(VALGRIND) $(VALGRIND_FLAGS) $<
+$(OUT_FILES): $(BIN) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
 
 SVG_FILES := $(addsuffix .svg, $(basename $(OUT_FILES)))
 .PHONY: $(DIR).visualize

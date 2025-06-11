@@ -11,7 +11,7 @@ DEPS += util/hashtable
 DEPS += util/source
 DEPS += util/vector
 include $(MK)/c_cmp_test.mk
-$(OUT_FILES)&: $(BIN)
-	$(VALGRIND) $(VALGRIND_FLAGS) $< 2>$(addsuffix error.out,$(dir $@))
+$(OUT_FILES)&: $(BIN) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<) 2>$(abspath $(addsuffix error.out,$(dir $@)))
 
 include $(MK)/pop.mk
