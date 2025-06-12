@@ -1,7 +1,7 @@
 NAME := lexer
 include $(MK)/push.mk
 
-DEPS := lex/dfa
+DEPS += lex/dfa
 DEPS += lex/fa
 DEPS += lex/lexer
 DEPS += lex/nfa

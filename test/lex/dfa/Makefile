@@ -1,7 +1,7 @@
 NAME := dfa
 include $(MK)/push.mk
 
-DEPS := lex/dfa
+DEPS += lex/dfa
 DEPS += lex/fa
 DEPS += lex/nfa
 DEPS += lex/regex

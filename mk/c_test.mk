@@ -14,3 +14,4 @@ $(BIN): $(OBJS) | $(BIN_DIR)
 MKDIRS := $(MKDIRS) $(BIN_DIR)
 
 CLEAN_FILES := $(CLEAN_FILES) $(BIN)
+DEPS :=

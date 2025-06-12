@@ -1,7 +1,7 @@
 NAME := fa
 include $(MK)/push.mk
 
-DEPS := lex/fa
+DEPS += lex/fa
 DEPS += util/hashtable
 DEPS += util/vector
 include $(MK)/c_cmp_test.mk
