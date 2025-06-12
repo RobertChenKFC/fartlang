@@ -15,8 +15,6 @@ DEPS := $(DEPS) util/source
 DEPS := $(DEPS) util/vector
 include $(MK)/c_test.mk
 
-# DEBUG
-.PHONY: debug
 GET_NUM_STATES := $(DIR)/get_num_states.py
 BISON_CMP_NAMES := $(DIR)/7-canonical-lr $(DIR)/7-lalr
 BISON_BASE_FILE := $(DIR)/7.yy
@@ -38,6 +36,7 @@ $(OUT_FILES): $(BIN) | $(DIR)
 	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
 $(CMPS): %.cmp: %.out %.ref
 	$(CMP) $(CMP_FLAGS) $^
+TEST := $(TEST) $(DIR).test
 .PHONY: $(DIR).test
 $(DIR).test: $(CMPS)
 
