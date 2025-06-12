@@ -1,9 +1,9 @@
 NAME := fa
 include $(MK)/push.mk
 
-DEPS += lex/fa
-DEPS += util/hashtable
-DEPS += util/vector
+DEPS := $(DEPS) lex/fa
+DEPS := $(DEPS) util/hashtable
+DEPS := $(DEPS) util/vector
 include $(MK)/c_cmp_test.mk
 $(OUT_FILES): $(BIN) | $(DIR)
 	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)

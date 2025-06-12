@@ -1,11 +1,11 @@
 NAME := nfa
 include $(MK)/push.mk
 
-DEPS += lex/fa
-DEPS += lex/nfa
-DEPS += lex/regex
-DEPS += util/hashtable
-DEPS += util/vector
+DEPS := $(DEPS) lex/fa
+DEPS := $(DEPS) lex/nfa
+DEPS := $(DEPS) lex/regex
+DEPS := $(DEPS) util/hashtable
+DEPS := $(DEPS) util/vector
 include $(MK)/c_cmp_test.mk
 $(OUT_FILES): $(BIN) | $(DIR)
 	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
