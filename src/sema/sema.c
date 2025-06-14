@@ -265,6 +265,9 @@ bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
       // Check if the file has already been added
       HashTableEntry *entry = HashTableEntryRetrieve(importedFiles, importPath);
       SemaSymInfo *symInfo = malloc(sizeof(SemaSymInfo));
+
+      // Import declaration does not have any type information here yet
+      symInfo->typeInfo.isTypeOwner = false;
       importDecl->semaInfo.symInfo = symInfo;
       if (entry) {
         symInfo->importFileCtx = entry->value;
@@ -414,10 +417,13 @@ void SemaASTInit(SyntaxAST *node, SemaASTInitFn init, ...) {
 
 void SemaASTInitV(SyntaxAST *node, SemaASTInitFn init, va_list args) {
   SemaInfo *info = &node->semaInfo;
-  init(info, args);
   for (SyntaxAST *cur = node->firstChild; cur; cur = cur->sibling) {
-    SemaASTInitV(cur, init, args);
+    va_list argsCopy;
+    va_copy(argsCopy, args);
+    SemaASTInitV(cur, init, argsCopy);
+    va_end(argsCopy);
   }
+  init(info, args);
 }
 
 bool SemaPopulateImportSymbols(SemaCtx *ctx) {
@@ -448,18 +454,16 @@ bool SemaPopulateImportSymbols(SemaCtx *ctx) {
             // Only class symbols are imported. There are no transitive imports
             continue;
           }
-
           HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, symbol);
           if (entry) {
             fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
                     " %s:%d: ", fileCtx->path, importDecl->loc.from.lineNo + 1);
-            // TODO: the red in the error message doesn't really match the red
-            // in the source location print. See if this should be changed
             fprintf(stderr, "wildcard import brings in used identifier "
                     SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET"\n", symbol);
             SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
-                                &importDecl->loc);
+                                &importDecl->import.extLoc);
             importDecl->semaInfo.skipAnalysis = true;
+            free(importDecl->semaInfo.symInfo);
             success = false;
             break;
           }
@@ -490,6 +494,7 @@ bool SemaPopulateImportSymbols(SemaCtx *ctx) {
           SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
                               &namespaceLoc);
           importDecl->semaInfo.skipAnalysis = true;
+          free(importDecl->semaInfo.symInfo);
           success = false;
           continue;
         }
@@ -577,6 +582,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
           if (!semaType) {
             success = false;
             varInit->semaInfo.skipAnalysis = true;
+            free(varInfo);
             continue;
           }
           varTypeInfo->type = semaType;
@@ -875,9 +881,17 @@ SemaType *SemaTypeFromMethodDecl(
   return methodType;
 
 VECTOR_CLEANUP:
+  for (int i = 0; i < paramTypes->size; ++i) {
+    bool isTypeOwner = (bool)(int64_t)isParamTypeOwner->arr[i];
+    if (isTypeOwner) {
+      SemaTypeDelete(paramTypes->arr[i]);
+    }
+  }
   VectorDelete(paramTypes);
   VectorDelete(isParamTypeOwner);
-  SemaTypeDelete(retType);
+  if (methodType->isRetTypeOwner) {
+    SemaTypeDelete(retType);
+  }
 METHOD_TYPE_CLEANUP:
   free(methodType);
   return NULL;
@@ -889,9 +903,7 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
   SemaStage stage = info->stage;
   switch (node->kind) {
     case SYNTAX_AST_KIND_IMPORT_DECL:
-      deleteSymInfo =
-          !node->import.isWildcard &&
-          stage >= SEMA_STAGE_POPULATE_IMPORT_SYMBOLS;
+      deleteSymInfo = stage >= SEMA_STAGE_ADD_ALL_FILES;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_CLASS_DECL:
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_CLASS_SYMBOLS;

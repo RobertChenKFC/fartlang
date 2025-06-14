@@ -1,13 +1,6 @@
-BIN = $(BIN_ROOT)/util/bigint/bigint.o
-BIN_DIR = $(dir $(BIN))
+NAME := bigint
+include $(MK)/push.mk
 
-.PHONY: clean
+include $(MK)/c_src.mk
 
-$(BIN): bigint.c | $(BIN_DIR)
-	$(CC) -c -o $@ $(CFLAGS) $<
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-clean:
-	rm -rf $(BIN)
+include $(MK)/pop.mk

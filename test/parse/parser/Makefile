@@ -1,66 +1,52 @@
-BIN = $(BIN_ROOT)/parse/parser/test_parser
+NAME := parser
+include $(MK)/push.mk
 
-# dependencies
-DEPS += /lex/fa
-DEPS += /lex/nfa
-DEPS += /lex/dfa
-DEPS += /lex/lexer
-DEPS += /lex/regex
-DEPS += /parse/cfg
-DEPS += /parse/lr1
-DEPS += /parse/parser
-DEPS += /util/bitset
-DEPS += /util/hashtable
-DEPS += /util/source
-DEPS += /util/vector
+DEPS := $(DEPS) lex/dfa
+DEPS := $(DEPS) lex/fa
+DEPS := $(DEPS) lex/nfa
+DEPS := $(DEPS) lex/lexer
+DEPS := $(DEPS) lex/regex
+DEPS := $(DEPS) parse/cfg
+DEPS := $(DEPS) parse/lr1
+DEPS := $(DEPS) parse/parser
+DEPS := $(DEPS) util/bitset
+DEPS := $(DEPS) util/hashtable
+DEPS := $(DEPS) util/source
+DEPS := $(DEPS) util/vector
+include $(MK)/c_test.mk
 
-SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
-LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
+GET_NUM_STATES := $(DIR)/get_num_states.py
+BISON_CMP_NAMES := $(DIR)/7-canonical-lr $(DIR)/7-lalr
+BISON_BASE_FILE := $(DIR)/7.yy
+BISON_FILES := $(addsuffix .yy,$(BISON_CMP_NAMES))
+BISON_OUTPUT_FILES := $(addsuffix .output,$(BISON_CMP_NAMES))
+BISON_CC_FILES := $(addsuffix .tab.cc,$(BISON_CMP_NAMES))
+BISON_REF_FILES := $(addsuffix .ref,$(BISON_CMP_NAMES))
+CMP_NAMES := $(DIR)/3 $(BISON_CMP_NAMES)
+OUT_FILES := $(addsuffix .out,$(CMP_NAMES))
+REF_FILES := $(addsuffix .ref,$(CMP_NAMES))
+CMPS := $(addsuffix .cmp,$(CMP_NAMES))
+$(BISON_FILES): $(DIR)/7-%.yy: $(BISON_BASE_FILE)
+	echo "%define lr.type $*" | cat - $< >$@
+$(BISON_OUTPUT_FILES): %.output: %.yy | $(DIR)
+	cd $| && $(BISON) --report=state $(abspath $<)
+$(BISON_REF_FILES): %.ref: %.output
+	$(GET_NUM_STATES) $< $@
+$(OUT_FILES): $(BIN) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
+$(CMPS): %.cmp: %.out %.ref
+	$(CMP) $(CMP_FLAGS) $^
+TEST := $(TEST) $(DIR).test
+.PHONY: $(DIR).test
+$(DIR).test: $(CMPS)
 
-ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
-CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
+CLEAN_FILES := $(CLEAN_FILES) $(BISON_FILES)
+CLEAN_FILES := $(CLEAN_FILES) $(BISON_OUTPUT_FILES)
+CLEAN_FILES := $(CLEAN_FILES) $(BISON_CC_FILES)
+CLEAN_FILES := $(CLEAN_FILES) $(BISON_REF_FILES)
+CLEAN_FILES := $(CLEAN_FILES) $(OUT_FILES)
+CLEAN_FILES := $(CLEAN_FILES) $(DIR)/parser2.txt
+CLEAN_FILES := $(CLEAN_FILES) $(DIR)/parser3-canonical-lr.txt
+CLEAN_FILES := $(CLEAN_FILES) $(DIR)/parser3-lalr.txt
 
-LR_TYPES = canonical-lr lalr
-GRAMMAR_FILES = $(addprefix 7-,$(LR_TYPES))
-BISON_FILES = $(addsuffix .yy,$(GRAMMAR_FILES))
-BISON_CPP_FILES = $(addsuffix .tab.cc,$(GRAMMAR_FILES))
-BISON_OUTPUT_FILES = $(addsuffix .output,$(GRAMMAR_FILES))
-REF_FILES = $(addsuffix .ref,$(GRAMMAR_FILES))
-PARSER_FILES = $(addsuffix .txt,$(addprefix parser3-,$(LR_TYPES)))
-
-TESTS = 3 $(GRAMMAR_FILES)
-TEST_DEPS = $(addsuffix .test,$(TESTS))
-OUT_FILES = $(addsuffix .out,$(TESTS))
-
-OUTPUT_FILES = $(BISON_FILES) $(BISON_CPP_FILES) $(BISON_OUTPUT_FILES) $(REF_FILES) parser2.txt $(PARSER_FILES)
-
-.PHONY: $(ALL_DEPS) test clean $(CLEAN_DEPS)
-
-$(BIN): test_parser.c $(ALL_DEPS)
-	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
-
-$(ALL_DEPS): %.all:
-	$(MAKE) -C $*
-
-test: $(TEST_DEPS)
-
-$(TEST_DEPS): %.test: %.out %.ref
-	$(CMP) $(CMP_FLAGS) $*.out $*.ref
-
-$(OUT_FILES): $(BIN)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN)
-
-$(REF_FILES): 7-%.ref: 7-%.output
-	./get_num_states.py 7-$*.output 7-$*.ref
-
-$(BISON_OUTPUT_FILES): 7-%.output: 7-%.yy
-	$(BISON) --report=state 7-$*.yy
-
-$(BISON_FILES): 7-%.yy: 7.yy
-	echo "%define lr.type $*" | cat - 7.yy > 7-$*.yy
-
-clean: $(CLEAN_DEPS)
-	rm -rf $(BIN) $(OUTPUT_FILES)
-
-$(CLEAN_DEPS): %.clean:
-	$(MAKE) -C $* clean
+include $(MK)/pop.mk

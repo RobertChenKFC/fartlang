@@ -1,0 +1,10 @@
+[31;1m[Error][0m f_method_decl.fart:5: reuse of identifier [31;1mf1[0m for method declaration
+    5 |   [31;1mf1[0m(x: i32) {} # Error
+[31;1m[Error][0m f_method_decl.fart:7: identifier [31;1mHello[0m is not a class 
+    7 |   f2(x: [31;1mHello[0m) {} # Error
+[31;1m[Error][0m f_method_decl.fart:8: identifier [31;1mfile7[0m is not a class 
+    8 |   f2(x: Bar) -> [31;1mfile7[0m {} # Error
+[31;1m[Error][0m f_method_decl.fart:9: identifier [31;1mfile7[0m is not a class 
+    9 |   f2(x: u8[], y: i32, z: [31;1mfile7[0m) -> file7.Bar {} # Error
+[31;1m[Error][0m f_method_decl.fart:11: reuse of identifier [31;1mf2[0m for method declaration
+   11 |   [31;1mf2[0m(x: Main) {} # Error

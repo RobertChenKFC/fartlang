@@ -1,0 +1,6 @@
+[31;1m[Error][0m f_import_not_transitive.fart:7: identifier [31;1mBar[0m is not a class in [32;1mfile6[0m
+    7 |   var x2 : [32;1mfile6[0m.[31;1mBar[0m; # Error
+[31;1m[Error][0m f_import_not_transitive.fart:9: identifier [31;1mfile3[0m is not a class in [32;1mfile8[0m
+    9 |   var x4 : [32;1mfile8[0m.[31;1mfile3[0m; # Error
+[31;1m[Error][0m f_import_not_transitive.fart:11: identifier [31;1mfile3[0m is not a class 
+   11 |   var x6 : [31;1mfile3[0m; # Error

@@ -1,0 +1,9 @@
+SP             := $(SP).x
+DIRSTACK_$(SP) := $(DIR)
+SRCSTACK_$(SP) := $(SRC_DIR)
+TSTSTACK_$(SP) := $(TEST_DIR)
+BINSTACK_$(SP) := $(BIN_DIR)
+DIR            := $(DIR)/$(NAME)
+SRC_DIR        := $(SRC_DIR)/$(NAME)
+TEST_DIR       := $(TEST_DIR)/$(NAME)
+BIN_DIR        := $(BIN_DIR)/$(NAME)

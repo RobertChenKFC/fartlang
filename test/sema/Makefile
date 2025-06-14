@@ -1,59 +1,32 @@
-BIN = $(BIN_ROOT)/sema/test_sema
+NAME := sema
+include $(MK)/push.mk
 
-# dependencies
-DEPS += /lex/fa
-DEPS += /lex/nfa
-DEPS += /lex/dfa
-DEPS += /lex/lexer
-DEPS += /lex/regex
-DEPS += /parse/cfg
-DEPS += /parse/lr1
-DEPS += /parse/parser
-DEPS += /parse/syntax
-DEPS += /sema
-DEPS += /util/bigint
-DEPS += /util/bitset
-DEPS += /util/hashtable
-DEPS += /util/source
-DEPS += /util/vector
+DEPS := $(DEPS) lex/fa
+DEPS := $(DEPS) lex/nfa
+DEPS := $(DEPS) lex/dfa
+DEPS := $(DEPS) lex/lexer
+DEPS := $(DEPS) lex/regex
+DEPS := $(DEPS) parse/cfg
+DEPS := $(DEPS) parse/lr1
+DEPS := $(DEPS) parse/parser
+DEPS := $(DEPS) parse/syntax
+DEPS := $(DEPS) sema
+DEPS := $(DEPS) util/bigint
+DEPS := $(DEPS) util/bitset
+DEPS := $(DEPS) util/hashtable
+DEPS := $(DEPS) util/source
+DEPS := $(DEPS) util/vector
+include $(MK)/c_cmp_test.mk
 
-SRC_DEPS = $(addprefix $(SRC_ROOT), $(DEPS))
-LIB_DEPS = $(addprefix $(BIN_ROOT), $(join $(DEPS), $(addprefix /, $(addsuffix .o, $(notdir $(DEPS))))))
+COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/lexer.txt
+COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/parser.txt
+$(COMPILER_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $<
+$(OUT_FILES): %.out: $(BIN) %.fart $(COMPILER_FILES) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(VALGRIND_REDIRECT) $(abspath $<) $(notdir $*.fart) 2>$(abspath $@)
 
-ALL_DEPS = $(addsuffix .all, $(SRC_DEPS))
-CLEAN_DEPS = $(addsuffix .clean, $(SRC_DEPS))
+BIN_DIR := $(dir $(BIN))
+CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/lexer.txt
+CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/parser.txt
 
-SAVE_FILES = $(dir $(BIN))lexer.txt $(dir $(BIN))parser.txt
-REF_FILES = $(wildcard *.ref)
-OUT_FILES = $(REF_FILES:.ref=.out)
-.PRECIOUS: $(OUT_FILES)
-TESTS = $(REF_FILES:.ref=.test)
-OUTPUT_FILES = $(SAVE_FILES) $(OUT_FILES)
-VALGRIND_FLAGS += --log-fd=9
-
-$(BIN): test_sema.c $(ALL_DEPS)
-	$(CC) -o $(BIN) $(CFLAGS) $(LIB_DEPS) $<
-
-.PHONY: test
-test: $(TESTS)
-
-$(TESTS): %.test: %.out %.ref
-	$(CMP) $(CMP_FLAGS) $*.out $*.ref
-
-%.out: %.fart $(BIN) $(SAVE_FILES)
-	$(VALGRIND) $(VALGRIND_FLAGS) $(BIN) $< 9>&2 2>$@
-
-$(SAVE_FILES): $(BIN)
-	$(BIN)
-
-.PHONY: $(ALL_DEPS)
-$(ALL_DEPS): %.all:
-	$(MAKE) -C $*
-
-.PHONY: clean
-clean: $(CLEAN_DEPS)
-	rm -rf $(BIN) $(OUTPUT_FILES) $(SAVE_FILES)
-
-.PHONY: $(CLEAN_DEPS)
-$(CLEAN_DEPS): %.clean:
-	$(MAKE) -C $* clean
+include $(MK)/pop.mk

@@ -1,0 +1,5 @@
+DIR      := $(DIRSTACK_$(SP))
+SRC_DIR  := $(SRCSTACK_$(SP))
+TEST_DIR := $(TSTSTACK_$(SP))
+BIN_DIR  := $(BINSTACK_$(SP))
+SP       := $(basename $(SP))

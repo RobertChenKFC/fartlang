@@ -1,10 +1,11 @@
 #include "parse/lr1/lr1.h"
-#include "1.h"
-#include "2.h"
-#include "3.h"
-#include "4.h"
-#include "5.h"
-#include "6.h"
+#include "parse/lr1/1.h"
+#include "parse/lr1/2.h"
+#include "parse/lr1/3.h"
+#include "parse/lr1/4.h"
+#include "parse/lr1/5.h"
+#include "parse/lr1/6.h"
+#include "parse/lr1/7.h"
 
 int main() {
   // 1. Create LR(1) graph of simple CFG (1)
@@ -24,4 +25,7 @@ int main() {
 
   // 6. Create LR(1) graph of complex CFG (2)
   test6();
+
+  // 7. Create LR(1) graph of simple CFG (4)
+  test7();
 }

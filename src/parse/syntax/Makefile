@@ -1,13 +1,6 @@
-BIN = $(BIN_ROOT)/parse/syntax/syntax.o
-BIN_DIR = $(dir $(BIN))
+NAME := syntax
+include $(MK)/push.mk
 
-.PHONY: clean
+include $(MK)/c_src.mk
 
-$(BIN): syntax.c handlers.c | $(BIN_DIR)
-	$(CC) -c -o $@ $(CFLAGS) $<
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-clean:
-	rm -rf $(BIN)
+include $(MK)/pop.mk

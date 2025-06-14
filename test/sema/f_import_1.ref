@@ -1,2 +1,2 @@
 [31;1m[Error][0m f_import_1.fart:1: imported file does not exist
-    1 | import [31;1mhello.world[0m;
+    1 | import [31;1mhello.world[0m; # Error

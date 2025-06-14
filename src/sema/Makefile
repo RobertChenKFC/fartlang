@@ -1,13 +1,6 @@
-BIN = $(BIN_ROOT)/sema/sema.o
-BIN_DIR = $(dir $(BIN))
+NAME := sema
+include $(MK)/push.mk
 
-.PHONY: clean
+include $(MK)/c_src.mk
 
-$(BIN): sema.c | $(BIN_DIR)
-	$(CC) -c -o $@ $(CFLAGS) $<
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-clean:
-	rm -rf $(BIN)
+include $(MK)/pop.mk

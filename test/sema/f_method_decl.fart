@@ -1,4 +1,4 @@
-# import dir1.file7;
+import dir1.file7;
 
 class Main {
   f1() {} # Ok
@@ -6,6 +6,7 @@ class Main {
 
   f2(x: Hello) {} # Error
   f2(x: Bar) -> file7 {} # Error
-  f2() -> file7.Bar {} # Error
-  f2(x: Main) {} # Ok
+  f2(x: u8[], y: i32, z: file7) -> file7.Bar {} # Error
+  f2() -> file7.Bar {} # Ok
+  f2(x: Main) {} # Error
 }

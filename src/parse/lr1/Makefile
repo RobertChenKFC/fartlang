@@ -1,13 +1,6 @@
-BIN = $(BIN_ROOT)/parse/lr1/lr1.o
-BIN_DIR = $(dir $(BIN))
+NAME := lr1
+include $(MK)/push.mk
 
-.PHONY: clean
+include $(MK)/c_src.mk
 
-$(BIN): lr1.c | $(BIN_DIR)
-	$(CC) -c -o $@ $(CFLAGS) $<
-
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-clean:
-	rm -rf $(BIN)
+include $(MK)/pop.mk

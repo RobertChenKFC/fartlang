@@ -1,14 +1,17 @@
-SRC=$(SRC_ROOT)
-TEST=$(TEST_ROOT)
+MK := ./mk
+include $(MK)/defs.mk
 
-.PHONY: all test clean
+DIR := .
+include $(MK)/internal.mk
 
-all:
-	$(MAKE) -C $(SRC)
+.PHONY: test
+test: $(TEST)
+.PHONY: test_targets
+test_targets:
+	./gen_test_targets.py $(GITHUB_OUTPUT) $(TEST)
 
-test:
-	$(MAKE) -C $(TEST) test
+include $(MK)/clean.mk
+.PHONY: clean
+clean: $(CLEAN)
 
-clean:
-	$(MAKE) -C $(TEST) clean
-
+include $(MK)/mkdir.mk
