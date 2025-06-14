@@ -72,6 +72,7 @@ void test5(void) {
   assert(x.arr[0] == 0 && x.arr[1] == 1);
   x.arr[0] = x.arr[1] = UINT64_MAX;
   assert(!BigintAddInt(&x, &x, 1));
+  BigintDelete(&x);
 }
 
 int main(void) {
