@@ -1,6 +1,6 @@
 [31;1m[Error][0m f_import_symbol.fart:2: reuse of identifier [31;1mfile3[0m for import namespace
-    2 | import dir1.file4 as [31;1mfile3[0m;
+    2 | import dir1.file4 as [31;1mfile3[0m; # Error
 [31;1m[Error][0m f_import_symbol.fart:3: reuse of identifier [31;1mfile3[0m for import namespace
-    3 | import dir2.[31;1mfile3[0m;
+    3 | import dir2.[31;1mfile3[0m; # Error
 [31;1m[Error][0m f_import_symbol.fart:5: wildcard import brings in used identifier [31;1mfile3[0m
-    5 | [31;1mimport dir2.file1.*;[0m
+    5 | import dir2.file1[31;1m.*[0m; # Error

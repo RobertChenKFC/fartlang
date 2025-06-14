@@ -1,0 +1,14 @@
+[31;1m[Error][0m f_var_decl.fart:6: reuse of identifier [31;1mx[0m for variable declaration
+    6 |   var [31;1mx[0m : i64; # Error
+[31;1m[Error][0m f_var_decl.fart:26: no initialization for variable [31;1mx11[0m provided when using type deduction
+   26 |   var [31;1mx11[0m; # Error
+[31;1m[Error][0m f_var_decl.fart:29: [31;1mFoo[0m is not a namespace
+   29 |   var x6 : [31;1mFoo[0m.Bar; # Error
+[31;1m[Error][0m f_var_decl.fart:30: identifier [31;1mBar[0m is not a class 
+   30 |   var x7 : [31;1mBar[0m; # Error
+[31;1m[Error][0m f_var_decl.fart:32: identifier [31;1mBar[0m is not a class in [32;1mfile5[0m
+   32 |   var x9 : [32;1mfile5[0m.[31;1mBar[0m; # Error
+[31;1m[Error][0m f_var_decl.fart:33: [31;1mFoo[0m is not a namespace
+   33 |   var x10 : [31;1mFoo[0m.x; # Error
+[31;1m[Error][0m dir1/file5.fart:5: [31;1mMain[0m is not a namespace
+    5 |   var y : [31;1mMain[0m.x1; # Error
