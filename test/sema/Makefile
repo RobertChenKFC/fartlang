@@ -20,13 +20,13 @@ include $(MK)/c_cmp_test.mk
 
 COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/lexer.txt
 COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/parser.txt
-$(CMPS): | $(COMPILER_FILES)
-$(COMPILER_FILES): $(BIN) | $(DIR)
-$(OUT_FILES): %.out: $(BIN) %.fart | $(DIR)
+$(COMPILER_FILES): $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $<
+$(OUT_FILES): %.out: $(BIN) %.fart $(COMPILER_FILES) | $(DIR)
 	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(VALGRIND_REDIRECT) $(abspath $<) $(notdir $*.fart) 2>$(abspath $@)
 
 BIN_DIR := $(dir $(BIN))
-CLEAN_FILES := $(CLEAN_FILES) 
+CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/lexer.txt
 CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/parser.txt
 
 include $(MK)/pop.mk
