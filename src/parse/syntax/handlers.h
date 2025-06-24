@@ -22,6 +22,7 @@ ParserDeclareHandler(SyntaxHandlerTypeList, rhs);
 ParserDeclareHandler(SyntaxHandlerVarInitList, rhs);
 ParserDeclareHandler(SyntaxHandlerVarInit, rhs);
 ParserDeclareHandler(SyntaxHandlerVarName, rhs);
+ParserDeclareHandler(SyntaxHandlerExprAlloc, rhs);
 ParserDeclareHandler(SyntaxHandlerExprTernary, rhs);
 ParserDeclareHandler(SyntaxHandlerExprLogicOr, rhs);
 ParserDeclareHandler(SyntaxHandlerExprLogicAnd, rhs);

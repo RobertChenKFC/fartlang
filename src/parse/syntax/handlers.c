@@ -443,6 +443,27 @@ ParserDeclareHandler(SyntaxHandlerVarName, rhs) {
   return varInit;
 }
 
+ParserDeclareHandler(SyntaxHandlerExprAlloc, rhs) {
+  assert(rhs->size == 4);
+  LexerToken *new_ = rhs->arr[0];
+  SyntaxAST *expr = rhs->arr[1];
+  LexerToken *col_ = rhs->arr[2];
+  SyntaxAST *type = rhs->arr[3];
+  assert(new_ && new_->tokenID == NEW);
+  assert(expr);
+  assert(col_ && col_->tokenID == COL);
+  assert(type);
+
+  SyntaxAST *alloc = SyntaxASTNew(SYNTAX_AST_KIND_ALLOC);
+  SyntaxASTAppend(alloc, expr);
+  SyntaxASTAppend(alloc, type);
+  alloc->loc.from = new_->loc.from;
+
+  LexerTokenDelete(new_);
+  LexerTokenDelete(col_);
+  return alloc;
+}
+
 ParserDeclareHandler(SyntaxHandlerExprTernary, rhs) {
   assert(rhs->size == 5);
   SyntaxAST *cond = rhs->arr[0];

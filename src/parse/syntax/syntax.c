@@ -103,6 +103,7 @@ enum {
   FLOAT_LITERAL,
   STRING_LITERAL,
   CHAR_LITERAL,
+  NEW,
   SWITCH,
   CASE,
   DEFAULT,
@@ -144,6 +145,7 @@ enum {
   VAR_INIT,
   VAR_NAME,
   EXPR,
+  EXPR_ALLOC,
   EXPR_TERNARY,
   EXPR_LOGIC_OR,
   EXPR_LOGIC_AND,
@@ -395,6 +397,7 @@ Lexer *SyntaxCreateLexer(void) {
         tick_, RegexFromUnion(2, notTickBackslash_, RegexFromConcat(2,
             backslash_, REGEX_ANY)),
         tick_));
+    ADD_REGEX_CHAIN(chain, new_, RegexFromString("new"));
     ADD_REGEX_CHAIN(chain, switch_, RegexFromString("switch"));
     ADD_REGEX_CHAIN(chain, case_, RegexFromString("case"));
     ADD_REGEX_CHAIN(chain, default_, RegexFromString("default"));
@@ -513,6 +516,7 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, float_literal_) == FLOAT_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, string_literal_) == STRING_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, char_literal_) == CHAR_LITERAL);
+    assert(LexerConfigAddRegex(lexerConfig, new_) == NEW);
     assert(LexerConfigAddRegex(lexerConfig, switch_) == SWITCH);
     assert(LexerConfigAddRegex(lexerConfig, case_) == CASE);
     assert(LexerConfigAddRegex(lexerConfig, default_) == DEFAULT);
@@ -580,6 +584,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == VAR_INIT);
       assert(CFGAddVariable(cfg) == VAR_NAME);
       assert(CFGAddVariable(cfg) == EXPR);
+      assert(CFGAddVariable(cfg) == EXPR_ALLOC);
       assert(CFGAddVariable(cfg) == EXPR_TERNARY);
       assert(CFGAddVariable(cfg) == EXPR_LOGIC_OR);
       assert(CFGAddVariable(cfg) == EXPR_LOGIC_AND);
@@ -737,7 +742,11 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarName,
           VAR_NAME, 1, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          EXPR, 1, EXPR_TERNARY);
+          EXPR, 1, EXPR_ALLOC);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprAlloc,
+          EXPR_ALLOC, 4, NEW, EXPR, COL, TYPE);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_ALLOC, 1, EXPR_TERNARY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprTernary,
           EXPR_TERNARY, 5, EXPR_LOGIC_OR, IF, EXPR_LOGIC_OR,
           ELSE, EXPR_LOGIC_OR);
@@ -1035,8 +1044,9 @@ SyntaxAST *SyntaxParseFile(FILE *file, const char *filename) {
 }
 
 void SyntaxASTDelete(void *p) {
-  if (!p)
+  if (!p) {
     return;
+  }
 
   SyntaxAST *node = p;
   SyntaxASTDelete(node->firstChild);
