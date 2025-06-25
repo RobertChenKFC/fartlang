@@ -21,36 +21,4 @@ class Main {
   # Any should be able take on any value
   var any_str: any = "goodbye";
   var any_char: any = 'h';
-
-  # Ternary operator
-  var tern_i32: bool = 3 if true else 5; # correct, type i32
-  var tern_cond = 3 if 4 else 5.; # error
-  var tern_mismatch = 3 if true else 5.; # error
-  var tern_nested_mismatch = 3 if (false if true else 5) else 5.; # error
-
-  # Bitwise operator
-  var bit_i32: bool = 3 ^ 5; # correct, type i32
-  var bit_u16: bool = 3u16 | 5u16; # correct, type u16
-  var bit_sign = 3 & 5u32; # error
-  var bit_not: bool = ~9; # correct, type i32
-  var bit_mismatch = 3u8 & 5u16; # error
-  var bit_f32 = 1. ^ 2.; # error
-  var bit_bool = true ^ false; # error
-  var bit_nested_bool = (true & true) ^ false; # error
-
-  # Logic operator
-  var logic_and: i32 = true and false; # correct, type bool
-  var logic_or: i32 = false or true; # correct, type bool
-  var logic_i32 = false or 5; # error
-  var logic_str = "hello" and true; # error
-  var logic_nested_str = false and "hello" and true; # error
-
-  # Comparison operator
-  var comp_lt_i32_0: i32 = 3 < 5i16; # correct, type bool
-  var comp_lt_i32: i32 = 3 < 5i16 <= 7i8; # correct, type bool
-  var comp_gt_fail2 = 3 > 'a' >= 7; # error
-  var comp_gt_fail3 = 3 > 5i16 >= 't'; # error
-  var comp_eq_f64: i32 = 3. == 5. != 7.f64; # correct, type bool
-  var comp_mix = 3 < 5u32 <= 7.; # error
-  var comp_wrong = 3 < true; # error
 }

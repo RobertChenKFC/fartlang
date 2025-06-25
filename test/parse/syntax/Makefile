@@ -16,6 +16,8 @@ DEPS := $(DEPS) util/bitset
 DEPS := $(DEPS) util/hashtable
 DEPS := $(DEPS) util/source
 DEPS := $(DEPS) util/vector
+# Special dependency: syntax.c includes handlers.c
+$(BIN_DIR)/syntax.o: $(SRC_DIR)/handlers.c
 
 include $(MK)/c_cmp_test.mk
 BIN_DIR := $(dir $(BIN))

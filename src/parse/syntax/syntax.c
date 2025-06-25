@@ -165,6 +165,7 @@ enum {
   INT_LITERAL_TERM,
   METHOD_DECLS,
   METHOD_DECL,
+  CONSTRUCTOR,
   METHOD_DECL_PREFIX,
   METHOD_DECL_BODY,
   BODY,
@@ -604,6 +605,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == INT_LITERAL_TERM);
       assert(CFGAddVariable(cfg) == METHOD_DECLS);
       assert(CFGAddVariable(cfg) == METHOD_DECL);
+      assert(CFGAddVariable(cfg) == CONSTRUCTOR);
       assert(CFGAddVariable(cfg) == METHOD_DECL_PREFIX);
       assert(CFGAddVariable(cfg) == METHOD_DECL_BODY);
       assert(CFGAddVariable(cfg) == BODY);
@@ -872,9 +874,13 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           METHOD_DECLS, 2, METHOD_DECLS, METHOD_DECL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
           METHOD_DECLS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          METHOD_DECL, 1, CONSTRUCTOR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecl,
           METHOD_DECL, 7, METHOD_DECL_MODIFIERS,
           IDENTIFIER, LPAREN, PARAM_LIST, RPAREN, RETURN_TYPE, METHOD_DECL_BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerConstructor,
+          CONSTRUCTOR, 5, NEW, LPAREN, PARAM_LIST, RPAREN, METHOD_DECL_BODY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
           METHOD_DECL_MODIFIERS, 1, FN);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,

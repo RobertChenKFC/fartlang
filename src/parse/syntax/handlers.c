@@ -1400,6 +1400,41 @@ ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs) {
   return method;
 }
 
+ParserDeclareHandler(SyntaxHandlerConstructor, rhs) {
+  assert(rhs->size == 5);
+  LexerToken *new_ = rhs->arr[0];
+  LexerToken *lParen_ = rhs->arr[1];
+  SyntaxAST *paramList = rhs->arr[2];
+  LexerToken *rParen_ = rhs->arr[3];
+  SyntaxAST *body = rhs->arr[4];
+  assert(new_ && new_->tokenID == NEW);
+  assert(lParen_ && lParen_->tokenID == LPAREN);
+  assert(paramList);
+  assert(rParen_ && rParen_->tokenID == RPAREN);
+  assert(body);
+
+  SyntaxAST *returnType = SyntaxASTNew(SYNTAX_AST_KIND_TYPE);
+  returnType->type.baseType = SYNTAX_TYPE_THIS;
+  returnType->type.arrayLevels = 0;
+
+  SyntaxAST *method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
+  method->method.name = strndup(new_->str, new_->length);
+  method->method.nameLoc = new_->loc;
+  method->method.type = SYNTAX_METHOD_TYPE_FN;
+  method->loc.from = SourcePointMin(&method->loc.from, &new_->loc.from);
+  SyntaxASTAppend(method, returnType);
+  SyntaxASTAppend(method, paramList);
+  if (body) {
+    SyntaxASTAppend(method, body);
+  } else {
+    method->loc.to = SourcePointMax(&method->loc.to, &rParen_->loc.to);
+  }
+  LexerTokenDelete(new_);
+  LexerTokenDelete(lParen_);
+  LexerTokenDelete(rParen_);
+  return method;
+}
+
 ParserDeclareHandler(SyntaxHandlerMethodDeclModifiers, rhs) {
   SyntaxAST *method = SyntaxASTNew(SYNTAX_AST_KIND_METHOD_DECL);
   if (rhs->size == 1) {

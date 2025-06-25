@@ -65,6 +65,7 @@ ParserDeclareHandler(SyntaxHandlerVariable, rhs);
 ParserDeclareHandler(SyntaxHandlerParenTerm, rhs);
 ParserDeclareHandler(SyntaxHandlerMethodDecls, rhs);
 ParserDeclareHandler(SyntaxHandlerMethodDecl, rhs);
+ParserDeclareHandler(SyntaxHandlerConstructor, rhs);
 ParserDeclareHandler(SyntaxHandlerMethodDeclModifiers, rhs);
 ParserDeclareHandler(SyntaxHandlerBody, rhs);
 ParserDeclareHandler(SyntaxHandlerParamList, rhs);
