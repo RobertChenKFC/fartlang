@@ -1,0 +1,52 @@
+[31;1m[Error][0m f_expr.fart:3: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+    3 |   var tern_i32: [32;1mbool[0m = [31;1m3 if true else 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:4: expected condition to be of type bool, got type [31;1mi32[0m instead
+    4 |   var tern_cond = 3 if [31;1m4[0m else 5.; # error
+[31;1m[Error][0m f_expr.fart:6: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
+    6 |   var tern_signed: [32;1mbool[0m = [31;1m3 if true else 5i64[0m; # correct, type i64
+[31;1m[Error][0m f_expr.fart:7: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+    7 |   var tern_unsigned: [32;1mbool[0m = [31;1m'a' if true else 5u32[0m; # correct, type u32
+[31;1m[Error][0m f_expr.fart:8: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+    8 |   var tern_float: [32;1mbool[0m = [31;1m3.f64 if true else 5.[0m; # correct, type f64
+[31;1m[Error][0m f_expr.fart:9: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+    9 |   var tern_any: [32;1mbool[0m = [31;1m3 if true else 5.[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:12: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   12 |   var bit_i32: [32;1mbool[0m = [31;1m3 ^ 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:13: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
+   13 |   var bit_u16: [32;1mbool[0m = [31;1m3u16 | 5u16[0m; # correct, type u16
+[31;1m[Error][0m f_expr.fart:14: bitwise operand of type [31;1mu32[0m does not match first operand of type [32;1mi32[0m
+   14 |   var bit_sign = [32;1m3[0m & [31;1m5u32[0m; # error
+[31;1m[Error][0m f_expr.fart:15: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   15 |   var bit_not: [32;1mbool[0m = [31;1m~9[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:16: bitwise operand of type [31;1mu16[0m does not match first operand of type [32;1mu8[0m
+   16 |   var bit_mismatch = [32;1m3u8[0m & [31;1m5u16[0m; # error
+[31;1m[Error][0m f_expr.fart:17: expected signed or unsigned type for bitwise operand, got [31;1mf32[0m instead
+   17 |   var bit_f32 = [31;1m1.[0m ^ 2.; # error
+[31;1m[Error][0m f_expr.fart:18: expected signed or unsigned type for bitwise operand, got [31;1mbool[0m instead
+   18 |   var bit_bool = [31;1mtrue[0m ^ false; # error
+[31;1m[Error][0m f_expr.fart:19: expected signed or unsigned type for bitwise operand, got [31;1mbool[0m instead
+   19 |   var bit_nested_bool = ([31;1mtrue[0m & true) ^ false; # error
+[31;1m[Error][0m f_expr.fart:22: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   22 |   var logic_and: [32;1mi32[0m = [31;1mtrue and false[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:23: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   23 |   var logic_or: [32;1mi32[0m = [31;1mfalse or true[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:24: expected operand of logical operator to be of type bool, got type [31;1mi32[0m instead
+   24 |   var logic_i32 = false or [31;1m5[0m; # error
+[31;1m[Error][0m f_expr.fart:25: expected operand of logical operator to be of type bool, got type [31;1mu8[][0m instead
+   25 |   var logic_str = [31;1m"hello"[0m and true; # error
+[31;1m[Error][0m f_expr.fart:26: expected operand of logical operator to be of type bool, got type [31;1mu8[][0m instead
+   26 |   var logic_nested_str = false and [31;1m"hello"[0m and true; # error
+[31;1m[Error][0m f_expr.fart:29: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   29 |   var comp_lt_i32_0: [32;1mi32[0m = [31;1m3 < 5i16[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:30: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   30 |   var comp_lt_i32: [32;1mi32[0m = [31;1m3 < 5i16 <= 7i8[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:31: operand of [31;1munsigned[0m type does not match operand of [32;1msigned[0m type
+   31 |   var comp_gt_fail2 = [32;1m3[0m > [31;1m'a'[0m >= 7; # error
+[31;1m[Error][0m f_expr.fart:32: operand of [31;1munsigned[0m type does not match operand of [32;1msigned[0m type
+   32 |   var comp_gt_fail3 = [32;1m3[0m > 5i16 >= [31;1m't'[0m; # error
+[31;1m[Error][0m f_expr.fart:33: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   33 |   var comp_eq_f64: [32;1mi32[0m = [31;1m3. == 5. != 7.f64[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:34: operand of [31;1munsigned[0m type does not match operand of [32;1msigned[0m type
+   34 |   var comp_mix = [32;1m3[0m < [31;1m5u32[0m <= 7.; # error
+[31;1m[Error][0m f_expr.fart:35: operand of [31;1mnon-numeric[0m type does not match operand of [32;1msigned[0m type
+   35 |   var comp_wrong = [32;1m3[0m < [31;1mtrue[0m; # error

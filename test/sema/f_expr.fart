@@ -2,8 +2,11 @@ class Main {
   # Ternary operator
   var tern_i32: bool = 3 if true else 5; # correct, type i32
   var tern_cond = 3 if 4 else 5.; # error
-  var tern_mismatch = 3 if true else 5.; # error
-  var tern_nested_mismatch = 3 if (false if true else 5) else 5.; # error
+  # Testing type unification using ternary operator
+  var tern_signed: bool = 3 if true else 5i64; # correct, type i64
+  var tern_unsigned: bool = 'a' if true else 5u32; # correct, type u32
+  var tern_float: bool = 3.f64 if true else 5.; # correct, type f64
+  var tern_any: bool = 3 if true else 5.; # correct, type any
 
   # Bitwise operator
   var bit_i32: bool = 3 ^ 5; # correct, type i32

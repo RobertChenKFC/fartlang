@@ -110,10 +110,6 @@ void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg);
 // no additional arguments. In particular, this init function sets the stage of
 // "info" to "SEMA_STAGE_TYPE_CHECK"
 void SemaASTInitTypeCheck(SemaInfo *info, va_list arg);
-// Checks if the an instance of the "right" type can be assigned to an instance
-// of the "left" type. This returns true if and only if (1) the "left" type is
-// "any" or (2) the "left" and "right" types are the same
-bool SemaTypeIsAssignable(SemaType *left, SemaType *right);
 // Checks if "type" is a float type
 bool SemaTypeIsFloat(SemaType *type);
 // Checks if "type" is a signed type
@@ -148,6 +144,19 @@ SemaType *SemaTypeCheckComparisonOp(
 bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
 // Checks if "expr" is a comparison expression
 bool SemaIsComparisonExpr(SyntaxAST *expr);
+// Performs the type unification procedure for "type1" and "type2". Returns
+// the unified type if the procedure succeeds, and NULL if the procedure fails.
+// "isTypeOwner" is set to true if and only if a new type is allocated and
+// returned
+SemaType *SemaTypeUnification(
+    SemaType *type1, SemaType *type2, bool *isTypeOwner);
+// Checks if "type1" can be implicitly cast to "type2"
+bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2);
+// Given the AST "expr" for an expression and its "type", if "type" is void,
+// prints an error message using "fileCtx"
+void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
+// Checks if "type" is a class type
+bool SemaTypeIsClass(SemaType *type);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -989,8 +998,9 @@ bool SemaTypeCheck(SemaCtx *ctx) {
               varTypeInfo->isTypeOwner = false;
             } else {
               // This variable is declared with a type, so must check if the
-              // types match
-              if (!SemaTypeIsAssignable(varTypeInfo->type, initExprType)) {
+              // initialization expression can implicit cast to the declared
+              // type
+              if (!SemaTypeImplicitCast(initExprType, varTypeInfo->type)) {
                 SyntaxAST *varType = varInit->firstChild;
                 SourceLocation *varTypeLoc = &varType->loc;
                 SourceLocation *initExprLoc = &initExpr->loc;
@@ -1248,6 +1258,8 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       }
       break;
     } case SEMA_TYPE_KIND_CLASS: {
+      // TODO: improve type printing by also sourcing the location of where
+      // each type is declared if the types happen to have the same name
       fprintf(file, "%s", type->node->string);
       break;
     } case SEMA_TYPE_KIND_NAMESPACE: {
@@ -1313,14 +1325,6 @@ void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg) {
 
 void SemaASTInitTypeCheck(SemaInfo *info, va_list arg) {
   info->stage = SEMA_STAGE_TYPE_CHECK;
-}
-
-bool SemaTypeIsAssignable(SemaType *left, SemaType *right) {
-  if (left->kind == SEMA_TYPE_KIND_PRIM_TYPE &&
-      left->primType == SEMA_PRIM_TYPE_ANY) {
-    return true;
-  }
-  return SemaTypeEqual(left, right);
 }
 
 bool SemaTypeIsFloat(SemaType *type) {
@@ -1475,27 +1479,16 @@ SemaType *SemaTypeCheckTernaryOp(
     SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
     goto TERNARY_OP_SKIP_EXPR;
   }
-  if (!SemaTypeEqual(trueType, falseType)) {
-    SourceLocation *trueLoc = &trueNode->loc;
-    SourceLocation *falseLoc = &falseNode->loc;
-    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-            " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
-    fprintf(stderr, "mismatch types "SOURCE_COLOR_BLUE);
-    SemaTypePrint(stderr, trueType);
-    fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_YELLOW);
-    SemaTypePrint(stderr, falseType);
-    fprintf(stderr, SOURCE_COLOR_RESET" for ternary operator\n");
-    // TODO: improve type printing by also sourcing the location of where
-    // each type is declared if the types happen to have the same name
-    SourceLocationPrint(
-        fileCtx->source, 2, SOURCE_COLOR_BLUE, &trueNode->loc,
-        SOURCE_COLOR_YELLOW, &falseNode->loc);
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  SemaType *unifiedType = SemaTypeUnification(
+      trueType, falseType, &typeInfo->isTypeOwner);
+  if (!unifiedType) {
+    SemaErrorIfVoid(trueType, trueNode, fileCtx);
+    SemaErrorIfVoid(falseType, falseType, fileCtx);
     goto TERNARY_OP_SKIP_EXPR;
   }
-  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
-  typeInfo->type = trueType;
-  typeInfo->isTypeOwner = false;
-  return trueType;
+  typeInfo->type = unifiedType;
+  return unifiedType;
 TERNARY_OP_SKIP_COND:
   condNode->semaInfo.skipAnalysis = true;
 TERNARY_OP_SKIP_TRUE:
@@ -1666,4 +1659,58 @@ bool SemaIsComparisonExpr(SyntaxAST *expr) {
     default:
       return false;
   }
+}
+
+SemaType *SemaTypeUnification(
+    SemaType *type1, SemaType *type2, bool *isTypeOwner) {
+  *isTypeOwner = false;
+  if ((SemaTypeIsSigned(type1) && SemaTypeIsSigned(type2)) ||
+      (SemaTypeIsUnsigned(type1) && SemaTypeIsUnsigned(type2)) ||
+      (SemaTypeIsFloat(type1) && SemaTypeIsFloat(type2))) {
+    SemaType *ret =
+        SemaTypeBitwidth(type1) >= SemaTypeBitwidth(type2) ? type1 : type2;
+    return ret;
+  }
+  if (SemaTypeIsClass(type1) && SemaTypeIsPrimType(type2, SEMA_PRIM_TYPE_NIL)) {
+    return type1;
+  }
+  if (SemaTypeIsClass(type2) && SemaTypeIsPrimType(type1, SEMA_PRIM_TYPE_NIL)) {
+    return type2;
+  }
+  if (SemaTypeEqual(type1, type2)) {
+    return type1;
+  }
+  if (SemaTypeIsPrimType(type1, SEMA_PRIM_TYPE_VOID) ||
+      SemaTypeIsPrimType(type2, SEMA_PRIM_TYPE_VOID)) {
+    return NULL;
+  }
+  *isTypeOwner = true;
+  SemaType *type = malloc(sizeof(SemaType));
+  SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_ANY);
+  return type;
+}
+
+bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2) {
+  bool isTypeOwner;
+  SemaType *type = SemaTypeUnification(type1, type2, &isTypeOwner);
+  bool implicitCast = SemaTypeEqual(type2, type);
+  if (isTypeOwner) {
+    SemaTypeDelete(type);
+  }
+  return implicitCast;
+}
+
+void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx) {
+  if (!SemaTypeIsPrimType(type, SEMA_PRIM_TYPE_VOID)) {
+    return;
+  }
+  SourceLocation *loc = &expr->loc;
+  fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+          " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+  fprintf(stderr, "invalid usage of "SOURCE_COLOR_RED" void type\n");
+  SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+}
+
+bool SemaTypeIsClass(SemaType *type) {
+  return type->kind == SEMA_TYPE_KIND_CLASS;
 }

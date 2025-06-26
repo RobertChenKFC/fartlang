@@ -24,3 +24,5 @@
    18 |   var p_str: [32;1mbool[0m = [31;1m"hello"[0m; # correct, type u8[]
 [31;1m[Error][0m f_term.fart:19: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[0m instead
    19 |   var p_char: [32;1mbool[0m = [31;1m'h'[0m; # correct, type u8
+[31;1m[Error][0m f_term.fart:20: expected expression to be of type [32;1mbool[0m, got type [31;1mnil[0m instead
+   20 |   var p_null0 : [32;1mbool[0m = [31;1mnull[0m; # error
