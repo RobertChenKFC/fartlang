@@ -38,7 +38,8 @@ typedef enum {
   SEMA_PRIM_TYPE_F32,
   SEMA_PRIM_TYPE_BOOL,
   SEMA_PRIM_TYPE_ANY,
-  SEMA_PRIM_TYPE_VOID
+  SEMA_PRIM_TYPE_VOID,
+  SEMA_PRIM_TYPE_NIL
 } SemaPrimType;
 
 // Attributes of each symbol

@@ -17,6 +17,8 @@ class Main {
   var p_bool: i32 = true; # correct, type bool
   var p_str: bool = "hello"; # correct, type u8[]
   var p_char: bool = 'h'; # correct, type u8
+  var p_null0 : bool = null; # error
+  var p_null1 : Main = null; # correct
 
   # Any should be able take on any value
   var any_str: any = "goodbye";

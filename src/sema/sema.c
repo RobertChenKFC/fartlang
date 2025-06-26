@@ -1040,6 +1040,7 @@ SemaType *SemaTypeFromTerm(
         case SYNTAX_TYPE_F32:
         case SYNTAX_TYPE_BOOL:
         case SYNTAX_TYPE_ANY:
+        case SYNTAX_TYPE_NULL:
           assert(SemaCheckAllPrimTypes(term->literal.type, type));
           break;
         case SYNTAX_TYPE_STR: {
@@ -1052,6 +1053,10 @@ SemaType *SemaTypeFromTerm(
           type->arrayLevels = 1;
           break;
         } default: {
+          // DEBUG
+          printf("Literal kind: %d\n", term->literal.type);
+
+          assert(false);
           break;
         }
       }
@@ -1161,6 +1166,9 @@ bool SemaCheckAllPrimTypes(SyntaxType syntaxType, SemaType *type) {
     case SYNTAX_TYPE_VOID:
       SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_VOID);
       return true;
+    case SYNTAX_TYPE_NULL:
+      SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_NIL);
+      return true;
     default:
       return false;
   }
@@ -1234,14 +1242,19 @@ void SemaTypePrint(FILE *file, SemaType *type) {
         case SEMA_PRIM_TYPE_VOID:
           fprintf(file, "void");
           break;
+        case SEMA_PRIM_TYPE_NIL:
+          fprintf(file, "nil");
+          break;
       }
       break;
     } case SEMA_TYPE_KIND_CLASS: {
       fprintf(file, "%s", type->node->string);
+      break;
     } case SEMA_TYPE_KIND_NAMESPACE: {
       char *namespace = type->node->import.namespace;
       assert(namespace);
       fprintf(file, "%s", namespace);
+      break;
     } default: {
       // DEBUG
       printf("Sema type kind: %d\n", type->kind);
