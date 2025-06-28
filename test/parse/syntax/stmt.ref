@@ -233,12 +233,12 @@ SYNTAX_AST_KIND_MODULE: 1:1~83:1:
                                     SYNTAX_AST_KIND_IDENTIFIER: 65:18~65:18: x: 
                                 SYNTAX_AST_KIND_LITERAL: 65:22~65:24: type SYNTAX_TYPE_I32, value 110
                             SYNTAX_AST_KIND_STMTS: 65:26~65:27: 
-                        SYNTAX_AST_KIND_WHILE_STMT: 68:5~71:7: 
+                        SYNTAX_AST_KIND_WHILE_STMT: 68:5~71:8: 
                             SYNTAX_AST_KIND_LITERAL: 68:11~68:14: type SYNTAX_TYPE_BOOL, value true
                             SYNTAX_AST_KIND_STMTS: 68:16~70:5: 
                                 SYNTAX_AST_KIND_BREAK_STMT: 69:7~69:12: 
-                            SYNTAX_AST_KIND_LABEL: 71:5~71:7: 
-                        SYNTAX_AST_KIND_FOR_STMT: 72:5~77:7: 
+                            SYNTAX_AST_KIND_LABEL: 71:5~71:8: 
+                        SYNTAX_AST_KIND_FOR_STMT: 72:5~77:8: 
                             SYNTAX_AST_KIND_PLACEHOLDER: -2147483648:-2147483648~-2147483647:-2147483647: 
                             SYNTAX_AST_KIND_PLACEHOLDER: -2147483648:-2147483648~-2147483647:-2147483647: 
                             SYNTAX_AST_KIND_PLACEHOLDER: -2147483648:-2147483648~-2147483647:-2147483647: 
@@ -248,7 +248,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~83:1:
                                     SYNTAX_AST_KIND_STMTS: 73:18~75:7: 
                                         SYNTAX_AST_KIND_BREAK_STMT: 74:9~74:16: 
                                             SYNTAX_AST_KIND_LABEL: 74:15~74:15: 
-                            SYNTAX_AST_KIND_LABEL: 77:5~77:7: 
+                            SYNTAX_AST_KIND_LABEL: 77:5~77:8: 
                         SYNTAX_AST_KIND_RETURN_STMT: 80:5~80:30: 
                             SYNTAX_AST_KIND_OP: 80:12~80:29: op: SYNTAX_OP_ADD: 
                                 SYNTAX_AST_KIND_LITERAL: 80:12~80:14: type SYNTAX_TYPE_I32, value 123

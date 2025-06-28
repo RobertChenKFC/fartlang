@@ -746,7 +746,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR, 1, EXPR_ALLOC);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprAlloc,
-          EXPR_ALLOC, 4, NEW, EXPR, COL, TYPE);
+          EXPR_ALLOC, 5, LBRACK, TYPE, RBRACK, MUL, EXPR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           EXPR_ALLOC, 1, EXPR_TERNARY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprTernary,
@@ -977,7 +977,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchDefault,
           SWITCH_DEFAULT, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
-          LABEL, 3, LBRACK, IDENTIFIER, RBRACK);
+          LABEL, 3, GT, IDENTIFIER, COL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
           LABEL, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerForStmt,

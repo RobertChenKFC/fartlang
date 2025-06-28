@@ -1,5 +1,5 @@
 class Expr {
-  var x = new f(1 if true else 2, 78 ^ 90).hello(4)[5].hey : fn (i32, i64[][]) -> bool[];
+  var x = [fn (i32, i64[][]) -> bool[]] * f(1 if true else 2, 78 ^ 90).hello(4)[5].hey if 3 else 4;
   var x = true or true if true or false else true or false;
   var x = true and true or true and false or true and false;
   var x = 1 | 2 and 3 | 4 and 5 | 6;

@@ -3,33 +3,36 @@ SYNTAX_AST_KIND_MODULE: 1:1~20:1:
     SYNTAX_AST_KIND_CLASS_DECLS: 1:1~20:1: 
         SYNTAX_AST_KIND_CLASS_DECL: 1:1~20:1: 
             SYNTAX_AST_KIND_STMTS: 2:3~19:17: 
-                SYNTAX_AST_KIND_VAR_DECL: 2:3~2:89: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 2:7~2:88: 
-                        SYNTAX_AST_KIND_VAR_INIT: 2:7~2:88: variable: x: 
+                SYNTAX_AST_KIND_VAR_DECL: 2:3~2:99: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 2:7~2:98: 
+                        SYNTAX_AST_KIND_VAR_INIT: 2:7~2:98: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_ALLOC: 2:11~2:88: 
-                                SYNTAX_AST_KIND_MEMBER_ACCESS: 2:15~2:58: member: hey: 
-                                    SYNTAX_AST_KIND_OP: 2:15~2:54: op: SYNTAX_OP_ARRAY_ACCESS: 
-                                        SYNTAX_AST_KIND_OP: 2:15~2:51: op: SYNTAX_OP_CALL: 
-                                            SYNTAX_AST_KIND_MEMBER_ACCESS: 2:15~2:48: member: hello: 
-                                                SYNTAX_AST_KIND_OP: 2:15~2:42: op: SYNTAX_OP_CALL: 
-                                                    SYNTAX_AST_KIND_IDENTIFIER: 2:15~2:15: f: 
-                                                    SYNTAX_AST_KIND_EXPR_LIST: 2:17~2:41: 
-                                                        SYNTAX_AST_KIND_OP: 2:17~2:32: op: SYNTAX_OP_TERNARY: 
-                                                            SYNTAX_AST_KIND_LITERAL: 2:17~2:17: type SYNTAX_TYPE_I32, value 1
-                                                            SYNTAX_AST_KIND_LITERAL: 2:22~2:25: type SYNTAX_TYPE_BOOL, value true
-                                                            SYNTAX_AST_KIND_LITERAL: 2:32~2:32: type SYNTAX_TYPE_I32, value 2
-                                                        SYNTAX_AST_KIND_OP: 2:35~2:41: op: SYNTAX_OP_BIT_XOR: 
-                                                            SYNTAX_AST_KIND_LITERAL: 2:35~2:36: type SYNTAX_TYPE_I32, value 78
-                                                            SYNTAX_AST_KIND_LITERAL: 2:40~2:41: type SYNTAX_TYPE_I32, value 90
-                                            SYNTAX_AST_KIND_EXPR_LIST: 2:50~2:50: 
-                                                SYNTAX_AST_KIND_LITERAL: 2:50~2:50: type SYNTAX_TYPE_I32, value 4
-                                        SYNTAX_AST_KIND_LITERAL: 2:53~2:53: type SYNTAX_TYPE_I32, value 5
-                                SYNTAX_AST_KIND_TYPE: 2:62~2:88: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
-                                    SYNTAX_AST_KIND_TYPE_LIST: 2:66~2:77: 
-                                        SYNTAX_AST_KIND_TYPE: 2:66~2:68: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
-                                        SYNTAX_AST_KIND_TYPE: 2:71~2:77: base type: SYNTAX_TYPE_I64, array levels: 2, child types: 
-                                    SYNTAX_AST_KIND_TYPE: 2:83~2:88: base type: SYNTAX_TYPE_BOOL, array levels: 1, child types: 
+                            SYNTAX_AST_KIND_ALLOC: 2:11~2:98: 
+                                SYNTAX_AST_KIND_OP: 2:43~2:98: op: SYNTAX_OP_TERNARY: 
+                                    SYNTAX_AST_KIND_MEMBER_ACCESS: 2:43~2:86: member: hey: 
+                                        SYNTAX_AST_KIND_OP: 2:43~2:82: op: SYNTAX_OP_ARRAY_ACCESS: 
+                                            SYNTAX_AST_KIND_OP: 2:43~2:79: op: SYNTAX_OP_CALL: 
+                                                SYNTAX_AST_KIND_MEMBER_ACCESS: 2:43~2:76: member: hello: 
+                                                    SYNTAX_AST_KIND_OP: 2:43~2:70: op: SYNTAX_OP_CALL: 
+                                                        SYNTAX_AST_KIND_IDENTIFIER: 2:43~2:43: f: 
+                                                        SYNTAX_AST_KIND_EXPR_LIST: 2:45~2:69: 
+                                                            SYNTAX_AST_KIND_OP: 2:45~2:60: op: SYNTAX_OP_TERNARY: 
+                                                                SYNTAX_AST_KIND_LITERAL: 2:45~2:45: type SYNTAX_TYPE_I32, value 1
+                                                                SYNTAX_AST_KIND_LITERAL: 2:50~2:53: type SYNTAX_TYPE_BOOL, value true
+                                                                SYNTAX_AST_KIND_LITERAL: 2:60~2:60: type SYNTAX_TYPE_I32, value 2
+                                                            SYNTAX_AST_KIND_OP: 2:63~2:69: op: SYNTAX_OP_BIT_XOR: 
+                                                                SYNTAX_AST_KIND_LITERAL: 2:63~2:64: type SYNTAX_TYPE_I32, value 78
+                                                                SYNTAX_AST_KIND_LITERAL: 2:68~2:69: type SYNTAX_TYPE_I32, value 90
+                                                SYNTAX_AST_KIND_EXPR_LIST: 2:78~2:78: 
+                                                    SYNTAX_AST_KIND_LITERAL: 2:78~2:78: type SYNTAX_TYPE_I32, value 4
+                                            SYNTAX_AST_KIND_LITERAL: 2:81~2:81: type SYNTAX_TYPE_I32, value 5
+                                    SYNTAX_AST_KIND_LITERAL: 2:91~2:91: type SYNTAX_TYPE_I32, value 3
+                                    SYNTAX_AST_KIND_LITERAL: 2:98~2:98: type SYNTAX_TYPE_I32, value 4
+                                SYNTAX_AST_KIND_TYPE: 2:12~2:38: base type: SYNTAX_TYPE_FUNC, array levels: 0, child types: 
+                                    SYNTAX_AST_KIND_TYPE_LIST: 2:16~2:27: 
+                                        SYNTAX_AST_KIND_TYPE: 2:16~2:18: base type: SYNTAX_TYPE_I32, array levels: 0, child types: 
+                                        SYNTAX_AST_KIND_TYPE: 2:21~2:27: base type: SYNTAX_TYPE_I64, array levels: 2, child types: 
+                                    SYNTAX_AST_KIND_TYPE: 2:33~2:38: base type: SYNTAX_TYPE_BOOL, array levels: 1, child types: 
                 SYNTAX_AST_KIND_VAR_DECL: 3:3~3:59: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 3:7~3:58: 
                         SYNTAX_AST_KIND_VAR_INIT: 3:7~3:58: variable: x: 

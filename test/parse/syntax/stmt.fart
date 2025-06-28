@@ -68,13 +68,13 @@ class Stmt {
     while true {
       break;
     }
-    [a]
+    > a:
     for ; ; {
       while true {
         break b;
       }
     }
-    [b]
+    > b:
 
     # Return
     return 123+456*789%101112;

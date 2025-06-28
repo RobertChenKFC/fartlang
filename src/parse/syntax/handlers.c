@@ -444,23 +444,26 @@ ParserDeclareHandler(SyntaxHandlerVarName, rhs) {
 }
 
 ParserDeclareHandler(SyntaxHandlerExprAlloc, rhs) {
-  assert(rhs->size == 4);
-  LexerToken *new_ = rhs->arr[0];
-  SyntaxAST *expr = rhs->arr[1];
-  LexerToken *col_ = rhs->arr[2];
-  SyntaxAST *type = rhs->arr[3];
-  assert(new_ && new_->tokenID == NEW);
+  assert(rhs->size == 5);
+  LexerToken *lbrack_ = rhs->arr[0];
+  SyntaxAST *type = rhs->arr[1];
+  LexerToken *rbrack_ = rhs->arr[2];
+  LexerToken *mul_ = rhs->arr[3];
+  SyntaxAST *expr = rhs->arr[4];
+  assert(lbrack_ && lbrack_->tokenID == LBRACK);
   assert(expr);
-  assert(col_ && col_->tokenID == COL);
+  assert(rbrack_ && rbrack_->tokenID == RBRACK);
+  assert(mul_ && mul_->tokenID == MUL);
   assert(type);
 
   SyntaxAST *alloc = SyntaxASTNew(SYNTAX_AST_KIND_ALLOC);
   SyntaxASTAppend(alloc, expr);
   SyntaxASTAppend(alloc, type);
-  alloc->loc.from = new_->loc.from;
+  alloc->loc.from = lbrack_->loc.from;
 
-  LexerTokenDelete(new_);
-  LexerTokenDelete(col_);
+  LexerTokenDelete(lbrack_);
+  LexerTokenDelete(rbrack_);
+  LexerTokenDelete(mul_);
   return alloc;
 }
 
@@ -1709,12 +1712,12 @@ ParserDeclareHandler(SyntaxHandlerSwitchDefault, rhs) {
 
 ParserDeclareHandler(SyntaxHandlerLabel, rhs) {
   if (rhs->size == 3) {
-    LexerToken *lbrack_ = rhs->arr[0];
+    LexerToken *gt_ = rhs->arr[0];
     LexerToken *identifier_ = rhs->arr[1];
-    LexerToken *rbrack_ = rhs->arr[2];
-    assert(lbrack_ && lbrack_->tokenID == LBRACK);
+    LexerToken *col_ = rhs->arr[2];
+    assert(gt_ && gt_->tokenID == GT);
     assert(identifier_ && identifier_->tokenID == IDENTIFIER);
-    assert(rbrack_ && rbrack_->tokenID == RBRACK);
+    assert(col_ && col_->tokenID == COL);
 
     SyntaxAST *label = SyntaxASTNew(SYNTAX_AST_KIND_LABEL);
     char c = identifier_->str[identifier_->length];
@@ -1722,12 +1725,12 @@ ParserDeclareHandler(SyntaxHandlerLabel, rhs) {
     label->string = strdup(identifier_->str);
     label->stringLoc = identifier_->loc;
     identifier_->str[identifier_->length] = c;
-    label->loc.from = lbrack_->loc.from;
-    label->loc.to = rbrack_->loc.to;
+    label->loc.from = gt_->loc.from;
+    label->loc.to = col_->loc.to;
 
-    LexerTokenDelete(lbrack_);
+    LexerTokenDelete(gt_);
     LexerTokenDelete(identifier_);
-    LexerTokenDelete(rbrack_);
+    LexerTokenDelete(col_);
     return label;
   } else {
     assert(rhs->size == 0);
