@@ -456,7 +456,8 @@ ParserDeclareHandler(SyntaxHandlerExprAlloc, rhs) {
   assert(mul_ && mul_->tokenID == MUL);
   assert(type);
 
-  SyntaxAST *alloc = SyntaxASTNew(SYNTAX_AST_KIND_ALLOC);
+  SyntaxAST *alloc = SyntaxASTNew(SYNTAX_AST_KIND_OP);
+  alloc->op = SYNTAX_OP_ALLOC;
   SyntaxASTAppend(alloc, expr);
   SyntaxASTAppend(alloc, type);
   alloc->loc.from = lbrack_->loc.from;

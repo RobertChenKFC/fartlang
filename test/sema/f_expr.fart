@@ -1,4 +1,12 @@
 class Main {
+  # Allocation
+  var alloc_i32_signed : bool = [i32] * 5; # error
+  var alloc_i32_baseType : bool = [Hello] * 5u32; # error
+  var alloc_i32_1d : bool = [i32] * 5u32; # correct, type i32[]
+  var alloc_i32_2d : bool = [i32[]] * 5u32; # correct, type i32[][]
+  var alloc_Main_1d : bool = [Main] * 5u32; # correct, type Main[]
+  var alloc_Main_2d : bool = [Main[]] * 5u32; # correct, type Main[][]
+
   # Ternary operator
   var tern_i32: bool = 3 if true else 5; # correct, type i32
   var tern_cond = 3 if 4 else 5.; # error

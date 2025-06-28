@@ -157,6 +157,17 @@ bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2);
 void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
 // Checks if "type" is a class type
 bool SemaTypeIsClass(SemaType *type);
+// Checks if the expression inside the alloc "expr" is of unsigned type, and
+// the type inside the alloc "expr" is well formed. If so, return the type of
+// the alloc expression, which is the type inside the alloc "expr" with one
+// additional array level. Otherwise, return NULL. Remaining arguments are
+// used in the same way as all the type check functions above
+SemaType *SemaTypeCheckAlloc(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns a new type with one more array level than "baseType". If
+// "isBaseTypeOwner" is true, "baseType" is modified in place and returned if.
+// possible. Otherwise, another type is allocated
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1113,6 +1124,8 @@ SemaType *SemaTypeFromExpr(
     return SemaTypeFromTerm(expr, symbolTable, fileCtx);
   }
   switch (expr->op) {
+    case SYNTAX_OP_ALLOC:
+      return SemaTypeCheckAlloc(expr, symbolTable, fileCtx);
     case SYNTAX_OP_TERNARY:
       return SemaTypeCheckTernaryOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LOGIC_OR:
@@ -1302,6 +1315,8 @@ bool SemaTypeEqual(SemaType *type1, SemaType *type2) {
     case SEMA_TYPE_KIND_CLASS:
     case SEMA_TYPE_KIND_NAMESPACE:
       return type1->node == type2->node;
+    default:
+      assert(false);
   }
 }
 
@@ -1713,4 +1728,64 @@ void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx) {
 
 bool SemaTypeIsClass(SemaType *type) {
   return type->kind == SEMA_TYPE_KIND_CLASS;
+}
+
+SemaType *SemaTypeCheckAlloc(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *countExpr = expr->firstChild;
+  SyntaxAST *syntaxBaseType = expr->lastChild;
+  SemaType *countType = SemaTypeFromExpr(
+      expr->firstChild, symbolTable, fileCtx);
+  if (!countType) {
+    goto ALLOC_SKIP_COUNT_EXPR;
+  }
+  if (!SemaTypeIsUnsigned(countType)) {
+    SourceLocation *loc = &countExpr->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected expression to be of unsigned type, got type "
+            SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, countType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto ALLOC_SKIP_TYPE;
+  }
+  bool isTypeOwner;
+  SemaType *baseType = SemaTypeFromSyntaxType(syntaxBaseType, symbolTable,
+      fileCtx, expr, &isTypeOwner);
+  if (!baseType) {
+    goto ALLOC_SKIP_TYPE;
+  }
+  SemaType *type = SemaTypeIncreaseArrayLevel(baseType, isTypeOwner);
+  SemaTypeInfo *info = &expr->semaInfo.typeInfo;
+  info->type = type;
+  info->isTypeOwner = true;
+  return type;
+ALLOC_SKIP_COUNT_EXPR:
+  countExpr->semaInfo.skipAnalysis = true;
+ALLOC_SKIP_TYPE:
+  syntaxBaseType->semaInfo.skipAnalysis = true;
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner) {
+  bool baseTypeIsArray = baseType->kind == SEMA_TYPE_KIND_ARRAY;
+  if (isBaseTypeOwner && baseTypeIsArray) {
+    ++baseType->arrayLevels;
+    return baseType;
+  }
+  SemaType *type = malloc(sizeof(SemaType));
+  type->kind = SEMA_TYPE_KIND_ARRAY;
+  type->isBaseTypeOwner = isBaseTypeOwner;
+  if (baseTypeIsArray) {
+    // To avoid nested array types (an array type whose base type is also an
+    // array type), we specially handle array types here
+    type->baseType = baseType->baseType;
+    type->arrayLevels = baseType->arrayLevels + 1;
+  } else {
+    type->baseType = baseType;
+    type->arrayLevels = 1;
+  }
+  return type;
 }
