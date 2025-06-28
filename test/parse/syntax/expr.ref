@@ -7,7 +7,7 @@ SYNTAX_AST_KIND_MODULE: 1:1~20:1:
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 2:7~2:98: 
                         SYNTAX_AST_KIND_VAR_INIT: 2:7~2:98: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_ALLOC: 2:11~2:98: 
+                            SYNTAX_AST_KIND_OP: 2:11~2:98: op: SYNTAX_OP_ALLOC: 
                                 SYNTAX_AST_KIND_OP: 2:43~2:98: op: SYNTAX_OP_TERNARY: 
                                     SYNTAX_AST_KIND_MEMBER_ACCESS: 2:43~2:86: member: hey: 
                                         SYNTAX_AST_KIND_OP: 2:43~2:82: op: SYNTAX_OP_ARRAY_ACCESS: 
