@@ -353,9 +353,6 @@ ParserDeclareHandler(SyntaxHandlerPrimitiveType, rhs) {
     case ANY:
       baseType = SYNTAX_TYPE_ANY;
       break;
-    case VOID:
-      baseType = SYNTAX_TYPE_VOID;
-      break;
     default:
       abort();
   }

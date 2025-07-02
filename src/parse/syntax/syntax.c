@@ -74,7 +74,6 @@ enum {
   F32,
   BOOL,
   ANY,
-  VOID,
   COMMA,
   EQ,
   IF,
@@ -166,7 +165,6 @@ enum {
   METHOD_DECLS,
   METHOD_DECL,
   CONSTRUCTOR,
-  METHOD_DECL_PREFIX,
   METHOD_DECL_BODY,
   BODY,
   PARAM_LIST,
@@ -298,7 +296,6 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, f32_, RegexFromString("f32"));
     ADD_REGEX_CHAIN(chain, bool_, RegexFromString("bool"));
     ADD_REGEX_CHAIN(chain, any_, RegexFromString("any"));
-    ADD_REGEX_CHAIN(chain, void_, RegexFromString("void"));
     ADD_REGEX_CHAIN(chain, comma_, RegexFromLetter(','));
     ADD_REGEX_CHAIN(chain, eq_, RegexFromLetter('='));
     ADD_REGEX_CHAIN(chain, if_, RegexFromString("if"));
@@ -488,7 +485,6 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, f32_) == F32);
     assert(LexerConfigAddRegex(lexerConfig, bool_) == BOOL);
     assert(LexerConfigAddRegex(lexerConfig, any_) == ANY);
-    assert(LexerConfigAddRegex(lexerConfig, void_) == VOID);
     assert(LexerConfigAddRegex(lexerConfig, comma_) == COMMA);
     assert(LexerConfigAddRegex(lexerConfig, eq_) == EQ);
     assert(LexerConfigAddRegex(lexerConfig, if_) == IF);
@@ -606,7 +602,6 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == METHOD_DECLS);
       assert(CFGAddVariable(cfg) == METHOD_DECL);
       assert(CFGAddVariable(cfg) == CONSTRUCTOR);
-      assert(CFGAddVariable(cfg) == METHOD_DECL_PREFIX);
       assert(CFGAddVariable(cfg) == METHOD_DECL_BODY);
       assert(CFGAddVariable(cfg) == BODY);
       assert(CFGAddVariable(cfg) == PARAM_LIST);
@@ -1011,6 +1006,9 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           RETURN_STMT, 2, RETURN, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnStmt,
           RETURN_STMT, 3, RETURN, EXPR, SEMICOL);
+
+      // DEBUG
+      parserConfig->htmlFilePath = "visualize.html";
       
       // Create parser
       parser = ParserFromConfig(parserConfig);

@@ -71,6 +71,12 @@ int ParserLookaheadActionCmp(const void *a, const void *b);
 void ParserLR1StatePrint(LR1State *state, HashTable *toRuleNo,
                          Vector *lhsStrings, Vector *rhsStrings,
                          const char *prefix);
+// Print LR(1) or LALR(1) state graph. A map "toStateNo" must be provided that
+// maps a LR1State to an integer representing the state number, and a similar
+// map "toRuleNo" for CFGRule
+void ParserPrintLR1StateGraph(
+    CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
+    HashTable *toStateNo, HashTable *toRuleNo, FILE *file);
 
 ParserObject *ParserObjectFromToken(LexerToken *token) {
   ParserObject *parserObj = malloc(sizeof(ParserObject));
@@ -149,6 +155,7 @@ ParserConfig *ParserConfigNew(
   config->lhsStrings = VectorNew();
   config->rhsStrings = VectorNew();
   config->conflictResolution = VectorNew();
+  config->htmlFilePath = NULL;
   return config;
 }
 
@@ -171,6 +178,7 @@ Parser *ParserFromConfig(ParserConfig *config) {
   Vector *lhsStrings = config->lhsStrings;
   Vector *rhsStrings = config->rhsStrings;
   Vector *conflictResolution = config->conflictResolution;
+  const char *htmlFilePath = config->htmlFilePath;
   free(config);
 
   // Parse the CFG RHS and RHS strings to extract the token strings
@@ -301,6 +309,24 @@ Parser *ParserFromConfig(ParserConfig *config) {
     }
   }
   int numStates = stateNoToStateEntry->size;
+
+  if (htmlFilePath) {
+    Vector *tokens = VectorNew();
+    Vector *variables = VectorNew();
+    for (int i = 0; i < cfg->numVariables; ++i) {
+      VectorAdd(variables, varStrings[i]);
+    }
+    for (int i = 0; i < cfg->numTokens; ++i) {
+      VectorAdd(tokens, tokenStrings[i]);
+    }
+    VectorAdd(tokens, "$end");
+    FILE *tmpFile = fopen(htmlFilePath, "w");
+    ParserPrintLR1StateGraph(
+        cfg, graph, tokens, variables, toStateNo, toRuleNo, tmpFile);
+    fclose(tmpFile);
+    VectorDelete(tokens);
+    VectorDelete(variables);
+  }
 
   Parser *parser = NULL;
   Vector *transitionStateFroms = VectorNew();
@@ -912,4 +938,198 @@ void ParserLR1StatePrint(LR1State *state, HashTable *toRuleNo,
       fprintf(stderr, " •");
     fprintf(stderr, "\n");
   }
+}
+
+void ParserPrintLR1StateGraph(
+    CFG *cfg, LR1StateGraph *graph, Vector *tokens, Vector *variables,
+    HashTable *states, HashTable *rulesToIdx, FILE *file) {
+  Vector *rules = cfg->rules;
+
+  fprintf(file, "<!DOCTYPE html>\n");
+  fprintf(file, "<html lang=\"en\">\n");
+  fprintf(file, "<head>\n");
+  fprintf(file, "    <title>LR(1) Graph</title>\n");
+  fprintf(file, "    <style>\n");
+  fprintf(file, "        body {\n");
+  fprintf(file, "            font-family: \"Source Code Pro\", \"Consolas\", "
+      "\"Monaco\", \"Courier New\", monospace;\n");
+  fprintf(file, "        }\n");
+  fprintf(file, "        .square-list {\n");
+  fprintf(file, "            list-style-type: square;\n");
+  fprintf(file, "        }\n");
+  fprintf(file, "    </style>\n");
+  fprintf(file, "</head>\n");
+  fprintf(file, "<body>\n");
+  fprintf(file, "    <header>\n");
+  fprintf(file, "        <h1>LR(1) Graph</h1>\n");
+  fprintf(file, "    </header>\n");
+  fprintf(file, "    <main>\n");
+
+  fprintf(file, "    <h2>Rules</h2>\n");
+  int numRules = rules->size;
+  for (int i = 0; i < numRules; ++i) {
+    CFGRule *rule = rules->arr[i];
+    int *rhs = rule->rhs;
+    int numRHS = rule->numRHS;
+    HashTableEntry *ruleEntry = HashTableEntryRetrieve(rulesToIdx, rule);
+    assert(ruleEntry);
+    int ruleNo = (int)(long long)ruleEntry->value;
+    
+    fprintf(file, "    <section id=\"rule-%d\">\n", ruleNo);
+    fprintf(file, "        <h3>Rule %d</h3>\n", ruleNo);
+    fprintf(file, "        <ul class=\"square-list\">\n");
+    fprintf(file, "            <li>%s →",
+        (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, rule->lhs)]);
+    for (int j = 0; j < numRHS; ++j) {
+      int id = rhs[j];
+      char *idStr;
+      if (CFG_IS_TOKEN_ID(cfg, id))
+        idStr = (char*)tokens->arr[id];
+      else
+        idStr = (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)];
+      fprintf(file, " %s", idStr);
+    }
+    fprintf(file, "\n");
+    fprintf(file, "        </ul>\n");
+    fprintf(file, "    </section>\n");
+  }
+
+  fprintf(file, "    <h2>States</h2>\n");
+
+  int stateIdx = 0;
+  for (HashTableEntry *entry = states->head; entry;
+       entry = entry->nextInTable, ++stateIdx) {
+    fprintf(file, "    <section id=\"state-%d\">\n", stateIdx);
+    if (entry != states->head) {
+      fprintf(file, "    <hr>\n");
+    }
+    fprintf(file, "        <h3>State %d</h3>\n", stateIdx);
+    fprintf(file, "        <h4>Item Set</h4>\n");
+    fprintf(file, "        <ul class=\"square-list\">\n");
+
+    LR1State *state = entry->key;
+    HashTable *items = state->items;
+    for (HashTableEntry *entryItem = items->head; entryItem;
+         entryItem = entryItem->nextInTable) {
+      LR1SymbolString *string = entryItem->key;
+      Vector *lookaheads = entryItem->value;
+      CFGRule *rule = string->rule;
+      int lhs = rule->lhs;
+      int *rhs = rule->rhs;
+      int numRHS = rule->numRHS;
+      int dot = string->dot;
+      fprintf(file, "            <li>%s →",
+          (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, lhs)]);
+      for (int j = 0; j < numRHS; ++j) {
+        fprintf(file, " ");
+        if (j == dot) {
+          fprintf(file, "• ");
+        }
+        int id = rhs[j];
+        char *idStr;
+        if (CFG_IS_TOKEN_ID(cfg, id))
+          idStr = (char*)tokens->arr[id];
+        else
+          idStr = (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)];
+        fprintf(file, "%s", idStr);
+      }
+      if (dot == numRHS) {
+        fprintf(file, " •");
+      }
+
+      // Note: bison only prints lookaheads in LR(1) items whose dot is at the
+      // end of the rule (i.e. a reduction can be performed). This is most
+      // likely because lookaheads are only useful for identifying whether a
+      // reduction can be performed or not, even though different states may
+      // look identical if only these lookaheads are printed.
+      if (dot == rule->numRHS) {
+        fprintf(file, " [");
+        for (int i = 0; i < lookaheads->size; ++i) {
+          if (i != 0) {
+            fprintf(file, ", ");
+          }
+          int tokenId = (int)(int64_t)lookaheads->arr[i];
+          fprintf(file, "%s", (char*)tokens->arr[tokenId]);
+        }
+        fprintf(file, "]");
+      }
+      fprintf(file, "</li>\n");
+    }
+    fprintf(file, "        </ul>\n");
+
+    fprintf(file, "        <h4>Actions</h4>\n");
+    fprintf(file, "        <ul>\n");
+    for (LR1Transition *transition = state->transition; transition;
+         transition = transition->next) {
+      int id = transition->id;
+      LR1State *otherState = transition->state;
+      HashTableEntry *otherStateEntry = HashTableEntryRetrieve(
+          states, otherState);
+      assert(otherStateEntry);
+      int otherStateIdx = (int)(int64_t)otherStateEntry->value;
+      if (CFG_IS_TOKEN_ID(cfg, id)) {
+
+        fprintf(file, "            <li>Shift %s and go to state "
+            "<a href=\"#state-%d\">%d</a></li>\n", (char*)tokens->arr[id],
+            otherStateIdx, otherStateIdx);
+      } else {
+        fprintf(file, "            <li>Shift %s and go to state "
+            "<a href=\"#state-%d\">%d</a></li>\n",
+            (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)],
+            otherStateIdx, otherStateIdx);
+      }
+    }
+    for (HashTableEntry *entryItem = items->head; entryItem;
+         entryItem = entryItem->nextInTable) {
+      LR1SymbolString *string = entryItem->key;
+      Vector *lookaheads = entryItem->value;
+      CFGRule *rule = string->rule;
+      HashTableEntry *ruleEntry = HashTableEntryRetrieve(rulesToIdx, rule);
+      assert(ruleEntry);
+      int ruleNo = (int)(int64_t)ruleEntry->value;
+      int dot = string->dot;
+      int numRHS = rule->numRHS;
+      if (dot == numRHS) {
+        int lhs = rule->lhs;
+        int *rhs = rule->rhs;
+        fprintf(file, "            <li>Reduce using rule <a href=\"#rule-%d\">"
+            "%d</a>: %s →", ruleNo, ruleNo,
+            (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, lhs)]);
+        for (int j = 0; j < numRHS; ++j) {
+          fprintf(file, " ");
+          if (j == dot) {
+            fprintf(file, "• ");
+          }
+          int id = rhs[j];
+          char *idStr;
+          if (CFG_IS_TOKEN_ID(cfg, id))
+            idStr = (char*)tokens->arr[id];
+          else
+            idStr = (char*)variables->arr[CFG_VARIABLE_ID_TO_IDX(cfg, id)];
+          fprintf(file, "%s", idStr);
+        }
+        if (dot == numRHS) {
+          fprintf(file, " •");
+        }
+        fprintf(file, " [");
+        for (int i = 0; i < lookaheads->size; ++i) {
+          if (i != 0) {
+            fprintf(file, ", ");
+          }
+          int tokenId = (int)(int64_t)lookaheads->arr[i];
+          fprintf(file, "%s", (char*)tokens->arr[tokenId]);
+        }
+        fprintf(file, "]");
+        fprintf(file, "</li>\n");
+
+      }
+    }
+
+    fprintf(file, "        </ul>\n");
+    fprintf(file, "    </section>\n");
+
+  }
+
+  fprintf(file, "</main>\n");
+  fprintf(file, "</body>\n");
 }
