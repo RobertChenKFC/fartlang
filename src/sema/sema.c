@@ -176,6 +176,24 @@ SemaType *SemaTypeCheckShiftOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is an integral type
 bool SemaTypeIsIntegral(SemaType *type);
+// Checks if applying type unification to the left and right operands of "expr"
+// results in a numeric type. If so, return the unified type, otherwise return
+// NULL. Additional type checks are performed for specific arithmetic operators
+// with the helper functions below. The remaining arguments are used in the same
+// way as all the type check functions above
+SemaType *SemaTypeCheckArithOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if "type" is a numeric type
+bool SemaTypeIsNumeric(SemaType *type);
+// Check if "leftOperandType" and "rightOperandType" are both integral types.
+// The remaining arguments are used for error reporting
+bool SemaTypeCheckModOp(
+    SyntaxAST *leftOperand, SemaType *leftOperandType, SyntaxAST *rightOperand,
+    SemaType *rightOperandType, SemaFileCtx *fileCtx);
+// Check if "operandType" is not an unsigned types. The remaining arguments are
+// used for error reporting
+bool SemaTypeCheckNegOp(
+    SyntaxAST *operand, SemaType *operandType, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1138,6 +1156,7 @@ SemaType *SemaTypeFromExpr(
       return SemaTypeCheckTernaryOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LOGIC_OR:
     case SYNTAX_OP_LOGIC_AND:
+    case SYNTAX_OP_NOT:
       return SemaTypeCheckLogicOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_BIT_OR:
     case SYNTAX_OP_BIT_AND:
@@ -1154,6 +1173,13 @@ SemaType *SemaTypeFromExpr(
     case SYNTAX_OP_LSHIFT:
     case SYNTAX_OP_RSHIFT:
       return SemaTypeCheckShiftOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_ADD:
+    case SYNTAX_OP_SUB:
+    case SYNTAX_OP_MUL:
+    case SYNTAX_OP_DIV:
+    case SYNTAX_OP_MOD:
+    case SYNTAX_OP_NEG:
+      return SemaTypeCheckArithOp(expr, symbolTable, fileCtx);
     default:
       assert(false);
   }
@@ -1690,11 +1716,29 @@ SemaType *SemaTypeUnification(
     SemaType *type1, SemaType *type2, bool *isTypeOwner) {
   *isTypeOwner = false;
   if ((SemaTypeIsSigned(type1) && SemaTypeIsSigned(type2)) ||
-      (SemaTypeIsUnsigned(type1) && SemaTypeIsUnsigned(type2)) ||
-      (SemaTypeIsFloat(type1) && SemaTypeIsFloat(type2))) {
+      (SemaTypeIsUnsigned(type1) && SemaTypeIsUnsigned(type2))) {
     SemaType *ret =
         SemaTypeBitwidth(type1) >= SemaTypeBitwidth(type2) ? type1 : type2;
     return ret;
+  }
+  if ((SemaTypeIsFloat(type1) && SemaTypeIsNumeric(type2)) ||
+      (SemaTypeIsNumeric(type1) && SemaTypeIsFloat(type2))) {
+    int width1 = SemaTypeBitwidth(type1);
+    int width2 = SemaTypeBitwidth(type2);
+    int width = width1 > width2 ? width1 : width2;
+    SemaType *type = malloc(sizeof(SemaType));
+    *isTypeOwner = true;
+    switch (width) {
+      case 32:
+        SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_F32);
+        break;
+      case 64:
+        SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_F64);
+        break;
+      default:
+        assert(false);
+    }
+    return type;
   }
   if (SemaTypeIsClass(type1) && SemaTypeIsPrimType(type2, SEMA_PRIM_TYPE_NIL)) {
     return type1;
@@ -1849,4 +1893,136 @@ CLEANUP:
 
 bool SemaTypeIsIntegral(SemaType *type) {
   return SemaTypeIsSigned(type) || SemaTypeIsUnsigned(type);
+}
+
+SemaType *SemaTypeCheckArithOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *leftOperand = expr->firstChild;
+  SemaType *leftOperandType = SemaTypeFromExpr(
+      leftOperand, symbolTable, fileCtx);
+  if (!leftOperandType) {
+    goto CLEANUP_LEFT_OPERAND;
+  }
+  bool hasOneOperand = expr->op == SYNTAX_OP_NEG;
+  SyntaxAST *rightOperand;
+  SemaType *rightOperandType;
+  if (!hasOneOperand) {
+    rightOperand = leftOperand->sibling;
+    assert(!rightOperand->sibling);
+    rightOperandType = SemaTypeFromExpr(rightOperand, symbolTable, fileCtx);
+    if (!rightOperandType) {
+      goto CLEANUP_RIGHT_OPERAND;
+    }
+  }
+  SemaType *exprType;
+  bool isTypeOwner;
+  if (hasOneOperand) {
+    exprType = leftOperandType;
+    isTypeOwner = false;
+  } else {
+    exprType = SemaTypeUnification(
+        leftOperandType, rightOperandType, &isTypeOwner);
+  }
+  if (!SemaTypeIsNumeric(exprType)) {
+    if (hasOneOperand) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
+    } else {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+      SemaTypePrint(stderr, rightOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" result in non-numeric type "
+          SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, exprType);
+      fprintf(stderr, SOURCE_COLOR_RESET"\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &leftOperand->loc,
+            SOURCE_COLOR_BLUE, &rightOperand->loc);
+      if (isTypeOwner) {
+        SemaTypeDelete(exprType);
+      }
+    }
+    goto CLEANUP;
+  }
+  bool typeCheckSucceeds;
+  switch (expr->op) {
+    case SYNTAX_OP_MOD:
+      typeCheckSucceeds = SemaTypeCheckModOp(
+          leftOperand, leftOperandType, rightOperand, rightOperandType,
+          fileCtx);
+      break;
+    case SYNTAX_OP_NEG:
+      typeCheckSucceeds = SemaTypeCheckNegOp(
+          leftOperand, leftOperandType, fileCtx);
+      break;
+    default:
+      typeCheckSucceeds = true;
+      break;
+  }
+  if (!typeCheckSucceeds) {
+    if (isTypeOwner) {
+      SemaTypeDelete(exprType);
+    }
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = exprType;
+  typeInfo->isTypeOwner = isTypeOwner;
+  return exprType;
+CLEANUP_LEFT_OPERAND:
+  leftOperand->semaInfo.skipAnalysis = true;
+CLEANUP_RIGHT_OPERAND:
+  rightOperand->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsNumeric(SemaType *type) {
+  return SemaTypeIsIntegral(type) || SemaTypeIsFloat(type);
+}
+
+bool SemaTypeCheckModOp(
+    SyntaxAST *leftOperand, SemaType *leftOperandType, SyntaxAST *rightOperand,
+    SemaType *rightOperandType, SemaFileCtx *fileCtx) {
+  SyntaxAST *operands[] = {leftOperand, rightOperand};
+  SemaType *operandTypes[] = {leftOperandType, rightOperandType};
+  for (int i = 0; i < 2; ++i) {
+    SyntaxAST *operand = operands[i];
+    SemaType *operandType = operandTypes[i];
+    if (!SemaTypeIsIntegral(operandType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+      fprintf(stderr, "expected integral type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SemaTypeCheckNegOp(
+    SyntaxAST *operand, SemaType *operandType, SemaFileCtx *fileCtx) {
+  if (SemaTypeIsUnsigned(operandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected float or signed type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    return false;
+  }
+  return true;
 }

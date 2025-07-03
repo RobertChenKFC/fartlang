@@ -20,8 +20,8 @@
    15 |   var tern_unsigned: [32;1mbool[0m = [31;1m'a' if true else 5u32[0m; # correct, type u32
 [31;1m[Error][0m f_expr.fart:16: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
    16 |   var tern_float: [32;1mbool[0m = [31;1m3.f64 if true else 5.[0m; # correct, type f64
-[31;1m[Error][0m f_expr.fart:17: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
-   17 |   var tern_any: [32;1mbool[0m = [31;1m3 if true else 5.[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:17: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   17 |   var tern_f32: [32;1mbool[0m = [31;1m3 if true else 5.[0m; # correct, type f32
 [31;1m[Error][0m f_expr.fart:20: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
    20 |   var bit_i32: [32;1mbool[0m = [31;1m3 ^ 5[0m; # correct, type i32
 [31;1m[Error][0m f_expr.fart:21: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
@@ -63,10 +63,40 @@
 [31;1m[Error][0m f_expr.fart:43: operand of [31;1mnon-numeric[0m type does not match operand of [32;1msigned[0m type
    43 |   var comp_wrong = [32;1m3[0m < [31;1mtrue[0m; # error
 [31;1m[Error][0m f_expr.fart:46: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
-   46 |   var shift_i32 : [32;1mbool[0m = [31;1m3 << 5u32[0m;
+   46 |   var shift_i32 : [32;1mbool[0m = [31;1m3 << 5u32[0m; # correct, type i32
 [31;1m[Error][0m f_expr.fart:47: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
-   47 |   var shift_u16 : [32;1mbool[0m = [31;1m3u16 << 'h'[0m;
+   47 |   var shift_u16 : [32;1mbool[0m = [31;1m3u16 << 'h'[0m; # correct, type u16
 [31;1m[Error][0m f_expr.fart:48: expected integral type for shift operand, got [31;1mf32[0m instead
-   48 |   var shift_not_integral = [31;1m3.[0m << 3u32;
+   48 |   var shift_not_integral = [31;1m3.[0m << 3u32; # error
 [31;1m[Error][0m f_expr.fart:49: expected unsigned type for shift operand, got [31;1mi32[0m instead
-   49 |   var shift_not_unsigned = 3 << [31;1m3[0m;
+   49 |   var shift_not_unsigned = 3 << [31;1m3[0m; # error
+[31;1m[Error][0m f_expr.fart:52: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   52 |   var arith_i32 : [32;1mbool[0m = [31;1m3 + 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:53: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   53 |   var arith_3_op_i32 : [32;1mbool[0m = [31;1m3 - 5 - 7[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:54: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+   54 |   var arith_unify_u32 : [32;1mbool[0m = [31;1m3u8 * 5u16 * 7u32[0m; # correct, type u32
+[31;1m[Error][0m f_expr.fart:55: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   55 |   var arith_unify_f32 : [32;1mbool[0m = [31;1m3i8 / 5i16 / 7.[0m; # correct, type f32
+[31;1m[Error][0m f_expr.fart:56: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   56 |   var arith_unify_f64 : [32;1mbool[0m = [31;1m3u8 + 3.f64[0m; # correct, type f64
+[31;1m[Error][0m f_expr.fart:57: unification of [33;1mi32[0m and [34;1mu32[0m result in non-numeric type [31;1many[0m
+   57 |   var arith_unify_signed_unsigned = [33;1m3[0m - [34;1m5u32[0m; # error
+[31;1m[Error][0m f_expr.fart:58: unification of [33;1mi32[0m and [34;1mbool[0m result in non-numeric type [31;1many[0m
+   58 |   var arith_unify_non_numeric = [33;1m3[0m * [34;1mfalse[0m; # error
+[31;1m[Error][0m f_expr.fart:59: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   59 |   var arith_rem : [32;1mbool[0m = [31;1m3 % 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:60: expected integral type, got [31;1mf32[0m instead
+   60 |   var arith_rem_integral_1 = [31;1m3.[0m % 5; # error
+[31;1m[Error][0m f_expr.fart:61: expected integral type, got [31;1mf64[0m instead
+   61 |   var arith_rem_integral_2 = 3 % [31;1m3.f64[0m; # error
+[31;1m[Error][0m f_expr.fart:62: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   62 |   var arith_neg : [32;1mbool[0m = [31;1m-3[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:63: expected float or signed type, got [31;1mu32[0m instead
+   63 |   var arith_neg_unsigned = -[31;1m3u32[0m; # error
+[31;1m[Error][0m f_expr.fart:64: expected numeric type, got [31;1mbool[0m instead
+   64 |   var arith_neg_non_numeric = -[31;1mtrue[0m; # error
+[31;1m[Error][0m f_expr.fart:65: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   65 |   var arith_lneg : [32;1mi32[0m = [31;1mnot true[0m; # error
+[31;1m[Error][0m f_expr.fart:66: expected operand of logical operator to be of type bool, got type [31;1mi32[0m instead
+   66 |   var arith_lneg_non_bool : i32 = not [31;1m10[0m; # correct, type bool

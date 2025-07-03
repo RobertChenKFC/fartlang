@@ -14,7 +14,7 @@ class Main {
   var tern_signed: bool = 3 if true else 5i64; # correct, type i64
   var tern_unsigned: bool = 'a' if true else 5u32; # correct, type u32
   var tern_float: bool = 3.f64 if true else 5.; # correct, type f64
-  var tern_any: bool = 3 if true else 5.; # correct, type any
+  var tern_f32: bool = 3 if true else 5.; # correct, type f32
 
   # Bitwise operator
   var bit_i32: bool = 3 ^ 5; # correct, type i32
@@ -43,8 +43,25 @@ class Main {
   var comp_wrong = 3 < true; # error
 
   # Shift operator
-  var shift_i32 : bool = 3 << 5u32;
-  var shift_u16 : bool = 3u16 << 'h';
-  var shift_not_integral = 3. << 3u32;
-  var shift_not_unsigned = 3 << 3;
+  var shift_i32 : bool = 3 << 5u32; # correct, type i32
+  var shift_u16 : bool = 3u16 << 'h'; # correct, type u16
+  var shift_not_integral = 3. << 3u32; # error
+  var shift_not_unsigned = 3 << 3; # error
+
+  # Arithmetic operator
+  var arith_i32 : bool = 3 + 5; # correct, type i32
+  var arith_3_op_i32 : bool = 3 - 5 - 7; # correct, type i32
+  var arith_unify_u32 : bool = 3u8 * 5u16 * 7u32; # correct, type u32
+  var arith_unify_f32 : bool = 3i8 / 5i16 / 7.; # correct, type f32
+  var arith_unify_f64 : bool = 3u8 + 3.f64; # correct, type f64
+  var arith_unify_signed_unsigned = 3 - 5u32; # error
+  var arith_unify_non_numeric = 3 * false; # error
+  var arith_rem : bool = 3 % 5; # correct, type i32
+  var arith_rem_integral_1 = 3. % 5; # error
+  var arith_rem_integral_2 = 3 % 3.f64; # error
+  var arith_neg : bool = -3; # correct, type i32
+  var arith_neg_unsigned = -3u32; # error
+  var arith_neg_non_numeric = -true; # error
+  var arith_lneg : i32 = not true; # error
+  var arith_lneg_non_bool : i32 = not 10; # correct, type bool
 }
