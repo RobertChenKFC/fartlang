@@ -157,7 +157,7 @@ bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2);
 void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
 // Checks if "type" is a class type
 bool SemaTypeIsClass(SemaType *type);
-// Checks if the expression inside the alloc "expr" is of unsigned type, and
+// Checks if the expresShiftOpinside the alloc "expr" is of unsigned type, and
 // the type inside the alloc "expr" is well formed. If so, return the type of
 // the alloc expression, which is the type inside the alloc "expr" with one
 // additional array level. Otherwise, return NULL. Remaining arguments are
@@ -168,6 +168,14 @@ SemaType *SemaTypeCheckAlloc(
 // "isBaseTypeOwner" is true, "baseType" is modified in place and returned if.
 // possible. Otherwise, another type is allocated
 SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner);
+// Checks if the left operand of the shift expression "expr" is of integral
+// type, and the right operand is of unsigned type. If so, return the type of
+// the shift expression, otherwise return NULL. The remaining arguments are
+// used in the same way as all the type check functions above
+SemaType *SemaTypeCheckShiftOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if "type" is an integral type
+bool SemaTypeIsIntegral(SemaType *type);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1143,6 +1151,9 @@ SemaType *SemaTypeFromExpr(
     case SYNTAX_OP_GT:
     case SYNTAX_OP_GE:
       return SemaTypeCheckComparisonOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_LSHIFT:
+    case SYNTAX_OP_RSHIFT:
+      return SemaTypeCheckShiftOp(expr, symbolTable, fileCtx);
     default:
       assert(false);
   }
@@ -1419,11 +1430,10 @@ SemaType *SemaTypeCheckBitwiseOp(
   if (!firstOperandType) {
     goto CLEANUP;
   }
-  if (!SemaTypeIsSigned(firstOperandType) &&
-      !SemaTypeIsUnsigned(firstOperandType)) {
+  if (!SemaTypeIsIntegral(firstOperandType)) {
     fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
             " %s:%d: ", fileCtx->path, firstOperand->loc.from.lineNo + 1);
-    fprintf(stderr, "expected signed or unsigned type for bitwise operand, "
+    fprintf(stderr, "expected integral type for bitwise operand, "
             "got "SOURCE_COLOR_RED);
     SemaTypePrint(stderr, firstOperandType);
     fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
@@ -1498,8 +1508,8 @@ SemaType *SemaTypeCheckTernaryOp(
   SemaType *unifiedType = SemaTypeUnification(
       trueType, falseType, &typeInfo->isTypeOwner);
   if (!unifiedType) {
-    SemaErrorIfVoid(trueType, trueNode, fileCtx);
-    SemaErrorIfVoid(falseType, falseType, fileCtx);
+    SemaErrorIfVoid(trueNode, trueType, fileCtx);
+    SemaErrorIfVoid(falseNode, falseType, fileCtx);
     goto TERNARY_OP_SKIP_EXPR;
   }
   typeInfo->type = unifiedType;
@@ -1788,4 +1798,55 @@ SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner) {
     type->arrayLevels = 1;
   }
   return type;
+}
+
+SemaType *SemaTypeCheckShiftOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *leftOperand = expr->firstChild;
+  SyntaxAST *rightOperand = leftOperand->sibling;
+  assert(!rightOperand->sibling);
+  SemaType *leftOperandType = SemaTypeFromExpr(
+      leftOperand, symbolTable, fileCtx);
+  if (!leftOperandType) {
+    goto CLEANUP_LEFT_OPERAND;
+  }
+  if (!SemaTypeIsIntegral(leftOperandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected integral type for shift operand, "
+            "got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, leftOperandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
+    goto CLEANUP_RIGHT_OPERAND;
+  }
+  SemaType *rightOperandType = SemaTypeFromExpr(
+      rightOperand, symbolTable, fileCtx);
+  if (!SemaTypeIsUnsigned(rightOperandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected unsigned type for shift operand, got "
+            SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, rightOperandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &rightOperand->loc);
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = leftOperandType;
+  typeInfo->isTypeOwner = false;
+  return leftOperandType;
+CLEANUP_LEFT_OPERAND:
+  leftOperand->semaInfo.skipAnalysis = true;
+CLEANUP_RIGHT_OPERAND:
+  rightOperand->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsIntegral(SemaType *type) {
+  return SemaTypeIsSigned(type) || SemaTypeIsUnsigned(type);
 }

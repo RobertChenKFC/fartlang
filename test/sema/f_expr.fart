@@ -41,4 +41,10 @@ class Main {
   var comp_eq_f64: i32 = 3. == 5. != 7.f64; # correct, type bool
   var comp_mix = 3 < 5u32 <= 7.; # error
   var comp_wrong = 3 < true; # error
+
+  # Shift operator
+  var shift_i32 : bool = 3 << 5u32;
+  var shift_u16 : bool = 3u16 << 'h';
+  var shift_not_integral = 3. << 3u32;
+  var shift_not_unsigned = 3 << 3;
 }

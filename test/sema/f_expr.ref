@@ -32,11 +32,11 @@
    23 |   var bit_not: [32;1mbool[0m = [31;1m~9[0m; # correct, type i32
 [31;1m[Error][0m f_expr.fart:24: bitwise operand of type [31;1mu16[0m does not match first operand of type [32;1mu8[0m
    24 |   var bit_mismatch = [32;1m3u8[0m & [31;1m5u16[0m; # error
-[31;1m[Error][0m f_expr.fart:25: expected signed or unsigned type for bitwise operand, got [31;1mf32[0m instead
+[31;1m[Error][0m f_expr.fart:25: expected integral type for bitwise operand, got [31;1mf32[0m instead
    25 |   var bit_f32 = [31;1m1.[0m ^ 2.; # error
-[31;1m[Error][0m f_expr.fart:26: expected signed or unsigned type for bitwise operand, got [31;1mbool[0m instead
+[31;1m[Error][0m f_expr.fart:26: expected integral type for bitwise operand, got [31;1mbool[0m instead
    26 |   var bit_bool = [31;1mtrue[0m ^ false; # error
-[31;1m[Error][0m f_expr.fart:27: expected signed or unsigned type for bitwise operand, got [31;1mbool[0m instead
+[31;1m[Error][0m f_expr.fart:27: expected integral type for bitwise operand, got [31;1mbool[0m instead
    27 |   var bit_nested_bool = ([31;1mtrue[0m & true) ^ false; # error
 [31;1m[Error][0m f_expr.fart:30: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
    30 |   var logic_and: [32;1mi32[0m = [31;1mtrue and false[0m; # correct, type bool
@@ -62,3 +62,11 @@
    42 |   var comp_mix = [32;1m3[0m < [31;1m5u32[0m <= 7.; # error
 [31;1m[Error][0m f_expr.fart:43: operand of [31;1mnon-numeric[0m type does not match operand of [32;1msigned[0m type
    43 |   var comp_wrong = [32;1m3[0m < [31;1mtrue[0m; # error
+[31;1m[Error][0m f_expr.fart:46: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   46 |   var shift_i32 : [32;1mbool[0m = [31;1m3 << 5u32[0m;
+[31;1m[Error][0m f_expr.fart:47: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
+   47 |   var shift_u16 : [32;1mbool[0m = [31;1m3u16 << 'h'[0m;
+[31;1m[Error][0m f_expr.fart:48: expected integral type for shift operand, got [31;1mf32[0m instead
+   48 |   var shift_not_integral = [31;1m3.[0m << 3u32;
+[31;1m[Error][0m f_expr.fart:49: expected unsigned type for shift operand, got [31;1mi32[0m instead
+   49 |   var shift_not_unsigned = 3 << [31;1m3[0m;
