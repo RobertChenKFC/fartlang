@@ -247,8 +247,8 @@ SYNTAX_AST_KIND_MODULE: 1:1~202:1:
                                     SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
                                     SYNTAX_AST_KIND_OP: 73:19~73:40: op: SYNTAX_OP_ADD: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 73:19~73:22: from: 
-                                        SYNTAX_AST_KIND_OP: 73:27~73:40: op: SYNTAX_OP_DIV: 
-                                            SYNTAX_AST_KIND_OP: 73:27~73:35: op: SYNTAX_OP_SUB: 
+                                        SYNTAX_AST_KIND_OP: 73:26~73:40: op: SYNTAX_OP_DIV: 
+                                            SYNTAX_AST_KIND_OP: 73:26~73:36: op: SYNTAX_OP_SUB: 
                                                 SYNTAX_AST_KIND_IDENTIFIER: 73:27~73:28: to: 
                                                 SYNTAX_AST_KIND_IDENTIFIER: 73:32~73:35: from: 
                                             SYNTAX_AST_KIND_LITERAL: 73:40~73:40: type SYNTAX_TYPE_I32, value 2
