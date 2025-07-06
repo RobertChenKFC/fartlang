@@ -100,3 +100,33 @@
    65 |   var arith_lneg : [32;1mi32[0m = [31;1mnot true[0m; # error
 [31;1m[Error][0m f_expr.fart:66: expected operand of logical operator to be of type bool, got type [31;1mi32[0m instead
    66 |   var arith_lneg_non_bool : i32 = not [31;1m10[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:69: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   69 |   var cast_as_i32 : [32;1mbool[0m = [31;1m10u32 as i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:70: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   70 |   var cast_as_i32_2 : [32;1mbool[0m = [31;1m10u16 as i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:71: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   71 |   var cast_as_any : [32;1mbool[0m = [31;1m10 as any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:72: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   72 |   var cast_is_i32 : [32;1mi32[0m = [31;1m(1 as any) is i32[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:73: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   73 |   var cast_is_u32 : [32;1mi32[0m = [31;1m(1 as any) is u32[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:74: expected type any, got [31;1mi32[0m instead
+   74 |   var cast_is_fail : i32 = [31;1m1[0m is u32; # error
+[31;1m[Error][0m f_expr.fart:75: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   75 |   var cast_into_any : [32;1mbool[0m = [31;1m1 into any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:76: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   76 |   var cast_into_i32 : [32;1mbool[0m = [31;1m(1 as any) into i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:77: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+   77 |   var cast_into_Main : [32;1mbool[0m = [31;1mnull into Main[0m; # correct, type Main
+[31;1m[Error][0m f_expr.fart:78: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   78 |   var cast_into_any_2 : [32;1mbool[0m = [31;1mnull into any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:79: expected a class type, got [31;1mbool[0m instead
+   79 |   var cast_into_bool = null into [31;1mbool[0m; # error
+[31;1m[Error][0m f_expr.fart:80: expected a class type, got [31;1mfn (i32) -> u32[0m instead
+   80 |   var cast_into_fn = null into [31;1mfn (i32) -> u32[0m; # error
+[31;1m[Error][0m f_expr.fart:81: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
+   81 |   var cast_into_i64 : [32;1mbool[0m = [31;1m1 into i64[0m; # correct, type i64
+[31;1m[Error][0m f_expr.fart:82: expected expression to be of type [32;1mbool[0m, got type [31;1mi8[0m instead
+   82 |   var cast_into_i8 : [32;1mbool[0m = [31;1m1 into i8[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:83: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   83 |   var cast_into_f32 : [32;1mbool[0m = [31;1m1 into f32[0m; # correct, type i32

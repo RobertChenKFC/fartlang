@@ -1360,6 +1360,8 @@ ParserDeclareHandler(SyntaxHandlerParenTerm, rhs) {
   assert(term);
   assert(rparen_ && rparen_->tokenID == RPAREN);
 
+  term->loc.from = lparen_->loc.from;
+  term->loc.to = rparen_->loc.to;
   LexerTokenDelete(lparen_);
   LexerTokenDelete(rparen_);
   return term;

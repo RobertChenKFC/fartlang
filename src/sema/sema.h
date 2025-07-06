@@ -70,9 +70,7 @@ struct SemaType {
   union {
     // Recursive types: SEMA_TYPE_KIND_ARRAY and SEMA_TYPE_KIND_FN. Recursive
     // types are types constructed from other types. Therefore, recursive
-    // pointers to other SemaType are stored. In addition, a boolean type owner
-    // flag will accompany each recursive pointer, indicating whether this
-    // SemaType is the owner of the recursive types or not
+    // pointers to other SemaType are stored
     //
     // For type kind SEMA_TYPE_KIND_ARRAY: records the type of each array
     // element in "baseType", and records the number of array dimensions in
@@ -91,8 +89,6 @@ struct SemaType {
     struct {
       SemaType *retType;
       Vector *paramTypes;
-      bool isRetTypeOwner;
-      Vector *isParamTypeOwner;
     };
 
     // For type kind SEMA_TYPE_KIND_PRIM_TYPE: which primitive type this is

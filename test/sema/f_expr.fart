@@ -64,4 +64,21 @@ class Main {
   var arith_neg_non_numeric = -true; # error
   var arith_lneg : i32 = not true; # error
   var arith_lneg_non_bool : i32 = not 10; # correct, type bool
+
+  # Cast operator
+  var cast_as_i32 : bool = 10u32 as i32; # correct, type i32
+  var cast_as_i32_2 : bool = 10u16 as i32; # correct, type i32
+  var cast_as_any : bool = 10 as any; # correct, type any
+  var cast_is_i32 : i32 = (1 as any) is i32; # correct, type bool
+  var cast_is_u32 : i32 = (1 as any) is u32; # correct, type bool
+  var cast_is_fail : i32 = 1 is u32; # error
+  var cast_into_any : bool = 1 into any; # correct, type any
+  var cast_into_i32 : bool = (1 as any) into i32; # correct, type i32
+  var cast_into_Main : bool = null into Main; # correct, type Main
+  var cast_into_any_2 : bool = null into any; # correct, type any
+  var cast_into_bool = null into bool; # error
+  var cast_into_fn = null into fn (i32) -> u32; # error
+  var cast_into_i64 : bool = 1 into i64; # correct, type i64
+  var cast_into_i8 : bool = 1 into i8; # correct, type i32
+  var cast_into_f32 : bool = 1 into f32; # correct, type i32
 }

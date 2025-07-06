@@ -23,4 +23,7 @@ class Main {
   # Any should be able take on any value
   var any_str: any = "goodbye";
   var any_char: any = 'h';
+
+  # Parenthsized expression
+  var paren_expr: bool = (10); # correct, type i32
 }

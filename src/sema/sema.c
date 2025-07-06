@@ -153,8 +153,9 @@ SemaType *SemaTypeUnification(
 // Checks if "type1" can be implicitly cast to "type2"
 bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2);
 // Given the AST "expr" for an expression and its "type", if "type" is void,
-// prints an error message using "fileCtx"
-void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
+// prints an error message using "fileCtx". Returns true if and only if "type"
+// is not void
+bool SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
 // Checks if "type" is a class type
 bool SemaTypeIsClass(SemaType *type);
 // Checks if the expresShiftOpinside the alloc "expr" is of unsigned type, and
@@ -164,10 +165,8 @@ bool SemaTypeIsClass(SemaType *type);
 // used in the same way as all the type check functions above
 SemaType *SemaTypeCheckAlloc(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
-// Returns a new type with one more array level than "baseType". If
-// "isBaseTypeOwner" is true, "baseType" is modified in place and returned if.
-// possible. Otherwise, another type is allocated
-SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner);
+// Returns a newly allocated type with one more array level than "baseType"
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType);
 // Checks if the left operand of the shift expression "expr" is of integral
 // type, and the right operand is of unsigned type. If so, return the type of
 // the shift expression, otherwise return NULL. The remaining arguments are
@@ -194,6 +193,37 @@ bool SemaTypeCheckModOp(
 // used for error reporting
 bool SemaTypeCheckNegOp(
     SyntaxAST *operand, SemaType *operandType, SemaFileCtx *fileCtx);
+// Generic type check function for cast operation "expr". Extracts the operand
+// type and target type of the "expr" and feed them to the "check" function.
+// If the check passes, then
+// (1) If "retBoolType" is true, a new bool SemaType is created and returned
+// (2) If "retBoolType", the target type is returned
+// Otherwise, NULL is returned. The remaining arguments are used in the same way
+// as the above type checking functions
+typedef bool (*SemaCastOpCheckFn)(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+SemaType *SemaTypeCheckCastOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaCastOpCheckFn check, bool retBoolType);
+// Check if the "operandType" is of type any
+bool SemaTypeCheckCastIsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// Check if the "operandType" is not a void type
+bool SemaTypeCheckCastAsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// Check for one of the following cases in order:
+// 1. If the operand is of type any or if the target type is any, check succeeds
+// 2. If the operand is of type nil, check if the target type is a class type
+// 3. Check if the operand type and the target type are both numeric types
+bool SemaTypeCheckCastIntoOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// If the stage currently stored in "info" is earlier than the provided "stage",
+// then update the stored stage to the provided "stage"
+void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -434,16 +464,7 @@ void SemaTypeDelete(SemaType *type) {
       }
       break;
     case SEMA_TYPE_KIND_FN:
-      if (type->isRetTypeOwner) {
-        SemaTypeDelete(type->retType);
-      }
-      for (int i = 0; i < type->paramTypes->size; ++i) {
-        if (type->isParamTypeOwner->arr[i]) {
-          SemaTypeDelete(type->paramTypes->arr[i]);
-        }
-      }
       VectorDelete(type->paramTypes);
-      VectorDelete(type->isParamTypeOwner);
       break;
     case SEMA_TYPE_KIND_CLASS:
       HashTableDelete(type->memberTable);
@@ -619,20 +640,28 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
           // Check if variable type is valid
           SyntaxAST *varType = varInit->firstChild;
           assert(varType && varType->kind == SYNTAX_AST_KIND_TYPE);
-          SemaSymInfo *varInfo = malloc(sizeof(SemaSymInfo));
-          varInit->semaInfo.symInfo = varInfo;
-          SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
+          SemaSymInfo *varInitSymInfo = malloc(sizeof(SemaSymInfo));
+          varInit->semaInfo.symInfo = varInitSymInfo;
+          SemaTypeInfo *varInitTypeInfo = &varInitSymInfo->typeInfo;
+          SemaTypeInfo *varTypeInfo = &varType->semaInfo.typeInfo;
           SemaType *semaType = SemaTypeFromSyntaxType(
               varType, symbolTable, fileCtx, varInit,
               &varTypeInfo->isTypeOwner);
           if (!semaType) {
             success = false;
             varInit->semaInfo.skipAnalysis = true;
-            free(varInfo);
+            free(varInitSymInfo);
             continue;
           }
-          varTypeInfo->type = semaType;
-          HashTableEntryAdd(memberTable, varIdentifier, varInfo);
+          varInitTypeInfo->type = varTypeInfo->type = semaType;
+          varInitTypeInfo->isTypeOwner = false;
+          // set-to-a-later-stage: most SYNTAX_AST_KIND_TYPE nodes only have
+          // their SemaType avaiable after the type checking stage, but this is
+          // one of the rare exceptions. The SemaDeleteASTSemaInfo relies on the
+          // stage to determine whether the SemaType is ready, so we modify the
+          // stage in this particular instance to the type check stage
+          varType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
+          HashTableEntryAdd(memberTable, varIdentifier, varInitSymInfo);
         }
       }
 
@@ -829,6 +858,7 @@ SemaType *SemaTypeFromSyntaxType(
       if (syntaxType->type.arrayLevels > 0) {
         type->kind = SEMA_TYPE_KIND_ARRAY;
         type->baseType = modulePathType;
+        type->isBaseTypeOwner = false;
         type->arrayLevels = syntaxType->type.arrayLevels;
       } else {
         free(type);
@@ -844,41 +874,43 @@ SemaType *SemaTypeFromSyntaxType(
       SyntaxAST *retSyntaxType = syntaxType->lastChild;
       assert(retSyntaxType && retSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
 
+      SemaTypeInfo *retTypeInfo = &retSyntaxType->semaInfo.typeInfo;
       SemaType *retType = SemaTypeFromSyntaxType(
-          retSyntaxType, symbolTable, fileCtx, parentAST, &type->isRetTypeOwner);
+          retSyntaxType, symbolTable, fileCtx, parentAST,
+          &retTypeInfo->isTypeOwner);
       if (!retType) {
+        retSyntaxType->semaInfo.skipAnalysis = true;
         free(type);
         return NULL;
       }
+      retTypeInfo->type = retType;
+      // See set-to-a-later-stage for more info
+      retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
 
       Vector *paramTypes = VectorNew();
-      Vector *isParamTypeOwner = VectorNew();
       for (SyntaxAST *paramSyntaxType = paramSyntaxTypes->firstChild;
            paramSyntaxType; paramSyntaxType = paramSyntaxType->sibling) {
         assert(paramSyntaxType &&
                paramSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
-        bool isCurTypeOwner;
+        SemaTypeInfo *paramTypeInfo = &paramSyntaxType->semaInfo.typeInfo;
         SemaType *paramType = SemaTypeFromSyntaxType(
-            paramSyntaxType, symbolTable, fileCtx, parentAST, &isCurTypeOwner);
+            paramSyntaxType, symbolTable, fileCtx, parentAST,
+            &paramTypeInfo->isTypeOwner);
         if (!paramType) {
+          paramSyntaxType->semaInfo.skipAnalysis = true;
           free(type);
           SemaTypeDelete(retType);
-          for (int i = 0; i < paramTypes->size; ++i) {
-            if (isParamTypeOwner->arr[i]) {
-              SemaTypeDelete(paramTypes->arr[i]);
-            }
-          }
           VectorDelete(paramTypes);
-          VectorDelete(isParamTypeOwner);
         }
         VectorAdd(paramTypes, paramType);
-        VectorAdd(isParamTypeOwner, (void*)(int64_t)isCurTypeOwner);
+        paramTypeInfo->type = paramType;
+        // See set-to-a-later-stage for more info
+        paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
       }
 
       type->kind = SEMA_TYPE_KIND_FN;
       type->retType = retType;
       type->paramTypes = paramTypes;
-      type->isParamTypeOwner = isParamTypeOwner;
       break;
     } default: {
       // A syntax type that is not handled by the semantic checker
@@ -895,50 +927,48 @@ SemaType *SemaTypeFromMethodDecl(
   methodType->kind = SEMA_TYPE_KIND_FN;
 
   SyntaxAST *retSyntaxType = methodDecl->firstChild;
+  SyntaxAST *paramList = retSyntaxType->sibling;
+  SyntaxAST *param = paramList->firstChild;
   assert(retSyntaxType && retSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
+  SemaTypeInfo *retTypeInfo = &retSyntaxType->semaInfo.typeInfo;
   SemaType *retType = SemaTypeFromSyntaxType(
       retSyntaxType, symbolTable, fileCtx, methodDecl,
-      &methodType->isRetTypeOwner);
+      &retTypeInfo->isTypeOwner);
   if (!retType) {
-    goto METHOD_TYPE_CLEANUP;
+    goto RET_TYPE_CLEANUP;
   }
-  methodType->retType = retType;
+  retTypeInfo->type = methodType->retType = retType;
+  // See set-to-a-later-stage for more info
+  retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
 
   Vector *paramTypes = VectorNew();
-  Vector *isParamTypeOwner = VectorNew();
   methodType->paramTypes = paramTypes;
-  methodType->isParamTypeOwner = isParamTypeOwner;
-  SyntaxAST *paramList = retSyntaxType->sibling;
   assert(paramList && paramList->kind == SYNTAX_AST_KIND_PARAM_LIST);
-  for (SyntaxAST *param = paramList->firstChild; param;
-       param = param->sibling) {
+  for (; param; param = param->sibling) {
     assert(param->kind == SYNTAX_AST_KIND_PARAM);
-    bool isOwner;
     SyntaxAST *paramSyntaxType = param->firstChild;
+    SemaTypeInfo *paramTypeInfo = &paramSyntaxType->semaInfo.typeInfo;
     assert(paramSyntaxType && paramSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
     SemaType *paramType = SemaTypeFromSyntaxType(
-        paramSyntaxType, symbolTable, fileCtx, methodDecl, &isOwner);
+        paramSyntaxType, symbolTable, fileCtx, methodDecl,
+        &paramTypeInfo->isTypeOwner);
     if (!paramType) {
-      goto VECTOR_CLEANUP;
+      VectorDelete(paramTypes);
+      goto PARAM_CLEANUP;
     }
     VectorAdd(paramTypes, paramType);
-    VectorAdd(isParamTypeOwner, (void*)(int64_t)isOwner);
+    paramTypeInfo->type = paramType;
+    // See set-to-a-later-stage for more info
+    paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
   }
   return methodType;
 
-VECTOR_CLEANUP:
-  for (int i = 0; i < paramTypes->size; ++i) {
-    bool isTypeOwner = (bool)(int64_t)isParamTypeOwner->arr[i];
-    if (isTypeOwner) {
-      SemaTypeDelete(paramTypes->arr[i]);
-    }
+RET_TYPE_CLEANUP:
+  retSyntaxType->semaInfo.skipAnalysis = true;
+PARAM_CLEANUP:
+  for (; param; param = param->sibling) {
+    param->firstChild->semaInfo.skipAnalysis = true;
   }
-  VectorDelete(paramTypes);
-  VectorDelete(isParamTypeOwner);
-  if (methodType->isRetTypeOwner) {
-    SemaTypeDelete(retType);
-  }
-METHOD_TYPE_CLEANUP:
   free(methodType);
   return NULL;
 }
@@ -969,6 +999,7 @@ DELETE_SYM_INFO:
       break;
     case SYNTAX_AST_KIND_OP:
     case SYNTAX_AST_KIND_LITERAL:
+    case SYNTAX_AST_KIND_TYPE:
       if (stage >= SEMA_STAGE_TYPE_CHECK && !info->skipAnalysis) {
         SemaTypeInfoDelete(&info->typeInfo);
       }
@@ -1180,6 +1211,18 @@ SemaType *SemaTypeFromExpr(
     case SYNTAX_OP_MOD:
     case SYNTAX_OP_NEG:
       return SemaTypeCheckArithOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_CAST_IS:
+      return SemaTypeCheckCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastIsOp,
+          /*retBoolType=*/true);
+    case SYNTAX_OP_CAST_AS:
+      return SemaTypeCheckCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastAsOp,
+          /*retBoolType=*/false);
+    case SYNTAX_OP_CAST_INTO:
+      return SemaTypeCheckCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastIntoOp,
+          /*retBoolType=*/false);
     default:
       assert(false);
   }
@@ -1249,7 +1292,7 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       }
       break;
     } case SEMA_TYPE_KIND_FN: {
-      fprintf(file, "(");
+      fprintf(file, "fn (");
       Vector *paramTypes = type->paramTypes;
       int n = paramTypes->size;
       for (int i = 0; i < n; ++i) {
@@ -1359,24 +1402,24 @@ bool SemaTypeEqual(SemaType *type1, SemaType *type2) {
 
 void SemaASTInitAddAllFiles(SemaInfo *info, va_list arg) {
   SemaFileCtx *fileCtx = va_arg(arg, SemaFileCtx*);
-  info->stage = SEMA_STAGE_ADD_ALL_FILES;
+  SemaInfoUpdateStage(info, SEMA_STAGE_ADD_ALL_FILES);
   info->fileCtx = fileCtx;
 }
 
 void SemaASTInitPopulateClassSymbols(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_CLASS_SYMBOLS);
 }
 
 void SemaASTInitPopulateImportSymbols(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_IMPORT_SYMBOLS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_IMPORT_SYMBOLS);
 }
 
 void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_MEMBERS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_MEMBERS);
 }
 
 void SemaASTInitTypeCheck(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_TYPE_CHECK;
+  SemaInfoUpdateStage(info, SEMA_STAGE_TYPE_CHECK);
 }
 
 bool SemaTypeIsFloat(SemaType *type) {
@@ -1769,15 +1812,16 @@ bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2) {
   return implicitCast;
 }
 
-void SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx) {
+bool SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx) {
   if (!SemaTypeIsPrimType(type, SEMA_PRIM_TYPE_VOID)) {
-    return;
+    return true;
   }
   SourceLocation *loc = &expr->loc;
   fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
           " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
   fprintf(stderr, "invalid usage of "SOURCE_COLOR_RED" void type\n");
   SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+  return false;
 }
 
 bool SemaTypeIsClass(SemaType *type) {
@@ -1810,10 +1854,13 @@ SemaType *SemaTypeCheckAlloc(
   if (!baseType) {
     goto ALLOC_SKIP_TYPE;
   }
-  SemaType *type = SemaTypeIncreaseArrayLevel(baseType, isTypeOwner);
-  SemaTypeInfo *info = &expr->semaInfo.typeInfo;
-  info->type = type;
-  info->isTypeOwner = true;
+  SemaTypeInfo *syntaxBaseTypeInfo = &syntaxBaseType->semaInfo.typeInfo;
+  syntaxBaseTypeInfo->type = baseType;
+  syntaxBaseTypeInfo->isTypeOwner = isTypeOwner;
+  SemaType *type = SemaTypeIncreaseArrayLevel(baseType);
+  SemaTypeInfo *exprTypeInfo = &expr->semaInfo.typeInfo;
+  exprTypeInfo->type = type;
+  exprTypeInfo->isTypeOwner = true;
   return type;
 ALLOC_SKIP_COUNT_EXPR:
   countExpr->semaInfo.skipAnalysis = true;
@@ -1823,15 +1870,11 @@ ALLOC_SKIP_TYPE:
   return NULL;
 }
 
-SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType, bool isBaseTypeOwner) {
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType) {
   bool baseTypeIsArray = baseType->kind == SEMA_TYPE_KIND_ARRAY;
-  if (isBaseTypeOwner && baseTypeIsArray) {
-    ++baseType->arrayLevels;
-    return baseType;
-  }
   SemaType *type = malloc(sizeof(SemaType));
   type->kind = SEMA_TYPE_KIND_ARRAY;
-  type->isBaseTypeOwner = isBaseTypeOwner;
+  type->isBaseTypeOwner = false;
   if (baseTypeIsArray) {
     // To avoid nested array types (an array type whose base type is also an
     // array type), we specially handle array types here
@@ -2025,4 +2068,118 @@ bool SemaTypeCheckNegOp(
     return false;
   }
   return true;
+}
+
+SemaType *SemaTypeCheckCastOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaCastOpCheckFn check, bool retBoolType) {
+  SyntaxAST *operand = expr->firstChild;
+  SyntaxAST *target = operand->sibling;
+  assert(!target->sibling);
+  SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP_OPERAND;
+  }
+  bool isTypeOwner;
+  SemaType *targetType = SemaTypeFromSyntaxType(
+      target, symbolTable, fileCtx, target, &isTypeOwner);
+  if (!targetType) {
+    goto CLEANUP_TARGET;
+  }
+  SemaTypeInfo *typeInfo = &target->semaInfo.typeInfo;
+  typeInfo->type = targetType;
+  typeInfo->isTypeOwner = isTypeOwner;
+  if (!check(operand, operandType, target, targetType, fileCtx)) {
+    goto CLEANUP;
+  }
+  typeInfo = &expr->semaInfo.typeInfo;
+  if (retBoolType) {
+    SemaType *boolType = malloc(sizeof(SemaType));
+    SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
+    typeInfo->type = boolType;
+    typeInfo->isTypeOwner = true;
+    return boolType;
+  }
+  typeInfo->type = targetType;
+  typeInfo->isTypeOwner = false;
+  return targetType;
+
+CLEANUP_OPERAND:
+  operand->semaInfo.skipAnalysis = true;
+CLEANUP_TARGET:
+  target->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeCheckCastIsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  if (!SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_ANY)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected type any, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    return false;
+  }
+  return true;
+}
+
+bool SemaTypeCheckCastAsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  return SemaErrorIfVoid(operand, operandType, fileCtx);
+}
+
+// Check for one of the following cases in order:
+// 1. If the operand is of type any or if the target type is any, check succeeds
+// 2. If the operand is of type nil, check if the target type is a class type
+// 3. Check if the operand type and the target type are both numeric types
+bool SemaTypeCheckCastIntoOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  if (SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_ANY) ||
+      SemaTypeIsPrimType(targetType, SEMA_PRIM_TYPE_ANY)) {
+    return true;
+  }
+  if (SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_NIL)) {
+    if (!SemaTypeIsClass(targetType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, target->loc.from.lineNo + 1);
+      fprintf(stderr, "expected a class type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, targetType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &target->loc);
+      return false;
+    }
+    return true;
+  }
+  SemaType *types[] = {operandType, targetType};
+  SyntaxAST *nodes[] = {operand, target};
+  for (int i = 0; i < 2; ++i) {
+    SemaType *type = types[i];
+    SyntaxAST *node = nodes[i];
+    if (!SemaTypeIsNumeric(type)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, node->loc.from.lineNo + 1);
+      fprintf(stderr, "expected a numeric type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, type);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &node->loc);
+      return false;
+    }
+  }
+  return true;
+}
+
+void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage) {
+  if (info->stage < stage) {
+    info->stage = stage;
+  }
 }
