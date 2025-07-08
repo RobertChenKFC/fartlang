@@ -224,6 +224,14 @@ bool SemaTypeCheckCastIntoOp(
 // If the stage currently stored in "info" is earlier than the provided "stage",
 // then update the stored stage to the provided "stage"
 void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage);
+// Check if the operand of "expr" is a function type, and each of the type of
+// the sub-expressions matches the argument types of the function type. If so,
+// return the return type of the function type, otherwise return NULL. The
+// remaining arguments are used in the same way as above
+SemaType *SemaTypeCheckCall(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Check if "type" is a function type
+bool SemaTypeIsFunction(SemaType *type);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1223,6 +1231,8 @@ SemaType *SemaTypeFromExpr(
       return SemaTypeCheckCastOp(
           expr, symbolTable, fileCtx, SemaTypeCheckCastIntoOp,
           /*retBoolType=*/false);
+    case SYNTAX_OP_CALL:
+      return SemaTypeCheckCall(expr, symbolTable, fileCtx);
     default:
       assert(false);
   }
@@ -1805,6 +1815,9 @@ SemaType *SemaTypeUnification(
 bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2) {
   bool isTypeOwner;
   SemaType *type = SemaTypeUnification(type1, type2, &isTypeOwner);
+  if (!type) {
+    return false;
+  }
   bool implicitCast = SemaTypeEqual(type2, type);
   if (isTypeOwner) {
     SemaTypeDelete(type);
@@ -2182,4 +2195,82 @@ void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage) {
   if (info->stage < stage) {
     info->stage = stage;
   }
+}
+
+SemaType *SemaTypeCheckCall(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *function = expr->firstChild;
+  SyntaxAST *args = function->sibling;
+  assert(!args->sibling);
+  SemaType *functionType = SemaTypeFromExpr(function, symbolTable, fileCtx);
+  if (!functionType) {
+    goto CLEANUP_FUNCTION;
+  }
+  SyntaxAST *arg = args->firstChild;
+  if (!SemaTypeIsFunction(functionType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+    fprintf(stderr, "expected a function type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, functionType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &function->loc);
+    goto CLEANUP_ARGS;
+  }
+  Vector *paramTypesVec = functionType->paramTypes;
+  void **paramTypes = paramTypesVec->arr;
+  int numParams = paramTypesVec->size, i;
+  for (i = 0; arg && i < numParams; arg = arg->sibling, ++i) {
+    SemaType *argType = SemaTypeFromExpr(arg, symbolTable, fileCtx);
+    if (!argType) {
+      goto CLEANUP_ARGS;
+    }
+    SemaType *paramType = paramTypes[i];
+    if (!SemaTypeImplicitCast(argType, paramType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+      fprintf(stderr, "cannot implicitly cast type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, argType);
+      fprintf(stderr, SOURCE_COLOR_RESET" to type "SOURCE_COLOR_GREEN);
+      SemaTypePrint(stderr, paramType);
+      fprintf(stderr, SOURCE_COLOR_RESET" expected by the function\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
+          SOURCE_COLOR_RED, &arg->loc);
+      arg = arg->sibling;
+      goto CLEANUP_ARGS;
+    }
+  }
+  int numArgs = i;
+  for (SyntaxAST *curArg = arg; curArg; curArg = curArg->sibling) {
+    ++numArgs;
+  }
+  if (numArgs != numParams) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+    fprintf(stderr, "expected "SOURCE_COLOR_GREEN"%d"SOURCE_COLOR_RESET
+        " arguments to the function, got "SOURCE_COLOR_RED"%d"SOURCE_COLOR_RESET
+        " arguments instead\n", numParams, numArgs);
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
+        SOURCE_COLOR_RED, &args->loc);
+    goto CLEANUP_ARGS;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = functionType->retType;
+  typeInfo->isTypeOwner = false;
+  return functionType->retType;
+
+CLEANUP_FUNCTION:
+  function->semaInfo.skipAnalysis = true;
+CLEANUP_ARGS:
+  for (; arg; arg = arg->sibling) {
+    arg->semaInfo.skipAnalysis = true;
+  }
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsFunction(SemaType *type) {
+  return type->kind == SEMA_TYPE_KIND_FN;
 }

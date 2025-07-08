@@ -130,3 +130,17 @@
    82 |   var cast_into_i8 : [32;1mbool[0m = [31;1m1 into i8[0m; # correct, type i32
 [31;1m[Error][0m f_expr.fart:83: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
    83 |   var cast_into_f32 : [32;1mbool[0m = [31;1m1 into f32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:86: expected expression to be of type [32;1mbool[0m, got type [31;1mvoid[0m instead
+   86 |   var call_empty : [32;1mbool[0m = [31;1m(null as fn ())()[0m; # correct, type void
+[31;1m[Error][0m f_expr.fart:87: expected expression to be of type [32;1mbool[0m, got type [31;1mvoid[0m instead
+   87 |   var call_args : [32;1mbool[0m = [31;1m(null as fn (i32, u8[]))(10, "hello")[0m; # correct, type void
+[31;1m[Error][0m f_expr.fart:88: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   88 |   var call_ret : [32;1mbool[0m = [31;1m(null as fn (u32, f64) -> i32)(10u32, 69.f64)[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:89: expected a function type, got [31;1mfn (u32, f64) -> i32[][0m instead
+   89 |   var call_not_fn = [31;1m(null as (fn (u32, f64) -> i32)[])[0m(10u32, 69.f64); # error
+[31;1m[Error][0m f_expr.fart:90: expected [32;1m3[0m arguments to the function, got [31;1m1[0m arguments instead
+   90 |   var call_fewer_args = [32;1m(null as fn (i32, i32, i32))[0m([31;1m1[0m); # error
+[31;1m[Error][0m f_expr.fart:91: expected [32;1m1[0m arguments to the function, got [31;1m3[0m arguments instead
+   91 |   var call_more_args = [32;1m(null as fn (i32))[0m([31;1m1, 1, 1[0m); # error
+[31;1m[Error][0m f_expr.fart:92: cannot implicitly cast type [31;1mi32[0m to type [32;1mu32[0m expected by the function
+   92 |   var call_mismatch = [32;1m(null as fn (i32, u32))[0m(1, [31;1m1[0m); # error

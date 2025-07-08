@@ -81,4 +81,13 @@ class Main {
   var cast_into_i64 : bool = 1 into i64; # correct, type i64
   var cast_into_i8 : bool = 1 into i8; # correct, type i32
   var cast_into_f32 : bool = 1 into f32; # correct, type i32
+
+  # Call operator
+  var call_empty : bool = (null as fn ())(); # correct, type void
+  var call_args : bool = (null as fn (i32, u8[]))(10, "hello"); # correct, type void
+  var call_ret : bool = (null as fn (u32, f64) -> i32)(10u32, 69.f64); # correct, type i32
+  var call_not_fn = (null as (fn (u32, f64) -> i32)[])(10u32, 69.f64); # error
+  var call_fewer_args = (null as fn (i32, i32, i32))(1); # error
+  var call_more_args = (null as fn (i32))(1, 1, 1); # error
+  var call_mismatch = (null as fn (i32, u32))(1, 1); # error
 }
