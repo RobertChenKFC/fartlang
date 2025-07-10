@@ -1,0 +1,33 @@
+class Main {
+  var x1 = 10; # correct
+  var x2 = x1; # error
+
+  fn main(x: f64, y: f32) {
+    ##
+    var Main = 5; # error
+
+    var x = 5; # error
+    var y = 5; # error
+    var x0 : bool = x; # correct, type f64
+    var y0 : bool = y; # correct, type f32
+
+    var x1 = 10; # correct
+    var x1 = 10; # error
+    var x2: bool = x1; # correct, type i32
+    var x2 = 'h'; # error
+    var x3 : bool = x3; # correct, type u8
+    ##
+
+    # TODO: add separate fart files for each statement with local scopes
+  }
+
+  ##
+  fn random_fn() {
+    var variable = x; # error
+    var variable2 = variable; # correct
+    var x = "hello"; # correct
+    var x1 = true; # correct
+    var x2 = null; # correct
+  }
+  ##
+}
