@@ -233,15 +233,19 @@ SemaType *SemaTypeCheckCall(
 // Check if "type" is a function type
 bool SemaTypeIsFunction(SemaType *type);
 // Returns true if and only if type checking the class variable declarations
-// stored in "varDecls" succeeds. The remaining arguments are used in the same
-// way as the type check functions above
+// stored in "varDecls" succeeds. There are two HashTable's: "memberTable", which
+// is the table that contains the variables, and "symbolTable", which is the
+// table lookup in the current scope. The remaining arguments are used in the
+// same way as the type check functions above
 bool SemaTypeCheckClassVarDecls(
-    SyntaxAST *varDecls, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *varDecls, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Returns true if and only if type checking the variable initializations stored
 // in "varInitList" succeeds. The remaining arguments are used in the same way
 // as the type check functions above
 bool SemaTypeCheckVarInitList(
-    SyntaxAST *varInitList, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *varInitList, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Returns true if and only if type checking the method body stored under
 // "methodDecl" succeeds, and the return value of the body is consistent with
 // the method declaration. The remaining arguments are used in the same way
@@ -281,6 +285,8 @@ bool SemaTypeCheckStmt(
 // above
 bool SemaTypeCheckVarDeclStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Sets skipAnalysis to true for "node" and all its descendants
+void SemaSkipAnalysisForSubtree(SyntaxAST *node);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -969,6 +975,8 @@ SemaType *SemaTypeFromMethodDecl(
   for (; param; param = param->sibling) {
     assert(param->kind == SYNTAX_AST_KIND_PARAM);
     SyntaxAST *paramSyntaxType = param->firstChild;
+    SemaSymInfo *paramSymInfo = malloc(sizeof(SemaSymInfo));
+    param->semaInfo.symInfo = paramSymInfo;
     SemaTypeInfo *paramTypeInfo = &paramSyntaxType->semaInfo.typeInfo;
     assert(paramSyntaxType && paramSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
     SemaType *paramType = SemaTypeFromSyntaxType(
@@ -979,7 +987,9 @@ SemaType *SemaTypeFromMethodDecl(
       goto PARAM_CLEANUP;
     }
     VectorAdd(paramTypes, paramType);
-    paramTypeInfo->type = paramType;
+    SemaTypeInfo *paramSymTypeInfo = &paramSymInfo->typeInfo;
+    paramSymTypeInfo->type = paramTypeInfo->type = paramType;
+    paramSymTypeInfo->isTypeOwner = false;
     // See set-to-a-later-stage for more info
     paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
   }
@@ -989,6 +999,7 @@ RET_TYPE_CLEANUP:
   retSyntaxType->semaInfo.skipAnalysis = true;
 PARAM_CLEANUP:
   for (; param; param = param->sibling) {
+    param->semaInfo.skipAnalysis = true;
     param->firstChild->semaInfo.skipAnalysis = true;
   }
   free(methodType);
@@ -1007,8 +1018,11 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_VAR_INIT:
+    case SYNTAX_AST_KIND_PARAM:
       // TODO: handle var init for member variables and inside methods
       // separately
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_METHOD_DECL:
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
 DELETE_SYM_INFO:
@@ -1052,7 +1066,11 @@ bool SemaTypeCheck(SemaCtx *ctx) {
 
       // Type check all class variable initializations
       SyntaxAST *varDecls = classDecl->firstChild;
-      if (!SemaTypeCheckClassVarDecls(varDecls, symbolTable, fileCtx)) {
+      SemaSymInfo *classInfo = classDecl->semaInfo.symInfo;
+      SemaTypeInfo *classTypeInfo = &classInfo->typeInfo;
+      HashTable *memberTable = classTypeInfo->type->memberTable;
+      if (!SemaTypeCheckClassVarDecls(
+            varDecls, memberTable, symbolTable, fileCtx)) {
         success = false;
       }
 
@@ -1131,7 +1149,12 @@ SemaType *SemaTypeFromTerm(
         break;
       }
       SemaSymInfo *varInfo = entry->value;
-      term->semaInfo.symInfo = varInfo;
+      SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
+      SemaTypeInfo *typeInfo = &term->semaInfo.typeInfo;
+      typeInfo->type = varTypeInfo->type;
+      typeInfo->isTypeOwner = false;
+      free(type);
+      type = typeInfo->type;
       break;
     }
 
@@ -2113,10 +2136,6 @@ bool SemaTypeCheckCastAsOp(
   return SemaErrorIfVoid(operand, operandType, fileCtx);
 }
 
-// Check for one of the following cases in order:
-// 1. If the operand is of type any or if the target type is any, check succeeds
-// 2. If the operand is of type nil, check if the target type is a class type
-// 3. Check if the operand type and the target type are both numeric types
 bool SemaTypeCheckCastIntoOp(
     SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
     SemaType *targetType, SemaFileCtx *fileCtx) {
@@ -2241,14 +2260,16 @@ bool SemaTypeIsFunction(SemaType *type) {
 }
 
 bool SemaTypeCheckClassVarDecls(
-    SyntaxAST *varDecls, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *varDecls, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
   assert(varDecls && varDecls->kind == SYNTAX_AST_KIND_STMTS);
   bool success = true;
   for (SyntaxAST *varDecl = varDecls->firstChild; varDecl;
        varDecl = varDecl->sibling) {
     assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
     SyntaxAST *varInitList = varDecl->firstChild;
-    if (!SemaTypeCheckVarInitList(varInitList, symbolTable, fileCtx)) {
+    if (!SemaTypeCheckVarInitList(
+          varInitList, memberTable, symbolTable, fileCtx)) {
       success = false;
     }
   }
@@ -2256,25 +2277,30 @@ bool SemaTypeCheckClassVarDecls(
 }
 
 bool SemaTypeCheckVarInitList(
-    SyntaxAST *varInitList, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *varInitList, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
   assert(varInitList &&
          varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
   bool success = true;
   for (SyntaxAST *varInit = varInitList->firstChild; varInit;
        varInit = varInit->sibling) {
     assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
-    SyntaxAST *initExpr = varInit->lastChild;
+    SyntaxAST *varType = varInit->firstChild;
+    SyntaxAST *initExpr = varType->sibling;
     if (varInit->semaInfo.skipAnalysis) {
+      // If analysis for variable initialization should be skipped, then it
+      // should be skipped for the initialization expression as well
+      SemaSkipAnalysisForSubtree(initExpr);
       continue;
     }
     SemaSymInfo *varInfo = varInit->semaInfo.symInfo;
     SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
-    if (initExpr->kind != SYNTAX_AST_KIND_TYPE) {
+    if (initExpr) {
       SemaType *initExprType = SemaTypeFromExpr(
           initExpr, symbolTable, fileCtx);
       if (!initExprType) {
         success = false;
-        continue;
+        goto REMOVE_VAR;
       }
       if (varTypeInfo->type->kind == SEMA_TYPE_KIND_PLACEHOLDER) {
         // This is an auto-deducted type, so replace the placeholder type
@@ -2289,7 +2315,6 @@ bool SemaTypeCheckVarInitList(
         // initialization expression can implicit cast to the declared
         // type
         if (!SemaTypeImplicitCast(initExprType, varTypeInfo->type)) {
-          SyntaxAST *varType = varInit->firstChild;
           SourceLocation *varTypeLoc = &varType->loc;
           SourceLocation *initExprLoc = &initExpr->loc;
           fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
@@ -2306,11 +2331,22 @@ bool SemaTypeCheckVarInitList(
               fileCtx->source, 2, SOURCE_COLOR_GREEN, varTypeLoc,
               SOURCE_COLOR_RED, initExprLoc);
           success = false;
+          goto REMOVE_VAR;
         }
       }
     } else {
       assert(varTypeInfo->type->kind != SEMA_TYPE_KIND_PLACEHOLDER);
     }
+    continue;
+REMOVE_VAR:
+    // If type checking did not succeed, then we should remove the variable
+    // from its member table. We also set the entry of the SemaSymInfo to NULL
+    // so that SemaPopScope can know not to delete the entry from the member
+    // table again
+    HashTableEntryDelete(memberTable, varInfo->entry);
+    varInfo->entry = NULL;
+  }
+  if (!success) {
   }
   return success;
 }
@@ -2330,8 +2366,11 @@ bool SemaTypeCheckMethodDecl(
   for (SyntaxAST *param = paramList->firstChild; param;
        param = param->sibling) {
     assert(param && param->kind == SYNTAX_AST_KIND_PARAM);
+    // "varType" is not provided here because parameter types were already
+    // type checked in SemaTypeFromMethodDecl, which is called in
+    // SemaPopulateMembers
     if (!SemaPopulateVar(
-        param, param->string, &param->stringLoc, param->firstChild,
+        param, param->string, &param->stringLoc, /*varType=*/NULL,
         /*addToScope=*/true, symbolTable, symbolTable, fileCtx)) {
       success = false;
     }
@@ -2367,8 +2406,7 @@ bool SemaPopulateVar(
             SOURCE_COLOR_RESET" for variable declaration\n",
             varName);
     SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, varLoc);
-    var->semaInfo.skipAnalysis = true;
-    return false;
+    goto CLEANUP;
   }
 
   // Check if variable type is valid
@@ -2383,9 +2421,8 @@ bool SemaPopulateVar(
         varType, symbolTable, fileCtx, var,
         &varTypeInfo->isTypeOwner);
     if (!semaType) {
-      var->semaInfo.skipAnalysis = true;
       free(varDeclSymInfo);
-      return false;
+      goto CLEANUP;
     }
 
     varDeclTypeInfo->type = varTypeInfo->type = semaType;
@@ -2412,8 +2449,14 @@ bool SemaPopulateVar(
     varDeclSymInfo->nextInScope = scopes->arr[scopes->size - 1];
     VectorAdd(scopes, varDeclSymInfo);
   }
-
   return true;
+
+CLEANUP:
+  var->semaInfo.skipAnalysis = true;
+  if (varType) {
+    varType->semaInfo.skipAnalysis = true;
+  }
+  return false;
 }
 
 void SemaPushScope(SemaFileCtx *fileCtx) {
@@ -2424,7 +2467,13 @@ void SemaPopScope(SemaFileCtx *fileCtx, HashTable *symbolTable) {
   Vector *scopes = fileCtx->scopes;
   for (SemaSymInfo *symInfo = scopes->arr[--scopes->size]; symInfo;
        symInfo = symInfo->nextInScope) {
-    HashTableEntryDelete(symbolTable, symInfo->entry);
+    // Note that it is possible for a variable to already be removed from the
+    // table because of type check failures, so we check that the entry is
+    // still in the table before removing it
+    HashTableEntry *entry = symInfo->entry;
+    if (entry) {
+      HashTableEntryDelete(symbolTable, entry);
+    }
   }
 }
 
@@ -2449,19 +2498,26 @@ bool SemaTypeCheckVarDeclStmt(
   assert(varInitList && varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
   for (SyntaxAST *varInit = varInitList->firstChild; varInit;
        varInit = varInit->sibling) {
-    // "varType" is not provided here because parameter types were already
-    // type checked in SemaTypeFromMethodDecl, which is called in
-    // SemaPopulateMembers
     if (!SemaPopulateVar(varInit, varInit->string, &varInit->stringLoc,
-        /*varType=*/NULL, /*addToScope=*/false, symbolTable, symbolTable,
+        varInit->firstChild, /*addToScope=*/true, symbolTable, symbolTable,
         fileCtx)) {
       success = false;
     }
   }
 
-  if (!SemaTypeCheckVarInitList(varInitList, symbolTable, fileCtx)) {
+  if (!SemaTypeCheckVarInitList(
+        varInitList, symbolTable, symbolTable, fileCtx)) {
     success = false;
   }
 
   return success;
+}
+
+void SemaSkipAnalysisForSubtree(SyntaxAST *node) {
+  if (!node) {
+    return;
+  }
+  node->semaInfo.skipAnalysis = true;
+  SemaSkipAnalysisForSubtree(node->firstChild);
+  SemaSkipAnalysisForSubtree(node->sibling);
 }

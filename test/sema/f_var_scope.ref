@@ -1,0 +1,30 @@
+[31;1m[Error][0m f_var_scope.fart:3: identifier [31;1mx1[0m is not defined
+    3 |   var x2 = [31;1mx1[0m; # error
+[31;1m[Error][0m f_var_scope.fart:6: reuse of identifier [31;1mMain[0m for variable declaration
+    6 |     var [31;1mMain[0m = 5; # error
+[31;1m[Error][0m f_var_scope.fart:8: reuse of identifier [31;1mx[0m for variable declaration
+    8 |     var [31;1mx[0m = 5; # error
+[31;1m[Error][0m f_var_scope.fart:9: reuse of identifier [31;1my[0m for variable declaration
+    9 |     var [31;1my[0m = 5; # error
+[31;1m[Error][0m f_var_scope.fart:10: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   10 |     var x0 : [32;1mbool[0m = [31;1mx[0m; # correct, type f64
+[31;1m[Error][0m f_var_scope.fart:11: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   11 |     var y0 : [32;1mbool[0m = [31;1my[0m; # correct, type f32
+[31;1m[Error][0m f_var_scope.fart:12: no initialization for variable [31;1mz0[0m provided when using type deduction
+   12 |     var [31;1mz0[0m; # error
+[31;1m[Error][0m f_var_scope.fart:15: reuse of identifier [31;1mx1[0m for variable declaration
+   15 |     var [31;1mx1[0m = 10.; # error
+[31;1m[Error][0m f_var_scope.fart:16: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   16 |     var x2: [32;1mbool[0m = [31;1mx1[0m; # correct, type i32
+[31;1m[Error][0m f_var_scope.fart:22: identifier [31;1mx[0m is not defined
+   22 |     var variable = [31;1mx[0m; # error
+[31;1m[Error][0m f_var_scope.fart:23: identifier [31;1mvariable[0m is not defined
+   23 |     var variable2 = [31;1mvariable[0m; # error
+[31;1m[Error][0m f_var_scope.fart:24: identifier [31;1mvariable[0m is not defined
+   24 |     var variable3 : bool = [31;1mvariable[0m; # error
+[31;1m[Error][0m f_var_scope.fart:25: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[][0m instead
+   25 |     var x : [32;1mbool[0m = [31;1m"hello"[0m; # correct, type u8[]
+[31;1m[Error][0m f_var_scope.fart:26: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   26 |     var x1 : [32;1mi32[0m = [31;1mtrue[0m; # correct, type bool
+[31;1m[Error][0m f_var_scope.fart:27: expected expression to be of type [32;1mbool[0m, got type [31;1mnil[0m instead
+   27 |     var x2 : [32;1mbool[0m = [31;1mnull[0m; # correct, type nil
