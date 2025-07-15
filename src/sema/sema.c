@@ -287,6 +287,8 @@ bool SemaTypeCheckVarDeclStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Sets skipAnalysis to true for "node" and all its descendants
 void SemaSkipAnalysisForSubtree(SyntaxAST *node);
+// Sets skipAnalysis to true for "node" and all its siblings and descendants
+void SemaSkipAnalysisForSubforest(SyntaxAST *node);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -713,7 +715,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
           SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
                               &methodDecl->method.nameLoc);
           success = false;
-          methodDecl->semaInfo.skipAnalysis = true;
+          SemaSkipAnalysisForSubtree(methodDecl);
           continue;
         }
 
@@ -965,6 +967,7 @@ SemaType *SemaTypeFromMethodDecl(
   if (!retType) {
     goto RET_TYPE_CLEANUP;
   }
+
   retTypeInfo->type = methodType->retType = retType;
   // See set-to-a-later-stage for more info
   retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
@@ -984,12 +987,14 @@ SemaType *SemaTypeFromMethodDecl(
         &paramTypeInfo->isTypeOwner);
     if (!paramType) {
       VectorDelete(paramTypes);
+      free(paramSymInfo);
       goto PARAM_CLEANUP;
     }
     VectorAdd(paramTypes, paramType);
     SemaTypeInfo *paramSymTypeInfo = &paramSymInfo->typeInfo;
     paramSymTypeInfo->type = paramTypeInfo->type = paramType;
     paramSymTypeInfo->isTypeOwner = false;
+
     // See set-to-a-later-stage for more info
     paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
   }
@@ -1018,9 +1023,9 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_VAR_INIT:
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_PARAM:
-      // TODO: handle var init for member variables and inside methods
-      // separately
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_METHOD_DECL:
@@ -2518,6 +2523,14 @@ void SemaSkipAnalysisForSubtree(SyntaxAST *node) {
     return;
   }
   node->semaInfo.skipAnalysis = true;
-  SemaSkipAnalysisForSubtree(node->firstChild);
-  SemaSkipAnalysisForSubtree(node->sibling);
+  SemaSkipAnalysisForSubforest(node->firstChild);
+}
+
+void SemaSkipAnalysisForSubforest(SyntaxAST *node) {
+  if (!node) {
+    return;
+  }
+  node->semaInfo.skipAnalysis = true;
+  SemaSkipAnalysisForSubforest(node->firstChild);
+  SemaSkipAnalysisForSubforest(node->sibling);
 }
