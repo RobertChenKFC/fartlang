@@ -1,0 +1,25 @@
+class Main {
+  var x = this; # error
+
+  new() {
+    var x0 : bool = this; # correct, type Main
+  }
+
+  hey() {
+    var x0 : bool = this; # correct, type Main
+  }
+
+  fn hello() {
+    var x0 = this; # error
+  }
+}
+
+class Foo {
+  new() {
+    var x0 : bool = this; # correct, type Foo
+  }
+
+  hey() {
+    var x0 : bool = this; # correct, type Foo
+  }
+}

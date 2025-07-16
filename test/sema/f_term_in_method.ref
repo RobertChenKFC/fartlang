@@ -1,0 +1,12 @@
+[31;1m[Error][0m f_term_in_method.fart:2: cannot refer to [31;1mthis[0m outside of constructor or method bodies
+    2 |   var x = [31;1mthis[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:5: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+    5 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Main
+[31;1m[Error][0m f_term_in_method.fart:9: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+    9 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Main
+[31;1m[Error][0m f_term_in_method.fart:13: cannot refer to [31;1mthis[0m outside of constructor or method bodies
+   13 |     var x0 = [31;1mthis[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:19: expected expression to be of type [32;1mbool[0m, got type [31;1mFoo[0m instead
+   19 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Foo
+[31;1m[Error][0m f_term_in_method.fart:23: expected expression to be of type [32;1mbool[0m, got type [31;1mFoo[0m instead
+   23 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Foo

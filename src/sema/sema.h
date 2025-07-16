@@ -133,7 +133,7 @@ struct SemaSymInfo {
   SemaTypeInfo typeInfo;
 
   union {
-    // SYNTAX_AST_KIND_VAR_INIT
+    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_METHOD_DECL
     struct {
       // The attributes of the declared symbol
       SemaAttr attr;
@@ -213,6 +213,11 @@ struct SemaFileCtx {
   // have any symbols declared, then NULL is pushed into scopes. Otherwise, the
   // latest symbol of type SemaSymInfo* is pushed
   Vector *scopes;
+  // The type of the current class we are semantic checking
+  SemaType *classType;
+  // The symbol info of the current method we are semantic checking. If we are
+  // not currently in any method, this will be set to NULL
+  SemaSymInfo *methodSymInfo;
 };
 
 // The context of the current semantic checking. The purpose of each field is

@@ -62,9 +62,11 @@ SemaType *SemaTypeFromSyntaxType(
 // Given the AST "methodDecl" of a method declaration, returns a SemaType
 // corresponding to the function type of this method if all the return type
 // and parameter type lookups for the method are successful, otherwise prints
-// an error message using "fileCtx" and NULL is returned
+// an error message using "fileCtx" and NULL is returned. If succeeds, also
+// sets the attribute "attr" of the method declaration
 SemaType *SemaTypeFromMethodDecl(
-    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaAttr *attr);
 // Construct a SemaType "type" from the base primitive type "primType"
 void SemaTypeFromSemaPrimType(SemaType *type, SemaPrimType primType);
 // Type checks all each variable declaration and statement in "ctx". Returns
@@ -289,6 +291,12 @@ bool SemaTypeCheckVarDeclStmt(
 void SemaSkipAnalysisForSubtree(SyntaxAST *node);
 // Sets skipAnalysis to true for "node" and all its siblings and descendants
 void SemaSkipAnalysisForSubforest(SyntaxAST *node);
+// Checks if the AST node "thisNode" of the this literal is enclosed in a
+// constructor method. If so, return the type of the enclosing class, otherwise
+// return NULL. The remaining arguments are used in the same way as the type
+// checking functions above
+SemaType *SemaTypeCheckThisLiteral(
+    SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -337,6 +345,9 @@ SemaFileCtx *SemaFileCtxNew(
   fileCtx->symbolTable = HashTableNew(
       ParserStringHash, ParserStringEqual, NULL, NULL);
   fileCtx->scopes = VectorNew();
+  fileCtx->classType = NULL;
+  fileCtx->methodSymInfo = NULL;
+
   SemaASTInit(node, SemaASTInitAddAllFiles, fileCtx);
   return fileCtx;
 }
@@ -666,6 +677,9 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
     for (SyntaxAST *classDecl = classDecls->firstChild; classDecl;
          classDecl = classDecl->sibling) {
       assert(classDecl && classDecl->kind == SYNTAX_AST_KIND_CLASS_DECL);
+
+      fileCtx->classType = classDecl->semaInfo.symInfo->typeInfo.type;
+
       char *classIdentifier = classDecl->string;
       HashTableEntry *classEntry = HashTableEntryRetrieve(
           symbolTable, classIdentifier);
@@ -720,8 +734,9 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
         }
 
         // Check if method return type and parameter types are valid
+        SemaAttr methodAttr;
         SemaType *methodType = SemaTypeFromMethodDecl(
-            methodDecl, symbolTable, fileCtx);
+            methodDecl, symbolTable, fileCtx, &methodAttr);
         if (!methodType) {
           success = false;
           methodDecl->semaInfo.skipAnalysis = true;
@@ -729,6 +744,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
         }
 
         SemaSymInfo *methodInfo = malloc(sizeof(SemaSymInfo));
+        methodInfo->attr = methodAttr;
         methodDecl->semaInfo.symInfo = methodInfo;
         SemaTypeInfo *methodTypeInfo = &methodInfo->typeInfo;
         methodTypeInfo->type = methodType;
@@ -952,7 +968,8 @@ SemaType *SemaTypeFromSyntaxType(
 }
 
 SemaType *SemaTypeFromMethodDecl(
-    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaAttr *attr) {
   SemaType *methodType = malloc(sizeof(SemaType));
   methodType->kind = SEMA_TYPE_KIND_FN;
 
@@ -961,18 +978,56 @@ SemaType *SemaTypeFromMethodDecl(
   SyntaxAST *param = paramList->firstChild;
   assert(retSyntaxType && retSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
   SemaTypeInfo *retTypeInfo = &retSyntaxType->semaInfo.typeInfo;
-  SemaType *retType = SemaTypeFromSyntaxType(
-      retSyntaxType, symbolTable, fileCtx, methodDecl,
-      &retTypeInfo->isTypeOwner);
-  if (!retType) {
-    goto RET_TYPE_CLEANUP;
-  }
 
+  SemaAttr methodAttr;
+  switch (methodDecl->method.type) {
+    case SYNTAX_METHOD_TYPE_FN: {
+      // The parser indicates that a method is a constructor by setting the
+      // return type of the method to SYNTAX_TYPE_THIS
+      bool isCtor =
+          retSyntaxType->type.baseType == SYNTAX_TYPE_THIS &&
+          retSyntaxType->type.arrayLevels == 0 &&
+          !retSyntaxType->firstChild;
+      if (isCtor) {
+        methodAttr = SEMA_ATTR_CTOR;
+      } else {
+        methodAttr = SEMA_ATTR_FN;
+      }
+      break;
+    } case SYNTAX_METHOD_TYPE_METHOD: {
+      methodAttr = SEMA_ATTR_METHOD;
+      break;
+    } default: {
+      assert(false);
+    }
+  }
+  *attr = methodAttr;
+
+  SemaType *retType;
+  if (methodAttr == SEMA_ATTR_CTOR) {
+    // Since SYNTAX_TYPE_THIS cannot be converted to a valid SemaType, set it
+    // to the type of the current enclosing class
+    assert(fileCtx->classType);
+    retType = fileCtx->classType;
+    retTypeInfo->isTypeOwner = false;
+  } else {
+    retType = SemaTypeFromSyntaxType(
+        retSyntaxType, symbolTable, fileCtx, methodDecl,
+        &retTypeInfo->isTypeOwner);
+    if (!retType) {
+      goto RET_TYPE_CLEANUP;
+    }
+  }
   retTypeInfo->type = methodType->retType = retType;
   // See set-to-a-later-stage for more info
   retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
 
   Vector *paramTypes = VectorNew();
+  if (methodAttr == SEMA_ATTR_METHOD) {
+    // Methods take on an implicit argument "this" of the enclosing class type
+    assert(fileCtx->classType);
+    VectorAdd(paramTypes, fileCtx->classType);
+  }
   methodType->paramTypes = paramTypes;
   assert(paramList && paramList->kind == SYNTAX_AST_KIND_PARAM_LIST);
   for (; param; param = param->sibling) {
@@ -1069,6 +1124,8 @@ bool SemaTypeCheck(SemaCtx *ctx) {
          classDecl = classDecl->sibling) {
       assert(classDecl && classDecl->kind == SYNTAX_AST_KIND_CLASS_DECL);
 
+      fileCtx->classType = classDecl->semaInfo.symInfo->typeInfo.type;
+
       // Type check all class variable initializations
       SyntaxAST *varDecls = classDecl->firstChild;
       SemaSymInfo *classInfo = classDecl->semaInfo.symInfo;
@@ -1084,6 +1141,9 @@ bool SemaTypeCheck(SemaCtx *ctx) {
       assert(methodDecls && methodDecls->kind == SYNTAX_AST_KIND_METHOD_DECLS);
       for (SyntaxAST *methodDecl = methodDecls->firstChild; methodDecl;
            methodDecl = methodDecl->sibling) {
+        assert(methodDecl && methodDecl->kind == SYNTAX_AST_KIND_METHOD_DECL);
+        fileCtx->methodSymInfo = methodDecl->semaInfo.symInfo;
+
         if (!SemaTypeCheckMethodDecl(methodDecl, symbolTable, fileCtx)) {
           success = false;
         }
@@ -1126,12 +1186,12 @@ SemaType *SemaTypeFromTerm(
           type->isBaseTypeOwner = true;
           type->arrayLevels = 1;
           break;
+        } case SYNTAX_TYPE_THIS: {
+          free(type);
+          return SemaTypeCheckThisLiteral(term, symbolTable, fileCtx);
         } default: {
-          // DEBUG
           printf("Literal kind: %d\n", term->literal.type);
-
           assert(false);
-          break;
         }
       }
       SemaTypeInfo *typeInfo = &term->semaInfo.typeInfo;
@@ -1167,9 +1227,7 @@ SemaType *SemaTypeFromTerm(
     // allocations
 
     default: {
-      // DEBUG
       printf("Term kind: %d\n", term->kind);
-
       assert(false);
     }
   }
@@ -1364,9 +1422,7 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       fprintf(file, "%s", namespace);
       break;
     } default: {
-      // DEBUG
       printf("Sema type kind: %d\n", type->kind);
-
       assert(false);
     }
   }
@@ -2489,9 +2545,7 @@ bool SemaTypeCheckStmt(
     case SYNTAX_AST_KIND_VAR_DECL:
       return SemaTypeCheckVarDeclStmt(stmt, symbolTable, fileCtx);
     default:
-      // DEBUG
       printf("Stmt kind: %d\n", stmt->kind);
-
       assert(false);
   }
 }
@@ -2533,4 +2587,29 @@ void SemaSkipAnalysisForSubforest(SyntaxAST *node) {
   node->semaInfo.skipAnalysis = true;
   SemaSkipAnalysisForSubforest(node->firstChild);
   SemaSkipAnalysisForSubforest(node->sibling);
+}
+
+SemaType *SemaTypeCheckThisLiteral(
+    SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  if (!methodSymInfo ||
+      (methodSymInfo->attr != SEMA_ATTR_CTOR &&
+       methodSymInfo->attr != SEMA_ATTR_METHOD)) {
+    SourceLocation *loc = &thisNode->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "cannot refer to "SOURCE_COLOR_RED"this"
+            SOURCE_COLOR_RESET" outside of constructor or method bodies\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  SemaType *thisType = fileCtx->classType;
+  assert(thisType);
+  SemaTypeInfo *thisInfo = &thisNode->semaInfo.typeInfo;
+  thisInfo->type = thisType;
+  thisInfo->isTypeOwner = false;
+  return thisType;
+CLEANUP:
+  thisNode->semaInfo.skipAnalysis = true;
+  return NULL;
 }
