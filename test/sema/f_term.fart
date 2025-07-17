@@ -1,3 +1,8 @@
+import dir1.file3;
+import dir1.file3 as File3;
+import dir1.file4;
+import dir1.file4.*;
+
 class Main {
   # Simple terms with auto type deduction
   var s_i32 = 5;
@@ -26,4 +31,14 @@ class Main {
 
   # Parenthsized expression
   var paren_expr: bool = (10); # correct, type i32
+
+  # Should not be able to store any class or namespaces
+  var class_var : bool = Main; # error
+  var namespace_var : bool = file3; # error
+  var namespace_var_2 = File3; # error 
+  var namespace_var_3 = file3; # error
+  var namespace_var_4 = file4; # error
+  # TODO: enable this later once member access is implemented
+  # var class_var_2 = file4.Foo; # error
+  var class_var_3 = Foo; # error
 }

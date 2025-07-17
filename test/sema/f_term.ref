@@ -1,30 +1,42 @@
-[31;1m[Error][0m f_term.fart:7: expected expression to be of type [32;1mbool[0m, got type [31;1mu64[0m instead
-    7 |   var p_u64: [32;1mbool[0m = [31;1m4u64[0m; # correct, type u64
-[31;1m[Error][0m f_term.fart:8: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
-    8 |   var p_i64: [32;1mbool[0m = [31;1m4i64[0m; # correct, type i64
-[31;1m[Error][0m f_term.fart:9: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
-    9 |   var p_u32: [32;1mbool[0m = [31;1m4u32[0m; # correct, type u32
-[31;1m[Error][0m f_term.fart:10: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
-   10 |   var p_i32: [32;1mbool[0m = [31;1m4[0m; # correct, type i32
-[31;1m[Error][0m f_term.fart:11: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
-   11 |   var p_u16: [32;1mbool[0m = [31;1m4u16[0m; # correct, type u16
-[31;1m[Error][0m f_term.fart:12: expected expression to be of type [32;1mbool[0m, got type [31;1mi16[0m instead
-   12 |   var p_i16: [32;1mbool[0m = [31;1m4i16[0m; # correct, type i16
-[31;1m[Error][0m f_term.fart:13: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[0m instead
-   13 |   var p_u8: [32;1mbool[0m = [31;1m4u8[0m; # correct, type u8
-[31;1m[Error][0m f_term.fart:14: expected expression to be of type [32;1mbool[0m, got type [31;1mi8[0m instead
-   14 |   var p_i8: [32;1mbool[0m = [31;1m4i8[0m; # correct, type i8
-[31;1m[Error][0m f_term.fart:15: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
-   15 |   var p_f64: [32;1mbool[0m = [31;1m4f64[0m; # correct, type f64
-[31;1m[Error][0m f_term.fart:16: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
-   16 |   var p_f32: [32;1mbool[0m = [31;1m4.[0m; # correct, type f32
-[31;1m[Error][0m f_term.fart:17: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
-   17 |   var p_bool: [32;1mi32[0m = [31;1mtrue[0m; # correct, type bool
-[31;1m[Error][0m f_term.fart:18: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[][0m instead
-   18 |   var p_str: [32;1mbool[0m = [31;1m"hello"[0m; # correct, type u8[]
-[31;1m[Error][0m f_term.fart:19: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[0m instead
-   19 |   var p_char: [32;1mbool[0m = [31;1m'h'[0m; # correct, type u8
-[31;1m[Error][0m f_term.fart:20: expected expression to be of type [32;1mbool[0m, got type [31;1mnil[0m instead
-   20 |   var p_null0 : [32;1mbool[0m = [31;1mnull[0m; # error
-[31;1m[Error][0m f_term.fart:28: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
-   28 |   var paren_expr: [32;1mbool[0m = [31;1m(10)[0m; # correct, type i32
+[31;1m[Error][0m f_term.fart:12: expected expression to be of type [32;1mbool[0m, got type [31;1mu64[0m instead
+   12 |   var p_u64: [32;1mbool[0m = [31;1m4u64[0m; # correct, type u64
+[31;1m[Error][0m f_term.fart:13: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
+   13 |   var p_i64: [32;1mbool[0m = [31;1m4i64[0m; # correct, type i64
+[31;1m[Error][0m f_term.fart:14: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+   14 |   var p_u32: [32;1mbool[0m = [31;1m4u32[0m; # correct, type u32
+[31;1m[Error][0m f_term.fart:15: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   15 |   var p_i32: [32;1mbool[0m = [31;1m4[0m; # correct, type i32
+[31;1m[Error][0m f_term.fart:16: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
+   16 |   var p_u16: [32;1mbool[0m = [31;1m4u16[0m; # correct, type u16
+[31;1m[Error][0m f_term.fart:17: expected expression to be of type [32;1mbool[0m, got type [31;1mi16[0m instead
+   17 |   var p_i16: [32;1mbool[0m = [31;1m4i16[0m; # correct, type i16
+[31;1m[Error][0m f_term.fart:18: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[0m instead
+   18 |   var p_u8: [32;1mbool[0m = [31;1m4u8[0m; # correct, type u8
+[31;1m[Error][0m f_term.fart:19: expected expression to be of type [32;1mbool[0m, got type [31;1mi8[0m instead
+   19 |   var p_i8: [32;1mbool[0m = [31;1m4i8[0m; # correct, type i8
+[31;1m[Error][0m f_term.fart:20: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   20 |   var p_f64: [32;1mbool[0m = [31;1m4f64[0m; # correct, type f64
+[31;1m[Error][0m f_term.fart:21: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   21 |   var p_f32: [32;1mbool[0m = [31;1m4.[0m; # correct, type f32
+[31;1m[Error][0m f_term.fart:22: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   22 |   var p_bool: [32;1mi32[0m = [31;1mtrue[0m; # correct, type bool
+[31;1m[Error][0m f_term.fart:23: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[][0m instead
+   23 |   var p_str: [32;1mbool[0m = [31;1m"hello"[0m; # correct, type u8[]
+[31;1m[Error][0m f_term.fart:24: expected expression to be of type [32;1mbool[0m, got type [31;1mu8[0m instead
+   24 |   var p_char: [32;1mbool[0m = [31;1m'h'[0m; # correct, type u8
+[31;1m[Error][0m f_term.fart:25: expected expression to be of type [32;1mbool[0m, got type [31;1mnil[0m instead
+   25 |   var p_null0 : [32;1mbool[0m = [31;1mnull[0m; # error
+[31;1m[Error][0m f_term.fart:33: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   33 |   var paren_expr: [32;1mbool[0m = [31;1m(10)[0m; # correct, type i32
+[31;1m[Error][0m f_term.fart:36: identifier [31;1mMain[0m is not used in an access operator
+   36 |   var class_var : bool = [31;1mMain[0m; # error
+[31;1m[Error][0m f_term.fart:37: identifier [31;1mfile3[0m is not used in an access operator
+   37 |   var namespace_var : bool = [31;1mfile3[0m; # error
+[31;1m[Error][0m f_term.fart:38: identifier [31;1mFile3[0m is not used in an access operator
+   38 |   var namespace_var_2 = [31;1mFile3[0m; # error 
+[31;1m[Error][0m f_term.fart:39: identifier [31;1mfile3[0m is not used in an access operator
+   39 |   var namespace_var_3 = [31;1mfile3[0m; # error
+[31;1m[Error][0m f_term.fart:40: identifier [31;1mfile4[0m is not used in an access operator
+   40 |   var namespace_var_4 = [31;1mfile4[0m; # error
+[31;1m[Error][0m f_term.fart:43: identifier [31;1mFoo[0m is not used in an access operator
+   43 |   var class_var_3 = [31;1mFoo[0m; # error

@@ -75,12 +75,15 @@ bool SemaTypeCheck(SemaCtx *ctx);
 // Given the AST "term" of a term, returns the SemaType of this
 // expression. If the expression successfully type checks, then the
 // corresponding SemaType is returned. Otherwise, and error message is printed
-// using "fileCtx" and NULL is returned
+// using "fileCtx" and NULL is returned. The "parentExpr" that uses this term
+// is also provided (or NULL if there is no parent expression)
 SemaType *SemaTypeFromTerm(
-    SyntaxAST *term, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *term, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Same as SemaTypeFromTerm, but for AST "expr" of expressions instead
 SemaType *SemaTypeFromExpr(
-    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *expr, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Check if the type expressed by "syntaxType" matches any of the primitive
 // types. If so, update "type" to reflect the expressed type and return true.
 // Otherwise, return false
@@ -124,23 +127,23 @@ int SemaTypeBitwidth(SemaType *type);
 // in the AST node "expr" are all the signed or all unsigned types, and all have
 // the same bitwidth. If so, return the result type, otherwise return NULL.
 // The "symbolTable" and "ctx" are used to recursively type check the operands
-SemaType *SemaTypeCheckBitwiseOp(
+SemaType *SemaTypeFromBitwiseOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if the condition of ternary "expr" is of type bool, and the true and
 // false branches of the expression evaluate to the same type. If so, return
 // the type of the true branch, otherwise, return NULL. Remaining arguments are
 // used in the same way as above
-SemaType *SemaTypeCheckTernaryOp(
+SemaType *SemaTypeFromTernaryOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if all operands of the logic "expr" is of type bool. If so, return
 // the type of the last operand, otherwise return NULL. Remaining arguments
 // are used in the same way as above
-SemaType *SemaTypeCheckLogicOp(
+SemaType *SemaTypeFromLogicOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if all operands are float types, all are signed types or all are
 // unsigned types. If so, return the type with the largest bitwidth, otherwise
 // return NULL. Remaining arguments are used in the same way as above
-SemaType *SemaTypeCheckComparisonOp(
+SemaType *SemaTypeFromComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is a primitive type of kind "primType"
 bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
@@ -165,7 +168,7 @@ bool SemaTypeIsClass(SemaType *type);
 // the alloc expression, which is the type inside the alloc "expr" with one
 // additional array level. Otherwise, return NULL. Remaining arguments are
 // used in the same way as all the type check functions above
-SemaType *SemaTypeCheckAlloc(
+SemaType *SemaTypeFromAlloc(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Returns a newly allocated type with one more array level than "baseType"
 SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType);
@@ -173,7 +176,7 @@ SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType);
 // type, and the right operand is of unsigned type. If so, return the type of
 // the shift expression, otherwise return NULL. The remaining arguments are
 // used in the same way as all the type check functions above
-SemaType *SemaTypeCheckShiftOp(
+SemaType *SemaTypeFromShiftOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is an integral type
 bool SemaTypeIsIntegral(SemaType *type);
@@ -182,7 +185,7 @@ bool SemaTypeIsIntegral(SemaType *type);
 // NULL. Additional type checks are performed for specific arithmetic operators
 // with the helper functions below. The remaining arguments are used in the same
 // way as all the type check functions above
-SemaType *SemaTypeCheckArithOp(
+SemaType *SemaTypeFromArithOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is a numeric type
 bool SemaTypeIsNumeric(SemaType *type);
@@ -205,7 +208,7 @@ bool SemaTypeCheckNegOp(
 typedef bool (*SemaCastOpCheckFn)(
     SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
     SemaType *targetType, SemaFileCtx *fileCtx);
-SemaType *SemaTypeCheckCastOp(
+SemaType *SemaTypeFromCastOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
     SemaCastOpCheckFn check, bool retBoolType);
 // Check if the "operandType" is of type any
@@ -230,7 +233,7 @@ void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage);
 // the sub-expressions matches the argument types of the function type. If so,
 // return the return type of the function type, otherwise return NULL. The
 // remaining arguments are used in the same way as above
-SemaType *SemaTypeCheckCall(
+SemaType *SemaTypeFromCall(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Check if "type" is a function type
 bool SemaTypeIsFunction(SemaType *type);
@@ -295,8 +298,17 @@ void SemaSkipAnalysisForSubforest(SyntaxAST *node);
 // constructor method. If so, return the type of the enclosing class, otherwise
 // return NULL. The remaining arguments are used in the same way as the type
 // checking functions above
-SemaType *SemaTypeCheckThisLiteral(
+SemaType *SemaTypeFromThisLiteral(
     SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns the namespace identifier string of the provided "importDecl". If
+// "loc" is provided (not NULL), will also set "loc" to the location of the
+// namespace identifier. There are three cases (decided in this order):
+// (1) If the import declaration is a wildcard import, returns NULL. "loc" will
+//     not be set in this case
+// (2) If the import declaration supplies a namespace, returns the supplied
+//     namespace
+// (3) Otherwise, return the last identifier of the module path
+char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -507,6 +519,7 @@ bool SemaPopulateClassSymbols(SemaCtx *ctx) {
         success = false;
       } else {
         SemaSymInfo *classInfo = malloc(sizeof(SemaSymInfo));
+        classInfo->attr = SEMA_ATTR_CLASS;
         classDecl->semaInfo.symInfo = classInfo;
         SemaType *type = malloc(sizeof(SemaType));
         type->kind = SEMA_TYPE_KIND_CLASS;
@@ -615,21 +628,8 @@ bool SemaPopulateImportSymbols(SemaCtx *ctx) {
           HashTableEntryAdd(symbolTable, symbol, importEntry->value);
         }
       } else {
-        char *namespace = importDecl->import.namespace;
         SourceLocation namespaceLoc;
-        if (!namespace) {
-          // If the import declaration does not specify a namespace and is not
-          // a wildcard import, then the default namespace is the last
-          // identifier in the module path
-          SyntaxAST *modulePath = importDecl->firstChild;
-          assert(modulePath && modulePath->kind == SYNTAX_AST_KIND_MODULE_PATH);
-          SyntaxAST *identifier = modulePath->lastChild;
-          assert(identifier && identifier->kind == SYNTAX_AST_KIND_IDENTIFIER);
-          namespace = identifier->string;
-          namespaceLoc = identifier->loc;
-        } else {
-          namespaceLoc = importDecl->import.extLoc;
-        }
+        char *namespace = SemaGetNamespaceIdentifier(importDecl, &namespaceLoc);
         HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, namespace);
         if (entry) {
           fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET" %s:%d: ",
@@ -1156,7 +1156,8 @@ bool SemaTypeCheck(SemaCtx *ctx) {
 }
 
 SemaType *SemaTypeFromTerm(
-    SyntaxAST *term, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *term, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
   SemaType *type = malloc(sizeof(SemaType));
   switch (term->kind) {
     case SYNTAX_AST_KIND_LITERAL: {
@@ -1188,7 +1189,7 @@ SemaType *SemaTypeFromTerm(
           break;
         } case SYNTAX_TYPE_THIS: {
           free(type);
-          return SemaTypeCheckThisLiteral(term, symbolTable, fileCtx);
+          return SemaTypeFromThisLiteral(term, symbolTable, fileCtx);
         } default: {
           printf("Literal kind: %d\n", term->literal.type);
           assert(false);
@@ -1220,6 +1221,23 @@ SemaType *SemaTypeFromTerm(
       typeInfo->isTypeOwner = false;
       free(type);
       type = typeInfo->type;
+
+      // If the identifier is actually a namespace or class (not variable of a
+      // class), then the parent expresssion using this term must be an access
+      // operator. In other words, namespaces and classes cannot be passed
+      // around as variables or parameters
+      if ((type->kind == SEMA_TYPE_KIND_NAMESPACE ||
+           varInfo->attr == SEMA_ATTR_CLASS) &&
+          !(parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS)) {
+        SourceLocation *loc = &term->stringLoc;
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+        fprintf(stderr, "identifier "SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET
+                " is not used in an access operator\n", varName);
+        SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+        type = NULL;
+        term->semaInfo.skipAnalysis = true;
+      }
       break;
     }
 
@@ -1235,55 +1253,90 @@ SemaType *SemaTypeFromTerm(
 }
 
 SemaType *SemaTypeFromExpr(
-    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *expr, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  if (expr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
+    // TODO: implement type checking for member access. How do we do this,
+    // exactly? The problem is that SemaType itself does not indicate whether
+    // it is a class or an instance of a class, which can limit what members
+    // it can access. For now, I can think of a workaround:
+    // (1) Check if the operand is an identifier. If so, we can look up the
+    //     SemaSymInfo of the identifier to get the type and attribute of the
+    //     identifier to determine what members it can access
+    // (2) Check if the operand is an access operator. If so, check if the first
+    //     operand of the access operator is a namespace. If this is the case,
+    //     then it is a class. An example is something like
+    //
+    //     bar.fart:
+    //
+    //       class FooBar {}
+    //
+    //     foo.fart:
+    //
+    //       import bar;
+    //
+    //       class Foo {
+    //         var x = bar.FooBar.x;
+    //       }
+    //
+    //     Here, when we type check "bar.FooBar.x", the operand "bar.FooBar" is
+    //     also an access operator, and "bar" is a namespace, so "bar.FooBar"
+    //     is a class and thus "x" must be a static variable or method of
+    //     "bar.FooBar".
+    // (3) Otherwise, if the operand's type is a class type, then the operand
+    //     is always an instance of the class.
+    //
+    // It is (3) that I'm unsure of. Are there any other cases similar to (2)
+    // such that the expression is not an instance of a class?
+  }
   if (expr->kind != SYNTAX_AST_KIND_OP) {
-    return SemaTypeFromTerm(expr, symbolTable, fileCtx);
+    return SemaTypeFromTerm(expr, parentExpr, symbolTable, fileCtx);
   }
   switch (expr->op) {
     case SYNTAX_OP_ALLOC:
-      return SemaTypeCheckAlloc(expr, symbolTable, fileCtx);
+      return SemaTypeFromAlloc(expr, symbolTable, fileCtx);
     case SYNTAX_OP_TERNARY:
-      return SemaTypeCheckTernaryOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromTernaryOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LOGIC_OR:
     case SYNTAX_OP_LOGIC_AND:
     case SYNTAX_OP_NOT:
-      return SemaTypeCheckLogicOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromLogicOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_BIT_OR:
     case SYNTAX_OP_BIT_AND:
     case SYNTAX_OP_BIT_XOR:
     case SYNTAX_OP_BIT_NOT:
-      return SemaTypeCheckBitwiseOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromBitwiseOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LT:
     case SYNTAX_OP_LE:
     case SYNTAX_OP_EQEQ:
     case SYNTAX_OP_NEQ:
     case SYNTAX_OP_GT:
     case SYNTAX_OP_GE:
-      return SemaTypeCheckComparisonOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromComparisonOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LSHIFT:
     case SYNTAX_OP_RSHIFT:
-      return SemaTypeCheckShiftOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromShiftOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_ADD:
     case SYNTAX_OP_SUB:
     case SYNTAX_OP_MUL:
     case SYNTAX_OP_DIV:
     case SYNTAX_OP_MOD:
     case SYNTAX_OP_NEG:
-      return SemaTypeCheckArithOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromArithOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_CAST_IS:
-      return SemaTypeCheckCastOp(
+      return SemaTypeFromCastOp(
           expr, symbolTable, fileCtx, SemaTypeCheckCastIsOp,
           /*retBoolType=*/true);
     case SYNTAX_OP_CAST_AS:
-      return SemaTypeCheckCastOp(
+      return SemaTypeFromCastOp(
           expr, symbolTable, fileCtx, SemaTypeCheckCastAsOp,
           /*retBoolType=*/false);
     case SYNTAX_OP_CAST_INTO:
-      return SemaTypeCheckCastOp(
+      return SemaTypeFromCastOp(
           expr, symbolTable, fileCtx, SemaTypeCheckCastIntoOp,
           /*retBoolType=*/false);
     case SYNTAX_OP_CALL:
-      return SemaTypeCheckCall(expr, symbolTable, fileCtx);
+      return SemaTypeFromCall(expr, symbolTable, fileCtx);
     default:
       assert(false);
   }
@@ -1417,7 +1470,7 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       fprintf(file, "%s", type->node->string);
       break;
     } case SEMA_TYPE_KIND_NAMESPACE: {
-      char *namespace = type->node->import.namespace;
+      char *namespace = SemaGetNamespaceIdentifier(type->node, /*loc=*/NULL);
       assert(namespace);
       fprintf(file, "%s", namespace);
       break;
@@ -1550,11 +1603,11 @@ int SemaTypeBitwidth(SemaType *type) {
   }
 }
 
-SemaType *SemaTypeCheckBitwiseOp(
+SemaType *SemaTypeFromBitwiseOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *firstOperand = expr->firstChild, *operand = firstOperand;
   SemaType *firstOperandType = SemaTypeFromExpr(
-      firstOperand, symbolTable, fileCtx);
+      firstOperand, expr, symbolTable, fileCtx);
   if (!firstOperandType) {
     goto CLEANUP;
   }
@@ -1571,7 +1624,8 @@ SemaType *SemaTypeCheckBitwiseOp(
     goto CLEANUP;
   }
   for (operand = firstOperand->sibling; operand; operand = operand->sibling) {
-    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    SemaType *operandType = SemaTypeFromExpr(
+        operand, expr, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
@@ -1603,21 +1657,21 @@ CLEANUP:
   return NULL;
 }
 
-SemaType *SemaTypeCheckTernaryOp(
+SemaType *SemaTypeFromTernaryOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *trueNode = expr->firstChild;
   SyntaxAST *condNode = trueNode->sibling;
   SyntaxAST *falseNode = condNode->sibling;
   SemaType *condType = SemaTypeFromExpr(
-      condNode, symbolTable, fileCtx);
+      condNode, expr, symbolTable, fileCtx);
   if (!condType) {
     goto TERNARY_OP_SKIP_COND;
   }
-  SemaType *trueType = SemaTypeFromExpr(trueNode, symbolTable, fileCtx);
+  SemaType *trueType = SemaTypeFromExpr(trueNode, expr, symbolTable, fileCtx);
   if (!trueType) {
     goto TERNARY_OP_SKIP_TRUE;
   }
-  SemaType *falseType = SemaTypeFromExpr(falseNode, symbolTable, fileCtx);
+  SemaType *falseType = SemaTypeFromExpr(falseNode, expr, symbolTable, fileCtx);
   if (!trueType) {
     goto TERNARY_OP_SKIP_FALSE;
   }
@@ -1653,12 +1707,12 @@ TERNARY_OP_SKIP_EXPR:
   return NULL;
 }
 
-SemaType *SemaTypeCheckLogicOp(
+SemaType *SemaTypeFromLogicOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *operand;
   SemaType *operandType;
   for (operand = expr->firstChild; operand; operand = operand->sibling) {
-    operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
@@ -1687,7 +1741,7 @@ CLEANUP:
   return NULL;
 }
 
-SemaType *SemaTypeCheckComparisonOp(
+SemaType *SemaTypeFromComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   // The AST of the expression 3 < 5 > 7 == 9 looks like this:
   //
@@ -1729,7 +1783,8 @@ SemaType *SemaTypeCheckComparisonOp(
   TypeGroup typeGroup;
   for (operandIndex = numOperands - 1; operandIndex >= 0; --operandIndex) {
     SyntaxAST *operand = failingOperand = operands[operandIndex];
-    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    SemaType *operandType = SemaTypeFromExpr(
+        operand, expr, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
@@ -1890,12 +1945,12 @@ bool SemaTypeIsClass(SemaType *type) {
   return type->kind == SEMA_TYPE_KIND_CLASS;
 }
 
-SemaType *SemaTypeCheckAlloc(
+SemaType *SemaTypeFromAlloc(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *countExpr = expr->firstChild;
   SyntaxAST *syntaxBaseType = expr->lastChild;
   SemaType *countType = SemaTypeFromExpr(
-      expr->firstChild, symbolTable, fileCtx);
+      expr->firstChild, expr, symbolTable, fileCtx);
   if (!countType) {
     goto ALLOC_SKIP_COUNT_EXPR;
   }
@@ -1949,13 +2004,13 @@ SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType) {
   return type;
 }
 
-SemaType *SemaTypeCheckShiftOp(
+SemaType *SemaTypeFromShiftOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *leftOperand = expr->firstChild;
   SyntaxAST *rightOperand = leftOperand->sibling;
   assert(!rightOperand->sibling);
   SemaType *leftOperandType = SemaTypeFromExpr(
-      leftOperand, symbolTable, fileCtx);
+      leftOperand, expr, symbolTable, fileCtx);
   if (!leftOperandType) {
     goto CLEANUP_LEFT_OPERAND;
   }
@@ -1971,7 +2026,7 @@ SemaType *SemaTypeCheckShiftOp(
     goto CLEANUP_RIGHT_OPERAND;
   }
   SemaType *rightOperandType = SemaTypeFromExpr(
-      rightOperand, symbolTable, fileCtx);
+      rightOperand, expr, symbolTable, fileCtx);
   if (!SemaTypeIsUnsigned(rightOperandType)) {
     fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
             " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
@@ -2000,11 +2055,11 @@ bool SemaTypeIsIntegral(SemaType *type) {
   return SemaTypeIsSigned(type) || SemaTypeIsUnsigned(type);
 }
 
-SemaType *SemaTypeCheckArithOp(
+SemaType *SemaTypeFromArithOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *leftOperand = expr->firstChild;
   SemaType *leftOperandType = SemaTypeFromExpr(
-      leftOperand, symbolTable, fileCtx);
+      leftOperand, expr, symbolTable, fileCtx);
   if (!leftOperandType) {
     goto CLEANUP_LEFT_OPERAND;
   }
@@ -2014,7 +2069,8 @@ SemaType *SemaTypeCheckArithOp(
   if (!hasOneOperand) {
     rightOperand = leftOperand->sibling;
     assert(!rightOperand->sibling);
-    rightOperandType = SemaTypeFromExpr(rightOperand, symbolTable, fileCtx);
+    rightOperandType = SemaTypeFromExpr(
+        rightOperand, expr, symbolTable, fileCtx);
     if (!rightOperandType) {
       goto CLEANUP_RIGHT_OPERAND;
     }
@@ -2132,13 +2188,13 @@ bool SemaTypeCheckNegOp(
   return true;
 }
 
-SemaType *SemaTypeCheckCastOp(
+SemaType *SemaTypeFromCastOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
     SemaCastOpCheckFn check, bool retBoolType) {
   SyntaxAST *operand = expr->firstChild;
   SyntaxAST *target = operand->sibling;
   assert(!target->sibling);
-  SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+  SemaType *operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
   if (!operandType) {
     goto CLEANUP_OPERAND;
   }
@@ -2242,12 +2298,13 @@ void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage) {
   }
 }
 
-SemaType *SemaTypeCheckCall(
+SemaType *SemaTypeFromCall(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *function = expr->firstChild;
   SyntaxAST *args = function->sibling;
   assert(!args->sibling);
-  SemaType *functionType = SemaTypeFromExpr(function, symbolTable, fileCtx);
+  SemaType *functionType = SemaTypeFromExpr(
+      function, expr, symbolTable, fileCtx);
   if (!functionType) {
     goto CLEANUP_FUNCTION;
   }
@@ -2266,7 +2323,7 @@ SemaType *SemaTypeCheckCall(
   void **paramTypes = paramTypesVec->arr;
   int numParams = paramTypesVec->size, i;
   for (i = 0; arg && i < numParams; arg = arg->sibling, ++i) {
-    SemaType *argType = SemaTypeFromExpr(arg, symbolTable, fileCtx);
+    SemaType *argType = SemaTypeFromExpr(arg, expr, symbolTable, fileCtx);
     if (!argType) {
       goto CLEANUP_ARGS;
     }
@@ -2358,7 +2415,7 @@ bool SemaTypeCheckVarInitList(
     SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
     if (initExpr) {
       SemaType *initExprType = SemaTypeFromExpr(
-          initExpr, symbolTable, fileCtx);
+          initExpr, /*parentExpr=*/NULL, symbolTable, fileCtx);
       if (!initExprType) {
         success = false;
         goto REMOVE_VAR;
@@ -2589,7 +2646,7 @@ void SemaSkipAnalysisForSubforest(SyntaxAST *node) {
   SemaSkipAnalysisForSubforest(node->sibling);
 }
 
-SemaType *SemaTypeCheckThisLiteral(
+SemaType *SemaTypeFromThisLiteral(
     SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
   if (!methodSymInfo ||
@@ -2612,4 +2669,29 @@ SemaType *SemaTypeCheckThisLiteral(
 CLEANUP:
   thisNode->semaInfo.skipAnalysis = true;
   return NULL;
+}
+
+char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc) {
+  if (importDecl->import.isWildcard) {
+    return NULL;
+  }
+  char *namespace = importDecl->import.namespace;
+  if (!namespace) {
+    // If the import declaration does not specify a namespace and is not
+    // a wildcard import, then the default namespace is the last
+    // identifier in the module path
+    SyntaxAST *modulePath = importDecl->firstChild;
+    assert(modulePath && modulePath->kind == SYNTAX_AST_KIND_MODULE_PATH);
+    SyntaxAST *identifier = modulePath->lastChild;
+    assert(identifier && identifier->kind == SYNTAX_AST_KIND_IDENTIFIER);
+    namespace = identifier->string;
+    if (loc) {
+      *loc = identifier->loc;
+    }
+  } else {
+    if (loc) {
+      *loc = importDecl->import.extLoc;
+    }
+  }
+  return namespace;
 }
