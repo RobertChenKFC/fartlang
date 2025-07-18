@@ -261,18 +261,22 @@ bool SemaTypeCheckMethodDecl(
 // name of the identifier "varName" and the type of the variable "varType" are
 // specified as separate arguments to the function so that this is a general
 // function that can take on any form of variable declaration: class variables,
-// method variables and method parameters. Note that there are two HashTable's:
-// "memberTable", which is the table we will populate the variable with, and
-// "symbolTable", which is the symbol table to lookup in the current scope (
-// (mainly to type check "varType"). Returns true if and only if the the
-// variable name doesn't already exist in the "memberTable", and "varType" (if
-// provided, can be NULL) is well-formed. The "addToScope" argument specifies
-// whether to also add the variable to the current scope. The remaining
-// arguments are used in the same way as the type check functions above
+// method variables and method parameters. The variable attribute "attr" is
+// also taken as a separate argument and will be used to set the attribute
+// of the SemaSymInfo of the variable.
+//
+// Note that there are two HashTable's: "memberTable", which is the table we
+// will populate the variable with, and "symbolTable", which is the symbol table
+// to lookup in the current scope (mainly to type check "varType"). Returns true
+// if and only if the the variable name doesn't already exist in the
+// "memberTable", and "varType" (if provided, can be NULL) is well-formed. The
+// "addToScope" argument specifies whether to also add the variable to the
+// current scope. The remaining arguments are used in the same way as the type
+// check functions above
 bool SemaPopulateVar(
     SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
-    bool addToScope, HashTable *symbolTable, HashTable *memberTable,
-    SemaFileCtx *fileCtx);
+    SemaAttr attr, bool addToScope, HashTable *symbolTable,
+    HashTable *memberTable, SemaFileCtx *fileCtx);
 // Adds a new scope with no symbols to the "fileCtx"
 void SemaPushScope(SemaFileCtx *fileCtx);
 // Remove the most lately-pushed scope in "fileCtx", and removing all the
@@ -309,6 +313,12 @@ SemaType *SemaTypeFromThisLiteral(
 //     namespace
 // (3) Otherwise, return the last identifier of the module path
 char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc);
+// Populate "memberTable" with all the variables declared in "varDecl". See
+// SemaPopulateVar for usage of the remaining parameters. Returns true if every
+// variable was populated successfully
+bool SemaPopulateVarDecl(
+    SyntaxAST *varDecl, HashTable *symbolTable, HashTable *memberTable,
+    bool addToScope, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -693,19 +703,10 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
       assert(varDecls && varDecls->kind == SYNTAX_AST_KIND_STMTS);
       for (SyntaxAST *varDecl = varDecls->firstChild; varDecl;
            varDecl = varDecl->sibling) {
-        assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
-        SyntaxAST *varInitList = varDecl->firstChild;
-        assert(varInitList &&
-               varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
-        for (SyntaxAST *varInit = varInitList->firstChild; varInit;
-             varInit = varInit->sibling) {
-          assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
-
-          if (!SemaPopulateVar(varInit, varInit->string, &varInit->stringLoc,
-                varInit->firstChild, /*addToScope=*/false, symbolTable,
-                memberTable, fileCtx)) {
-            success = false;
-          }
+        if (!SemaPopulateVarDecl(
+              varDecl, symbolTable, memberTable, /*addToScope=*/false,
+              fileCtx)) {
+          success = false;
         }
       }
 
@@ -2487,9 +2488,11 @@ bool SemaTypeCheckMethodDecl(
     // "varType" is not provided here because parameter types were already
     // type checked in SemaTypeFromMethodDecl, which is called in
     // SemaPopulateMembers
+    
     if (!SemaPopulateVar(
         param, param->string, &param->stringLoc, /*varType=*/NULL,
-        /*addToScope=*/true, symbolTable, symbolTable, fileCtx)) {
+        /*attr=*/SEMA_ATTR_VAR, /*addToScope=*/true, symbolTable, symbolTable,
+        fileCtx)) {
       success = false;
     }
   }
@@ -2512,8 +2515,8 @@ bool SemaTypeCheckMethodDecl(
 
 bool SemaPopulateVar(
     SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
-    bool addToScope, HashTable *symbolTable, HashTable *memberTable,
-    SemaFileCtx *fileCtx) {
+    SemaAttr attr, bool addToScope, HashTable *symbolTable,
+    HashTable *memberTable, SemaFileCtx *fileCtx) {
   // Check if variable identifier is unique
   HashTableEntry *entry = HashTableEntryRetrieve(
       memberTable, varName);
@@ -2562,6 +2565,7 @@ bool SemaPopulateVar(
   entry = HashTableEntryRetrieve(memberTable, varName);
   assert(entry);
   varDeclSymInfo->entry = entry;
+  varDeclSymInfo->attr = attr;
   if (addToScope) {
     Vector *scopes = fileCtx->scopes;
     varDeclSymInfo->nextInScope = scopes->arr[scopes->size - 1];
@@ -2609,18 +2613,13 @@ bool SemaTypeCheckStmt(
 
 bool SemaTypeCheckVarDeclStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
-  bool success = false;
-  SyntaxAST *varInitList = stmt->firstChild;
-  assert(varInitList && varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
-  for (SyntaxAST *varInit = varInitList->firstChild; varInit;
-       varInit = varInit->sibling) {
-    if (!SemaPopulateVar(varInit, varInit->string, &varInit->stringLoc,
-        varInit->firstChild, /*addToScope=*/true, symbolTable, symbolTable,
-        fileCtx)) {
-      success = false;
-    }
+  bool success = true;
+  if (!SemaPopulateVarDecl(
+        stmt, symbolTable, symbolTable, /*addToScope=*/true, fileCtx)) {
+    success = false;
   }
 
+  SyntaxAST *varInitList = stmt->firstChild;
   if (!SemaTypeCheckVarInitList(
         varInitList, symbolTable, symbolTable, fileCtx)) {
     success = false;
@@ -2694,4 +2693,42 @@ char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc) {
     }
   }
   return namespace;
+}
+
+bool SemaPopulateVarDecl(
+    SyntaxAST *varDecl, HashTable *symbolTable, HashTable *memberTable,
+    bool addToScope, SemaFileCtx *fileCtx) {
+  assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
+
+  bool success = true;
+  unsigned varDeclModifiers = varDecl->varDeclModifiers;
+  SemaAttr attr;
+  if (varDeclModifiers & SYNTAX_VAR_DECL_STATIC) {
+    if (varDeclModifiers & SYNTAX_VAR_DECL_CONST) {
+      attr = SEMA_ATTR_STATIC_CONST;
+    } else {
+      attr = SEMA_ATTR_STATIC_VAR;
+    }
+  } else {
+    if (varDeclModifiers & SYNTAX_VAR_DECL_CONST) {
+      attr = SEMA_ATTR_CONST;
+    } else {
+      attr = SEMA_ATTR_VAR;
+    }
+  }
+
+  SyntaxAST *varInitList = varDecl->firstChild;
+  assert(varInitList &&
+         varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
+  for (SyntaxAST *varInit = varInitList->firstChild; varInit;
+       varInit = varInit->sibling) {
+    assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
+
+    if (!SemaPopulateVar(varInit, varInit->string, &varInit->stringLoc,
+          varInit->firstChild, attr, addToScope, symbolTable, memberTable,
+          fileCtx)) {
+      success = false;
+    }
+  }
+  return success;
 }
