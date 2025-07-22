@@ -319,6 +319,33 @@ char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc);
 bool SemaPopulateVarDecl(
     SyntaxAST *varDecl, HashTable *symbolTable, HashTable *memberTable,
     bool addToScope, SemaFileCtx *fileCtx);
+// Check if the "memberAccess" is well-formed by checking if the member access'
+// identifier is a member of the member access' operand, taking into account
+// whether the operand is a namespace, class or instance of a class. If type
+// check succeeds, returns the type of the member, otherwise return NULL. The
+// remaining arguments are used in the same way as the type check functions
+// above
+SemaType *SemaTypeFromMemberAccess(
+    SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
+// Returns true if and only if an expression or term stored in the AST node
+// "value" can be captured in a variable, ie. is not a class or a namespace.
+// Note that "value" must be type checked by the appropriate function
+// (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
+bool SemaValueIsCapturable(SyntaxAST *value);
+// Returns true if and only if the AST "node" is a namespace. Note that "node"
+// must be type checked by the appropriate function (SemaTypeFromExpr or
+// SemaTypeFromTerm) before being passed to this function
+bool SemaNodeIsNamespace(SyntaxAST *node);
+// Calls SemaPrintErrorForUncapturableValue when "value" is a class or namespace
+// used in "parentExpr" and "parentExpr" is not an access operator. Note that
+// "parentExpr" must be type checked by the appropriate function prior to
+// calling. Returns true if and only if no errors were printed
+bool SemaCheckErrorForUncapturableValue(
+    SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx);
+// Print the error message for "value" when "value" is a class or namespace used
+// in "parentExpr", but "parentExpr" is not an access operator.
+void SemaPrintErrorForUncapturableValue(SyntaxAST *value, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1097,6 +1124,7 @@ DELETE_SYM_INFO:
     case SYNTAX_AST_KIND_OP:
     case SYNTAX_AST_KIND_LITERAL:
     case SYNTAX_AST_KIND_TYPE:
+    case SYNTAX_AST_KIND_MEMBER_ACCESS:
       if (stage >= SEMA_STAGE_TYPE_CHECK && !info->skipAnalysis) {
         SemaTypeInfoDelete(&info->typeInfo);
       }
@@ -1162,7 +1190,6 @@ SemaType *SemaTypeFromTerm(
   SemaType *type = malloc(sizeof(SemaType));
   switch (term->kind) {
     case SYNTAX_AST_KIND_LITERAL: {
-      // TODO: handle other kinds of literals
       switch (term->literal.type) {
         case SYNTAX_TYPE_U64:
         case SYNTAX_TYPE_I64:
@@ -1223,29 +1250,12 @@ SemaType *SemaTypeFromTerm(
       free(type);
       type = typeInfo->type;
 
-      // If the identifier is actually a namespace or class (not variable of a
-      // class), then the parent expresssion using this term must be an access
-      // operator. In other words, namespaces and classes cannot be passed
-      // around as variables or parameters
-      if ((type->kind == SEMA_TYPE_KIND_NAMESPACE ||
-           varInfo->attr == SEMA_ATTR_CLASS) &&
-          !(parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS)) {
-        SourceLocation *loc = &term->stringLoc;
-        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-        fprintf(stderr, "identifier "SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET
-                " is not used in an access operator\n", varName);
-        SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+      if (!SemaCheckErrorForUncapturableValue(term, parentExpr, fileCtx)) {
         type = NULL;
         term->semaInfo.skipAnalysis = true;
       }
       break;
-    }
-
-    // TODO: continue here. Add more cases for different terms: identifier,
-    // allocations
-
-    default: {
+    } default: {
       printf("Term kind: %d\n", term->kind);
       assert(false);
     }
@@ -1257,38 +1267,7 @@ SemaType *SemaTypeFromExpr(
     SyntaxAST *expr, SyntaxAST *parentExpr, HashTable *symbolTable,
     SemaFileCtx *fileCtx) {
   if (expr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
-    // TODO: implement type checking for member access. How do we do this,
-    // exactly? The problem is that SemaType itself does not indicate whether
-    // it is a class or an instance of a class, which can limit what members
-    // it can access. For now, I can think of a workaround:
-    // (1) Check if the operand is an identifier. If so, we can look up the
-    //     SemaSymInfo of the identifier to get the type and attribute of the
-    //     identifier to determine what members it can access
-    // (2) Check if the operand is an access operator. If so, check if the first
-    //     operand of the access operator is a namespace. If this is the case,
-    //     then it is a class. An example is something like
-    //
-    //     bar.fart:
-    //
-    //       class FooBar {}
-    //
-    //     foo.fart:
-    //
-    //       import bar;
-    //
-    //       class Foo {
-    //         var x = bar.FooBar.x;
-    //       }
-    //
-    //     Here, when we type check "bar.FooBar.x", the operand "bar.FooBar" is
-    //     also an access operator, and "bar" is a namespace, so "bar.FooBar"
-    //     is a class and thus "x" must be a static variable or method of
-    //     "bar.FooBar".
-    // (3) Otherwise, if the operand's type is a class type, then the operand
-    //     is always an instance of the class.
-    //
-    // It is (3) that I'm unsure of. Are there any other cases similar to (2)
-    // such that the expression is not an instance of a class?
+    return SemaTypeFromMemberAccess(expr, parentExpr, symbolTable, fileCtx);
   }
   if (expr->kind != SYNTAX_AST_KIND_OP) {
     return SemaTypeFromTerm(expr, parentExpr, symbolTable, fileCtx);
@@ -2304,12 +2283,12 @@ SemaType *SemaTypeFromCall(
   SyntaxAST *function = expr->firstChild;
   SyntaxAST *args = function->sibling;
   assert(!args->sibling);
+  SyntaxAST *arg = args->firstChild;
   SemaType *functionType = SemaTypeFromExpr(
       function, expr, symbolTable, fileCtx);
   if (!functionType) {
     goto CLEANUP_FUNCTION;
   }
-  SyntaxAST *arg = args->firstChild;
   if (!SemaTypeIsFunction(functionType)) {
     fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
             " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
@@ -2354,9 +2333,14 @@ SemaType *SemaTypeFromCall(
     fprintf(stderr, "expected "SOURCE_COLOR_GREEN"%d"SOURCE_COLOR_RESET
         " arguments to the function, got "SOURCE_COLOR_RED"%d"SOURCE_COLOR_RESET
         " arguments instead\n", numParams, numArgs);
-    SourceLocationPrint(
-        fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
-        SOURCE_COLOR_RED, &args->loc);
+    if (numArgs == 0) {
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_GREEN, &function->loc);
+    } else {
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
+          SOURCE_COLOR_RED, &args->loc);
+    }
     goto CLEANUP_ARGS;
   }
   SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
@@ -2731,4 +2715,179 @@ bool SemaPopulateVarDecl(
     }
   }
   return success;
+}
+
+SemaType *SemaTypeFromMemberAccess(
+    SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = memberAccess->firstChild;
+  char *identifier = memberAccess->string;
+  SemaType *operandType = SemaTypeFromExpr(
+      operand, memberAccess, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP;
+  }
+  if (operandType->kind != SEMA_TYPE_KIND_CLASS &&
+      operandType->kind != SEMA_TYPE_KIND_NAMESPACE) {
+    SourceLocation *loc = &operand->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected a namespace, class or instance of class, got "
+        "type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  HashTableEntry *memberEntry =
+      HashTableEntryRetrieve(operandType->memberTable, identifier);
+  if (!memberEntry) {
+    SourceLocation *loc = &memberAccess->stringLoc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a member of "
+        "type "SOURCE_COLOR_GREEN, identifier);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc, SOURCE_COLOR_RED,
+        loc);
+    goto CLEANUP;
+  }
+  SemaSymInfo *memberSymInfo = memberEntry->value;
+  SemaTypeInfo *memberTypeInfo = &memberSymInfo->typeInfo;
+  SemaAttr memberAttr = memberSymInfo->attr;
+  SemaType *memberType = memberTypeInfo->type;
+
+  if (!SemaCheckErrorForUncapturableValue(memberAccess, parentExpr, fileCtx)) {
+    goto CLEANUP;
+  }
+
+  bool operandIsCapturable = SemaValueIsCapturable(operand);
+  if (operandIsCapturable) {
+    // Operand is an instance of a class, so it can access any method or
+    // non-static variable of the class
+    if (memberAttr != SEMA_ATTR_METHOD && memberAttr != SEMA_ATTR_VAR &&
+        memberAttr != SEMA_ATTR_CONST) {
+        SourceLocation *loc = &memberAccess->stringLoc;
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+        fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a "
+            "method or non-static variable of type "SOURCE_COLOR_GREEN,
+            identifier);
+        SemaTypePrint(stderr, operandType);
+        fprintf(stderr, SOURCE_COLOR_RESET"\n");
+        SourceLocationPrint(
+            fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc,
+            SOURCE_COLOR_RED, loc);
+        goto CLEANUP;
+    }
+  } else if (operandType->kind == SEMA_TYPE_KIND_CLASS) {
+    // Operand is a class, so it can access anything other than non-static
+    // variables of the class
+    if (memberAttr == SEMA_ATTR_VAR || memberAttr == SEMA_ATTR_CONST) {
+        SourceLocation *loc = &memberAccess->stringLoc;
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+        fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is a "
+            "non-static variable of type "SOURCE_COLOR_GREEN,
+            identifier);
+        SemaTypePrint(stderr, operandType);
+        fprintf(stderr, SOURCE_COLOR_RESET"\n");
+        SourceLocationPrint(
+            fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc,
+            SOURCE_COLOR_RED, loc);
+        goto CLEANUP;
+    }
+  } else {
+    assert(operandType->kind == SEMA_TYPE_KIND_NAMESPACE);
+  }
+
+  SemaTypeInfo *typeInfo = &memberAccess->semaInfo.typeInfo;
+  if (operandIsCapturable && memberAttr == SEMA_ATTR_METHOD) {
+    // If we are refering to a method via an instance of the class, the type
+    // of the member access should be a new function type without the first
+    // parameter (implicit this)
+    assert(memberType->kind == SEMA_TYPE_KIND_FN);
+    SemaType *type = malloc(sizeof(SemaType));
+    type->kind = SEMA_TYPE_KIND_FN;
+    type->retType = memberType->retType;
+    Vector *memberParams = memberType->paramTypes;
+    int numParams = memberParams->size;
+    Vector *params = VectorNew();
+    type->paramTypes = params;
+    for (int i = 1; i < numParams; ++i) {
+      VectorAdd(params, memberParams->arr[i]);
+    }
+    typeInfo->type = type;
+    typeInfo->isTypeOwner = true;
+  } else {
+    typeInfo->type = memberType;
+    typeInfo->isTypeOwner = false;
+  }
+  return typeInfo->type;
+
+CLEANUP:
+  memberAccess->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaValueIsCapturable(SyntaxAST *value) {
+  // A value is capturable if and only if it is not a class or a namespace.
+  // - A namespace can only be referenced by an identifier
+  // - A class can be referenced in two ways:
+  //   - By the class identifier itself (if it is in the current scope or
+  //     imported from a wildcard import)
+  //   - Referenced indirectly via a namespace
+  // Therefore, we only have to identify the cases where the value is an
+  // identifier or a member access. In all other cases, the value would be
+  // capturable
+  switch (value->kind) {
+    case SYNTAX_AST_KIND_IDENTIFIER: {
+      SemaType *type = value->semaInfo.typeInfo.type;
+      switch (type->kind) {
+        case SEMA_TYPE_KIND_CLASS:
+        case SEMA_TYPE_KIND_NAMESPACE:
+          return false;
+        case SEMA_TYPE_KIND_ARRAY:
+        case SEMA_TYPE_KIND_FN:
+        case SEMA_TYPE_KIND_PRIM_TYPE:
+          return true;
+        default:
+          printf("Type kind: %d\n", type->kind);
+          assert(false);
+      }
+    } case SYNTAX_AST_KIND_MEMBER_ACCESS: {
+      SyntaxAST *operand = value->firstChild;
+      assert(operand);
+      return !SemaNodeIsNamespace(operand);
+    } default: {
+      return true;
+    }
+  }
+}
+
+bool SemaNodeIsNamespace(SyntaxAST *node) {
+  return node->kind == SYNTAX_AST_KIND_IDENTIFIER &&
+         node->semaInfo.typeInfo.type->kind == SEMA_TYPE_KIND_NAMESPACE;
+}
+
+bool SemaCheckErrorForUncapturableValue(
+    SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx) {
+  if (SemaValueIsCapturable(value) ||
+      (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS)) {
+    return true;
+  }
+  SemaPrintErrorForUncapturableValue(value, fileCtx);
+  return false;
+}
+
+void SemaPrintErrorForUncapturableValue(
+    SyntaxAST *value, SemaFileCtx *fileCtx) {
+  SourceLocation *loc = &value->loc;
+  fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+          " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+  fprintf(stderr, SOURCE_COLOR_RED"value"SOURCE_COLOR_RESET
+          " is not used in an access operator\n");
+  SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
 }

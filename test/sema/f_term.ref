@@ -28,15 +28,15 @@
    25 |   var p_null0 : [32;1mbool[0m = [31;1mnull[0m; # error
 [31;1m[Error][0m f_term.fart:33: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
    33 |   var paren_expr: [32;1mbool[0m = [31;1m(10)[0m; # correct, type i32
-[31;1m[Error][0m f_term.fart:36: identifier [31;1mMain[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:36: [31;1mvalue[0m is not used in an access operator
    36 |   var class_var : bool = [31;1mMain[0m; # error
-[31;1m[Error][0m f_term.fart:37: identifier [31;1mfile3[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:37: [31;1mvalue[0m is not used in an access operator
    37 |   var namespace_var : bool = [31;1mfile3[0m; # error
-[31;1m[Error][0m f_term.fart:38: identifier [31;1mFile3[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:38: [31;1mvalue[0m is not used in an access operator
    38 |   var namespace_var_2 = [31;1mFile3[0m; # error 
-[31;1m[Error][0m f_term.fart:39: identifier [31;1mfile3[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:39: [31;1mvalue[0m is not used in an access operator
    39 |   var namespace_var_3 = [31;1mfile3[0m; # error
-[31;1m[Error][0m f_term.fart:40: identifier [31;1mfile4[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:40: [31;1mvalue[0m is not used in an access operator
    40 |   var namespace_var_4 = [31;1mfile4[0m; # error
-[31;1m[Error][0m f_term.fart:43: identifier [31;1mFoo[0m is not used in an access operator
+[31;1m[Error][0m f_term.fart:43: [31;1mvalue[0m is not used in an access operator
    43 |   var class_var_3 = [31;1mFoo[0m; # error

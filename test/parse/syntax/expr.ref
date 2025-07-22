@@ -244,14 +244,15 @@ SYNTAX_AST_KIND_MODULE: 1:1~20:1:
                                     SYNTAX_AST_KIND_OP: 17:15~17:18: op: SYNTAX_OP_ARRAY_ACCESS: 
                                         SYNTAX_AST_KIND_IDENTIFIER: 17:15~17:15: f: 
                                         SYNTAX_AST_KIND_LITERAL: 17:17~17:17: type SYNTAX_TYPE_I32, value 1
-                SYNTAX_AST_KIND_VAR_DECL: 18:3~18:17: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:16: 
-                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:16: variable: x: 
+                SYNTAX_AST_KIND_VAR_DECL: 18:3~18:21: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 18:7~18:20: 
+                        SYNTAX_AST_KIND_VAR_INIT: 18:7~18:20: variable: x: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_OP: 18:11~18:16: op: SYNTAX_OP_BIT_NOT: 
-                                SYNTAX_AST_KIND_MEMBER_ACCESS: 18:12~18:16: member: h: 
-                                    SYNTAX_AST_KIND_MEMBER_ACCESS: 18:12~18:14: member: g: 
-                                        SYNTAX_AST_KIND_IDENTIFIER: 18:12~18:12: f: 
+                            SYNTAX_AST_KIND_OP: 18:11~18:20: op: SYNTAX_OP_BIT_NOT: 
+                                SYNTAX_AST_KIND_MEMBER_ACCESS: 18:12~18:20: member: h: 
+                                    SYNTAX_AST_KIND_MEMBER_ACCESS: 18:12~18:18: member: new: 
+                                        SYNTAX_AST_KIND_MEMBER_ACCESS: 18:12~18:14: member: g: 
+                                            SYNTAX_AST_KIND_IDENTIFIER: 18:12~18:12: f: 
                 SYNTAX_AST_KIND_VAR_DECL: 19:3~19:17: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 19:7~19:16: 
                         SYNTAX_AST_KIND_VAR_INIT: 19:7~19:16: variable: x: 

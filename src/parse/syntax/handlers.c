@@ -670,7 +670,9 @@ ParserDeclareHandler(SyntaxHandlerExprMemberAccess, rhs) {
   LexerToken *identifier_ = rhs->arr[2];
   assert(expr);
   assert(dot_ && dot_->tokenID == DOT);
-  assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+  assert(
+      identifier_ &&
+      (identifier_->tokenID == NEW || identifier_->tokenID == IDENTIFIER));
 
   SyntaxAST *access = SyntaxASTNew(SYNTAX_AST_KIND_MEMBER_ACCESS);
   access->loc.to = identifier_->loc.to;

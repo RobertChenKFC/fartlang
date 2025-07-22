@@ -827,6 +827,8 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           EXPR_ACCESS, 3, EXPR_ACCESS, LBRACK, RBRACK);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMemberAccess,
           EXPR_ACCESS, 3, EXPR_ACCESS, DOT, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMemberAccess,
+          EXPR_ACCESS, 3, EXPR_ACCESS, DOT, NEW);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprInc,
           EXPR_ACCESS, 2, EXPR_ACCESS, ADD_ADD);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprDec,

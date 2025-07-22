@@ -2,4 +2,5 @@ import dir1.file7.*;
 
 class Foo {
   var x : Bar; # Ok
+  static var y : Bar; # Ok
 }

@@ -15,6 +15,6 @@ class Expr {
   var x = -1 into i64;
   var x = -f()(1)(1, 2, 3);
   var x = not f[1][];
-  var x = ~f.g.h;
+  var x = ~f.g.new.h;
   var x = -f++--;
 }
