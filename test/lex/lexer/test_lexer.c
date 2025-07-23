@@ -150,7 +150,6 @@ int main() {
   fclose(file);
   RegexDelete(lt);
   RegexDelete(sl);
-  RegexDelete(whitespace);
   LexerConfigDelete(config);
   LexerDelete(lexer);
 
@@ -176,6 +175,27 @@ int main() {
   assert(noErrors);
   fclose(file);
   RegexDelete(a);
+  LexerDelete(lexer);
+  LexerConfigDelete(config);
+
+  // 11. Test token with overlap and error
+  Regex *decimal = RegexFromString("9");
+  Regex *decimalI32 = RegexFromString("9i32");
+  config = LexerConfigNew();
+  LexerConfigAddRegex(config, decimal);
+  LexerConfigAddRegex(config, decimalI32);
+  LexerConfigSetIgnoreRegex(config, whitespace);
+  lexer = LexerFromConfig(config);
+  file = fopen("11.in", "r");
+  LexerSetInputFile(lexer, file, "11.in");
+  fclose(file);
+  file = fopen("11.out", "w");
+  noErrors = ReadTokenUntilEOF(lexer, file);
+  fclose(file);
+  assert(!noErrors);
+  RegexDelete(decimal);
+  RegexDelete(decimalI32);
+  RegexDelete(whitespace);
   LexerDelete(lexer);
   LexerConfigDelete(config);
 }
