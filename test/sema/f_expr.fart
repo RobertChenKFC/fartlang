@@ -90,4 +90,16 @@ class Main {
   var call_fewer_args = (null as fn (i32, i32, i32))(1); # error
   var call_more_args = (null as fn (i32))(1, 1, 1); # error
   var call_mismatch = (null as fn (i32, u32))(1, 1); # error
+
+  # Index operator
+  var index_u32 : bool = (0 as i32[])[0u32]; # correct, type i32
+  var index_i32 = (0 as i32[])[0]; # error
+  var index_not_array = (0 as i32)[0u32]; # error
+  var index_not_array_2 = (0 as fn () -> i32[])[0u32]; # error
+  var index_not_unsigned = (0 as i32[])[0.]; # error
+  var index_not_unsigned_2 = (0 as i32[])[true]; # error
+  var index_not_unsigned_3 = (0 as i32[])[null]; # error
+  var index_u8 : bool = (0 as i32[])['a']; # correct, type i32
+  var index_3d : i32 = (0 as bool[][][])['a'][2u32][4u16]; # correct, type bool
+  var index_3d_partial : bool = (0 as bool[][][])[9u32]; # correct, type bool[][]
 }

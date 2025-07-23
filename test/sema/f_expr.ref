@@ -144,3 +144,23 @@
    91 |   var call_more_args = [32;1m(null as fn (i32))[0m([31;1m1, 1, 1[0m); # error
 [31;1m[Error][0m f_expr.fart:92: cannot implicitly cast type [31;1mi32[0m to type [32;1mu32[0m expected by the function
    92 |   var call_mismatch = [32;1m(null as fn (i32, u32))[0m(1, [31;1m1[0m); # error
+[31;1m[Error][0m f_expr.fart:95: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   95 |   var index_u32 : [32;1mbool[0m = [31;1m(0 as i32[])[0u32][0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:96: expected an unsigned type, got type [31;1mi32[0m instead
+   96 |   var index_i32 = (0 as i32[])[[31;1m0[0m]; # error
+[31;1m[Error][0m f_expr.fart:97: expected an array type, got type [31;1mi32[0m instead
+   97 |   var index_not_array = [31;1m(0 as i32)[0m[0u32]; # error
+[31;1m[Error][0m f_expr.fart:98: expected an array type, got type [31;1mfn () -> i32[][0m instead
+   98 |   var index_not_array_2 = [31;1m(0 as fn () -> i32[])[0m[0u32]; # error
+[31;1m[Error][0m f_expr.fart:99: expected an unsigned type, got type [31;1mf32[0m instead
+   99 |   var index_not_unsigned = (0 as i32[])[[31;1m0.[0m]; # error
+[31;1m[Error][0m f_expr.fart:100: expected an unsigned type, got type [31;1mbool[0m instead
+  100 |   var index_not_unsigned_2 = (0 as i32[])[[31;1mtrue[0m]; # error
+[31;1m[Error][0m f_expr.fart:101: expected an unsigned type, got type [31;1mnil[0m instead
+  101 |   var index_not_unsigned_3 = (0 as i32[])[[31;1mnull[0m]; # error
+[31;1m[Error][0m f_expr.fart:102: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+  102 |   var index_u8 : [32;1mbool[0m = [31;1m(0 as i32[])['a'][0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:103: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+  103 |   var index_3d : [32;1mi32[0m = [31;1m(0 as bool[][][])['a'][2u32][4u16][0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:104: expected expression to be of type [32;1mbool[0m, got type [31;1mbool[][][0m instead
+  104 |   var index_3d_partial : [32;1mbool[0m = [31;1m(0 as bool[][][])[9u32][0m; # correct, type bool[][]

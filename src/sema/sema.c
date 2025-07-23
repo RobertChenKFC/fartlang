@@ -346,6 +346,15 @@ bool SemaCheckErrorForUncapturableValue(
 // Print the error message for "value" when "value" is a class or namespace used
 // in "parentExpr", but "parentExpr" is not an access operator.
 void SemaPrintErrorForUncapturableValue(SyntaxAST *value, SemaFileCtx *fileCtx);
+// Check if the operand of "expr" is an array type, and the index expression
+// is an unsigned type. If so, return the type of "expr" with one fewer array
+// dimension, otherwise return NULL. The remaining arguments are used in the
+// same way as above
+SemaType *SemaTypeFromIndexOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns a type with one fewer array level than "arrayType". A new type is
+// allocated if and only if "isTypeOwner" is set to true
+SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1317,6 +1326,8 @@ SemaType *SemaTypeFromExpr(
           /*retBoolType=*/false);
     case SYNTAX_OP_CALL:
       return SemaTypeFromCall(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_ARRAY_ACCESS:
+      return SemaTypeFromIndexOp(expr, symbolTable, fileCtx);
     default:
       assert(false);
   }
@@ -2890,4 +2901,66 @@ void SemaPrintErrorForUncapturableValue(
   fprintf(stderr, SOURCE_COLOR_RED"value"SOURCE_COLOR_RESET
           " is not used in an access operator\n");
   SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+}
+
+SemaType *SemaTypeFromIndexOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = expr->firstChild;
+  SyntaxAST *index = operand->sibling;
+  assert(!index->sibling);
+
+  SemaType *operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
+  if (!operandType) {
+    goto OPERAND_CLEANUP;
+  }
+  if (operandType->kind != SEMA_TYPE_KIND_ARRAY) {
+    SourceLocation *loc = &operand->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected an array type, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto INDEX_CLEANUP;
+  }
+  SemaType *indexType = SemaTypeFromExpr(index, expr, symbolTable, fileCtx);
+  if (!indexType) {
+    goto INDEX_CLEANUP;
+  }
+  if (!SemaTypeIsUnsigned(indexType)) {
+    SourceLocation *loc = &index->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected an unsigned type, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, indexType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = SemaTypeDecreaseArrayLevel(
+      operandType, &typeInfo->isTypeOwner);
+  return typeInfo->type;
+
+OPERAND_CLEANUP:
+  operand->semaInfo.skipAnalysis = true;
+INDEX_CLEANUP:
+  index->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner) {
+  if (arrayType->arrayLevels == 1) {
+    *isTypeOwner = false;
+    return arrayType->baseType;
+  }
+  *isTypeOwner = true;
+  SemaType *baseType = malloc(sizeof(SemaType));
+  baseType->kind = SEMA_TYPE_KIND_ARRAY;
+  baseType->baseType = arrayType->baseType;
+  baseType->isBaseTypeOwner = false;
+  baseType->arrayLevels = arrayType->arrayLevels - 1;
+  return baseType;
 }
