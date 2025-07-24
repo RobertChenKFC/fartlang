@@ -360,6 +360,25 @@ SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
 // as the type check functions above
 bool SemaTypeCheckExprStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if type checking the assignment statement stored
+// in "stmt" succeeds. The remaining arguments are used in the same way as the
+// type check functions above
+bool SemaTypeCheckAssignStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Type checks the RHS of "assign", checks if the LHS of "assign" is assignable,
+// and checks if the LHS type and RHS type are valid according to the assignment
+// operator. If so, return the type of the LHS, otherwise return NULL. The
+// remaining arguments are used in the same way as the type check functions
+// above
+SemaType *SemaTypeFromAssign(
+    SyntaxAST *assign, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Check if "expr" is assignable. Note that "expr" must be type checked by
+// SemaTypeFromExpr before being passed to this function
+bool SemaIsAssignable(SyntaxAST *expr, HashTable *symbolTable);
+// The implementation of SemaTypeFromArithOp. Passes the arithmetic operation
+// as a separate argument "op" instead of reading from the AST node "expr"
+SemaType *SemaTypeFromArithOpImpl(
+    SyntaxAST *expr, SyntaxOp op, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1139,6 +1158,7 @@ DELETE_SYM_INFO:
     case SYNTAX_AST_KIND_LITERAL:
     case SYNTAX_AST_KIND_TYPE:
     case SYNTAX_AST_KIND_MEMBER_ACCESS:
+    case SYNTAX_AST_KIND_ASSIGN:
       if (stage >= SEMA_STAGE_TYPE_CHECK && !info->skipAnalysis) {
         SemaTypeInfoDelete(&info->typeInfo);
       }
@@ -1282,6 +1302,9 @@ SemaType *SemaTypeFromExpr(
     SemaFileCtx *fileCtx) {
   if (expr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
     return SemaTypeFromMemberAccess(expr, parentExpr, symbolTable, fileCtx);
+  }
+  if (expr->kind == SYNTAX_AST_KIND_ASSIGN) {
+    return SemaTypeFromAssign(expr, symbolTable, fileCtx);
   }
   if (expr->kind != SYNTAX_AST_KIND_OP) {
     return SemaTypeFromTerm(expr, parentExpr, symbolTable, fileCtx);
@@ -2053,94 +2076,7 @@ bool SemaTypeIsIntegral(SemaType *type) {
 
 SemaType *SemaTypeFromArithOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
-  SyntaxAST *leftOperand = expr->firstChild;
-  SemaType *leftOperandType = SemaTypeFromExpr(
-      leftOperand, expr, symbolTable, fileCtx);
-  if (!leftOperandType) {
-    goto CLEANUP_LEFT_OPERAND;
-  }
-  bool hasOneOperand = expr->op == SYNTAX_OP_NEG;
-  SyntaxAST *rightOperand;
-  SemaType *rightOperandType;
-  if (!hasOneOperand) {
-    rightOperand = leftOperand->sibling;
-    assert(!rightOperand->sibling);
-    rightOperandType = SemaTypeFromExpr(
-        rightOperand, expr, symbolTable, fileCtx);
-    if (!rightOperandType) {
-      goto CLEANUP_RIGHT_OPERAND;
-    }
-  }
-  SemaType *exprType;
-  bool isTypeOwner;
-  if (hasOneOperand) {
-    exprType = leftOperandType;
-    isTypeOwner = false;
-  } else {
-    exprType = SemaTypeUnification(
-        leftOperandType, rightOperandType, &isTypeOwner);
-  }
-  if (!SemaTypeIsNumeric(exprType)) {
-    if (hasOneOperand) {
-      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-              " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
-      fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
-      SemaTypePrint(stderr, leftOperandType);
-      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
-      SourceLocationPrint(
-          fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
-    } else {
-      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-              " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
-      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
-      SemaTypePrint(stderr, leftOperandType);
-      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
-      SemaTypePrint(stderr, rightOperandType);
-      fprintf(stderr, SOURCE_COLOR_RESET" result in non-numeric type "
-          SOURCE_COLOR_RED);
-      SemaTypePrint(stderr, exprType);
-      fprintf(stderr, SOURCE_COLOR_RESET"\n");
-      SourceLocationPrint(
-          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &leftOperand->loc,
-            SOURCE_COLOR_BLUE, &rightOperand->loc);
-      if (isTypeOwner) {
-        SemaTypeDelete(exprType);
-      }
-    }
-    goto CLEANUP;
-  }
-  bool typeCheckSucceeds;
-  switch (expr->op) {
-    case SYNTAX_OP_MOD:
-      typeCheckSucceeds = SemaTypeCheckModOp(
-          leftOperand, leftOperandType, rightOperand, rightOperandType,
-          fileCtx);
-      break;
-    case SYNTAX_OP_NEG:
-      typeCheckSucceeds = SemaTypeCheckNegOp(
-          leftOperand, leftOperandType, fileCtx);
-      break;
-    default:
-      typeCheckSucceeds = true;
-      break;
-  }
-  if (!typeCheckSucceeds) {
-    if (isTypeOwner) {
-      SemaTypeDelete(exprType);
-    }
-    goto CLEANUP;
-  }
-  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
-  typeInfo->type = exprType;
-  typeInfo->isTypeOwner = isTypeOwner;
-  return exprType;
-CLEANUP_LEFT_OPERAND:
-  leftOperand->semaInfo.skipAnalysis = true;
-CLEANUP_RIGHT_OPERAND:
-  rightOperand->semaInfo.skipAnalysis = true;
-CLEANUP:
-  expr->semaInfo.skipAnalysis = true;
-  return NULL;
+  return SemaTypeFromArithOpImpl(expr, expr->op, symbolTable, fileCtx);
 }
 
 bool SemaTypeIsNumeric(SemaType *type) {
@@ -2607,6 +2543,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckVarDeclStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_EXPR_STMT:
       return SemaTypeCheckExprStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_ASSIGN_STMT:
+      return SemaTypeCheckAssignStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2977,4 +2915,265 @@ bool SemaTypeCheckExprStmt(
   SyntaxAST *expr = stmt->firstChild;
   return SemaTypeFromExpr(
       expr, /*parentExpr=*/NULL, symbolTable, fileCtx) != NULL;
+}
+
+bool SemaTypeCheckAssignStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *assign = stmt->firstChild;
+  return SemaTypeFromExpr(
+      assign, /*parentExpr=*/NULL, symbolTable, fileCtx) != NULL;
+}
+
+SemaType *SemaTypeFromAssign(
+    SyntaxAST *assign, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *lhs = assign->firstChild;
+  SyntaxAST *rhs = lhs->sibling;
+  assert(!rhs->sibling);
+
+  // Get the type of the expression to assign
+  SemaType *type;
+  SyntaxOp arithOp;
+  bool isArithOp = false, isShiftOp = false, isBitwiseOp = false;
+  switch (assign->op) {
+    case SYNTAX_OP_EQ: {
+      SemaType *rhsType = SemaTypeFromExpr(
+          rhs, /*parentExpr=*/NULL, symbolTable, fileCtx);
+      if (!rhsType) {
+        goto CLEANUP_RHS;
+      }
+      SemaType *lhsType = SemaTypeFromExpr(
+          lhs, /*parentExpr=*/NULL, symbolTable, fileCtx);
+      if (!lhsType) {
+        goto CLEANUP_LHS;
+      }
+      SemaTypeInfo *typeInfo = &assign->semaInfo.typeInfo;
+      typeInfo->type = type = rhsType;
+      typeInfo->isTypeOwner = false;
+      break;
+    } case SYNTAX_OP_ADD_EQ: {
+      arithOp = SYNTAX_OP_ADD;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_SUB_EQ: {
+      arithOp = SYNTAX_OP_SUB;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_MUL_EQ: {
+      arithOp = SYNTAX_OP_MUL;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_DIV_EQ: {
+      arithOp = SYNTAX_OP_DIV;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_MOD_EQ: {
+      arithOp = SYNTAX_OP_MOD;
+      isArithOp = true;
+      break;
+    }
+    case SYNTAX_OP_LSHIFT_EQ:
+    case SYNTAX_OP_RSHIFT_EQ: {
+      isShiftOp = true;
+      break;
+    }
+    case SYNTAX_OP_BIT_AND_EQ:
+    case SYNTAX_OP_BIT_XOR_EQ:
+    case SYNTAX_OP_BIT_OR_EQ: {
+      isBitwiseOp = true;
+      break;
+    } default: {
+      printf("Assign op: %d\n", assign->op);
+      assert(false);
+    }
+  }
+  if (isArithOp) {
+    type = SemaTypeFromArithOpImpl(assign, arithOp, symbolTable, fileCtx);
+  } else if (isShiftOp) {
+    type = SemaTypeFromShiftOp(assign, symbolTable, fileCtx);
+  } else if (isBitwiseOp) {
+    type = SemaTypeFromBitwiseOp(assign, symbolTable, fileCtx);
+  }
+  if (!type) {
+    goto CLEANUP;
+  }
+
+  // Check if the type of the expression to assign can be implicitly cast
+  // to the type of the LHS
+  SemaType *lhsType = lhs->semaInfo.typeInfo.type;
+  if (!SemaTypeImplicitCast(type, lhsType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, lhs->loc.from.lineNo + 1);
+    fprintf(stderr, "assignment expresssion of type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, type);
+    fprintf(stderr, SOURCE_COLOR_RESET" cannot be implictly cast to LHS type "
+        SOURCE_COLOR_GREEN);
+    SemaTypePrint(stderr, lhsType);
+    fprintf(stderr, SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_GREEN, &lhs->loc, SOURCE_COLOR_RED,
+        &rhs->loc);
+    goto CLEANUP;
+  }
+
+  // Check if the LHS is assignable
+  if (!SemaIsAssignable(lhs, symbolTable)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, lhs->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"LHS"SOURCE_COLOR_RESET" of assignment is "
+        "not assignable\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &lhs->loc);
+    goto CLEANUP;
+  }
+
+  // Set the type of the assignment to the LHS type
+  SemaTypeInfo *typeInfo = &assign->semaInfo.typeInfo;
+  // This type might be previously assigned to by SemaTypeFromArithOpImpl,
+  // so we have to delete it before replacing it with the LHS type
+  SemaTypeInfoDelete(typeInfo);
+  typeInfo->type = lhsType;
+  typeInfo->isTypeOwner = false;
+  return lhsType;
+
+CLEANUP_RHS:
+  rhs->semaInfo.skipAnalysis = true;
+CLEANUP_LHS:
+  lhs->semaInfo.skipAnalysis = true;
+CLEANUP:
+  assign->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaIsAssignable(SyntaxAST *expr, HashTable *symbolTable) {
+  SemaType *exprType = expr->semaInfo.typeInfo.type;
+  switch (expr->kind) {
+    case SYNTAX_AST_KIND_IDENTIFIER: {
+      if (exprType->kind == SEMA_TYPE_KIND_CLASS ||
+          exprType->kind == SEMA_TYPE_KIND_NAMESPACE) {
+        return false;
+      }
+      char *identifier = expr->string;
+      HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, identifier);
+      assert(entry);
+      SemaSymInfo *symInfo = entry->value;
+      SemaAttr attr = symInfo->attr;
+      return attr == SEMA_ATTR_VAR || attr == SEMA_ATTR_STATIC_VAR;
+    } case SYNTAX_AST_KIND_OP: {
+      return expr->op == SYNTAX_OP_ARRAY_ACCESS;
+    } case SYNTAX_AST_KIND_MEMBER_ACCESS: {
+      SyntaxAST *operand = expr->firstChild;
+      SemaType *operandType = operand->semaInfo.typeInfo.type;
+      if (operandType->kind == SEMA_TYPE_KIND_NAMESPACE) {
+        // Since the operand is a namespace, the expression can only be a class,
+        // which is not assignable
+        return false;
+      }
+      assert(operandType->kind == SEMA_TYPE_KIND_CLASS);
+      char *identifier = expr->string;
+      HashTableEntry *memberEntry = HashTableEntryRetrieve(
+          operandType->memberTable, identifier);
+      assert(memberEntry);
+      SemaSymInfo *memberInfo = memberEntry->value;
+      SemaAttr attr = memberInfo->attr;
+      return attr == SEMA_ATTR_VAR || attr == SEMA_ATTR_STATIC_VAR;
+    } default: {
+      return false;
+    }
+  }
+}
+
+SemaType *SemaTypeFromArithOpImpl(
+    SyntaxAST *expr, SyntaxOp op, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  SyntaxAST *leftOperand = expr->firstChild;
+  bool hasOneOperand = op == SYNTAX_OP_NEG;
+  SyntaxAST *rightOperand;
+  if (!hasOneOperand) {
+    rightOperand = leftOperand->sibling;
+    assert(!rightOperand->sibling);
+  }
+
+  SemaType *leftOperandType = SemaTypeFromExpr(
+      leftOperand, expr, symbolTable, fileCtx);
+  if (!leftOperandType) {
+    goto CLEANUP_LEFT_OPERAND;
+  }
+  SemaType *rightOperandType;
+  if (!hasOneOperand) {
+    rightOperandType = SemaTypeFromExpr(
+        rightOperand, expr, symbolTable, fileCtx);
+    if (!rightOperandType) {
+      goto CLEANUP_RIGHT_OPERAND;
+    }
+  }
+  SemaType *exprType;
+  bool isTypeOwner;
+  if (hasOneOperand) {
+    exprType = leftOperandType;
+    isTypeOwner = false;
+  } else {
+    exprType = SemaTypeUnification(
+        leftOperandType, rightOperandType, &isTypeOwner);
+  }
+  if (!SemaTypeIsNumeric(exprType)) {
+    if (hasOneOperand) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
+    } else {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+      SemaTypePrint(stderr, rightOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" result in non-numeric type "
+          SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, exprType);
+      fprintf(stderr, SOURCE_COLOR_RESET"\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &leftOperand->loc,
+            SOURCE_COLOR_BLUE, &rightOperand->loc);
+      if (isTypeOwner) {
+        SemaTypeDelete(exprType);
+      }
+    }
+    goto CLEANUP;
+  }
+  bool typeCheckSucceeds;
+  switch (op) {
+    case SYNTAX_OP_MOD:
+      typeCheckSucceeds = SemaTypeCheckModOp(
+          leftOperand, leftOperandType, rightOperand, rightOperandType,
+          fileCtx);
+      break;
+    case SYNTAX_OP_NEG:
+      typeCheckSucceeds = SemaTypeCheckNegOp(
+          leftOperand, leftOperandType, fileCtx);
+      break;
+    default:
+      typeCheckSucceeds = true;
+      break;
+  }
+  if (!typeCheckSucceeds) {
+    if (isTypeOwner) {
+      SemaTypeDelete(exprType);
+    }
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = exprType;
+  typeInfo->isTypeOwner = isTypeOwner;
+  return exprType;
+CLEANUP_LEFT_OPERAND:
+  leftOperand->semaInfo.skipAnalysis = true;
+CLEANUP_RIGHT_OPERAND:
+  rightOperand->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
 }

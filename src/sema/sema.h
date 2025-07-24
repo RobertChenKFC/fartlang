@@ -165,7 +165,7 @@ struct SemaInfo {
     SemaSymInfo *symInfo;
 
     // A pointer to SemaTypeInfo is stored for the following kinds of AST nodes:
-    // SYNTAX_AST_KIND_LITERAL, SYNTAX_AST_KIND_OP
+    // SYNTAX_AST_KIND_LITERAL, SYNTAX_AST_KIND_OP, SYNTAX_AST_KIND_ASSIGN
     SemaTypeInfo typeInfo;
   };
 

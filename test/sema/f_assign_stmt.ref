@@ -1,0 +1,46 @@
+[31;1m[Error][0m f_assign_stmt.fart:15: assignment expresssion of type [31;1mbool[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   15 |     [32;1mx[0m = [31;1mtrue[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:18: assignment expresssion of type [31;1mi64[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   18 |     [32;1mx[0m = [31;1my = 10[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:28: [31;1mLHS[0m of assignment is not assignable
+   28 |     [31;1mt3[0m = 'B'; # error
+[31;1m[Error][0m f_assign_stmt.fart:30: [31;1mLHS[0m of assignment is not assignable
+   30 |     [31;1mt5[0m = true; # error
+[31;1m[Error][0m f_assign_stmt.fart:32: [31;1mLHS[0m of assignment is not assignable
+   32 |     [31;1mthis.t2[0m = 1; # error
+[31;1m[Error][0m f_assign_stmt.fart:34: [31;1mLHS[0m of assignment is not assignable
+   34 |     [31;1mMain.t4[0m = 3; # error
+[31;1m[Error][0m f_assign_stmt.fart:35: [31;1mLHS[0m of assignment is not assignable
+   35 |     [31;1mMain.g()[0m = null; # error
+[31;1m[Error][0m f_assign_stmt.fart:36: [31;1mLHS[0m of assignment is not assignable
+   36 |     1 = [31;1m2[0m = 3; # error
+[31;1m[Error][0m f_assign_stmt.fart:37: [31;1mLHS[0m of assignment is not assignable
+   37 |     [31;1m(x as Main)[0m = null; # error
+[31;1m[Error][0m f_assign_stmt.fart:38: [31;1mvalue[0m is not used in an access operator
+   38 |     [31;1mfile4[0m = 3; # error
+[31;1m[Error][0m f_assign_stmt.fart:39: [31;1mvalue[0m is not used in an access operator
+   39 |     [31;1mfile4.Foo[0m = null; # error
+[31;1m[Error][0m f_assign_stmt.fart:40: [31;1mvalue[0m is not used in an access operator
+   40 |     [31;1mMain[0m = Main.g(); # error
+[31;1m[Error][0m f_assign_stmt.fart:44: unification of [33;1mi32[0m and [34;1mbool[0m result in non-numeric type [31;1many[0m
+   44 |     [33;1mx[0m += [34;1mtrue[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:45: unification of [33;1mi32[0m and [34;1mu8[0m result in non-numeric type [31;1many[0m
+   45 |     [33;1mx[0m -= [34;1m3u8[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:46: unification of [33;1mi32[0m and [34;1mu8[][0m result in non-numeric type [31;1many[0m
+   46 |     [33;1mx[0m -= [34;1m"hello"[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:48: unification of [33;1mi32[0m and [34;1mnil[0m result in non-numeric type [31;1many[0m
+   48 |     [33;1mx[0m *= [34;1mnull[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:50: unification of [33;1mi32[0m and [34;1mMain[0m result in non-numeric type [31;1many[0m
+   50 |     [33;1mx[0m /= [34;1mthis[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:53: expected integral type, got [31;1mf32[0m instead
+   53 |     [31;1mx2[0m %= 10; # error
+[31;1m[Error][0m f_assign_stmt.fart:55: expected unsigned type for shift operand, got [31;1mi32[0m instead
+   55 |     x <<= [31;1m3[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:57: expected unsigned type for shift operand, got [31;1mf32[0m instead
+   57 |     x >>= [31;1mx2[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:59: bitwise operand of type [31;1mi16[0m does not match first operand of type [32;1mi32[0m
+   59 |     [32;1mx[0m &= [31;1m1i16[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:61: bitwise operand of type [31;1mf32[0m does not match first operand of type [32;1mi32[0m
+   61 |     [32;1mx[0m ^= [31;1mx2[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:63: bitwise operand of type [31;1mbool[0m does not match first operand of type [32;1mi32[0m
+   63 |     [32;1mx[0m |= [31;1mtrue[0m; # error
