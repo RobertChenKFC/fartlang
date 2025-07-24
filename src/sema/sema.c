@@ -355,6 +355,11 @@ SemaType *SemaTypeFromIndexOp(
 // Returns a type with one fewer array level than "arrayType". A new type is
 // allocated if and only if "isTypeOwner" is set to true
 SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
+// Returns true if and only if type checking the expression statement
+// stored in "stmt" succeeds. The remaining arguments are used in the same way
+// as the type check functions above
+bool SemaTypeCheckExprStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -2600,6 +2605,8 @@ bool SemaTypeCheckStmt(
   switch (stmt->kind) {
     case SYNTAX_AST_KIND_VAR_DECL:
       return SemaTypeCheckVarDeclStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_EXPR_STMT:
+      return SemaTypeCheckExprStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2963,4 +2970,11 @@ SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner) {
   baseType->isBaseTypeOwner = false;
   baseType->arrayLevels = arrayType->arrayLevels - 1;
   return baseType;
+}
+
+bool SemaTypeCheckExprStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *expr = stmt->firstChild;
+  return SemaTypeFromExpr(
+      expr, /*parentExpr=*/NULL, symbolTable, fileCtx) != NULL;
 }

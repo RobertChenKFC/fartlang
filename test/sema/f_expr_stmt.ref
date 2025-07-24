@@ -1,0 +1,6 @@
+[31;1m[Error][0m f_expr_stmt.fart:10: [31;1mh[0m is not a member of type [32;1mMain[0m
+   10 |     [32;1mMain.new()[0m.[31;1mh[0m(); # error
+[31;1m[Error][0m f_expr_stmt.fart:12: cannot implicitly cast type [31;1mfn () -> i32[0m to type [32;1mi32[0m expected by the function
+   12 |     [32;1mMain.new().setId[0m([31;1mMain.new().getId[0m); # error
+[31;1m[Error][0m f_expr_stmt.fart:14: unification of [33;1mi32[0m and [34;1mu8[][0m result in non-numeric type [31;1many[0m
+   14 |     Main.new().setId([33;1mMain.new().getId()[0m + [34;1m"hello"[0m); # error
