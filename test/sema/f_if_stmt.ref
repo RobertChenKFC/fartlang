@@ -1,0 +1,14 @@
+[31;1m[Error][0m f_if_stmt.fart:5: reuse of identifier [31;1mx[0m for variable declaration
+    5 |       var [31;1mx[0m = true; # error
+[31;1m[Error][0m f_if_stmt.fart:9: identifier [31;1mx0[0m is not defined
+    9 |       if [31;1mx0[0m == 3 { # error
+[31;1m[Error][0m f_if_stmt.fart:14: identifier [31;1mc[0m is not defined
+   14 |         [31;1mc[0m = "goodbye"; # error
+[31;1m[Error][0m f_if_stmt.fart:16: expected type bool, got type [31;1mi32[0m instead
+   16 |     } else if [31;1mx + y[0m { # error
+[31;1m[Error][0m f_if_stmt.fart:17: identifier [31;1mb[0m is not defined
+   17 |       [31;1mb[0m = true; # error
+[31;1m[Error][0m f_if_stmt.fart:19: identifier [31;1mx0[0m is not defined
+   19 |     [31;1mx0[0m = 5; # error
+[31;1m[Error][0m f_if_stmt.fart:20: identifier [31;1mb[0m is not defined
+   20 |     [31;1mb[0m = true; # error

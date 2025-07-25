@@ -1,0 +1,22 @@
+class Main {
+  f() {
+    var x = 5, y = 3; # correct
+    if true { # correct
+      var x = true; # error
+      var x0 = 3; # correct
+    } else if x < y { # correct
+      var b = false; # correct
+      if x0 == 3 { # error
+      } else if b { # correct
+        var c = "hello!"; # correct
+      } else {
+        b = true; # correct
+        c = "goodbye"; # error
+      }
+    } else if x + y { # error
+      b = true; # error
+    }
+    x0 = 5; # error
+    b = true; # error
+  }
+}

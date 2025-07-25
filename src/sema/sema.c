@@ -385,6 +385,16 @@ SemaType *SemaTypeFromArithOpImpl(
 // functions above
 SemaType *SemaTypeFromIncOp(
     SyntaxAST *inc, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the conditions of the if statement "stmt" is of
+// type bool, and type checks the body of the if statement. The remaining
+// arguments are used in the same way as the type checking functions above
+bool SemaTypeCheckIfStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if all statements in the "body" type check
+// successfully. Note that before type checking, an additional scope will be
+// pushed, and the scope will later be popped after type checking
+bool SemaTypeCheckBody(
+    SyntaxAST *body, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -2515,7 +2525,7 @@ bool SemaPopulateVar(
   if (addToScope) {
     Vector *scopes = fileCtx->scopes;
     varDeclSymInfo->nextInScope = scopes->arr[scopes->size - 1];
-    VectorAdd(scopes, varDeclSymInfo);
+    scopes->arr[scopes->size - 1] = varDeclSymInfo;
   }
   return true;
 
@@ -2555,6 +2565,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckExprStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_ASSIGN_STMT:
       return SemaTypeCheckAssignStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_IF_STMT:
+      return SemaTypeCheckIfStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -3224,4 +3236,59 @@ SemaType *SemaTypeFromIncOp(
 CLEANUP:
   inc->semaInfo.skipAnalysis = true;
   return NULL;
+}
+
+bool SemaTypeCheckIfStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  bool success = false;
+  // The children of an if statement are:
+  // ifCond ifBody (elseIfCond elseIfBody)* (elseBody)?
+  // Therefore, the following loop iterates over each (cond, body) pair until
+  // there are no such pairs left
+  SyntaxAST *cond, *body;
+  for (cond = stmt->firstChild; cond && (body = cond->sibling);
+       cond = body->sibling) {
+    SemaType *condType = SemaTypeFromExpr(
+        cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!condType) {
+      success = false;
+    } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+      fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, condType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+      success = false;
+    }
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  if (cond) {
+    // If there is a children left, however, this children is the else body
+    body = cond;
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  if (!success) {
+    stmt->semaInfo.skipAnalysis = true;
+  }
+  return success;
+}
+
+bool SemaTypeCheckBody(
+    SyntaxAST *body, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaPushScope(fileCtx);
+  assert(body && body->kind == SYNTAX_AST_KIND_STMTS);
+  bool success = true;
+  for (SyntaxAST *stmt = body->firstChild; stmt; stmt = stmt->sibling) {
+    if (!SemaTypeCheckStmt(stmt, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  SemaPopScope(fileCtx, symbolTable);
+  return success;
 }
