@@ -379,6 +379,12 @@ bool SemaIsAssignable(SyntaxAST *expr, HashTable *symbolTable);
 // as a separate argument "op" instead of reading from the AST node "expr"
 SemaType *SemaTypeFromArithOpImpl(
     SyntaxAST *expr, SyntaxOp op, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if the operand of the increment expression "inc" is a numeric type
+// and assignable. If so, return the type of the operand, otherwise return NULL.
+// The remaining arguments are used in the same way as the type checking
+// functions above
+SemaType *SemaTypeFromIncOp(
+    SyntaxAST *inc, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1356,7 +1362,11 @@ SemaType *SemaTypeFromExpr(
       return SemaTypeFromCall(expr, symbolTable, fileCtx);
     case SYNTAX_OP_ARRAY_ACCESS:
       return SemaTypeFromIndexOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_INC:
+    case SYNTAX_OP_DEC:
+      return SemaTypeFromIncOp(expr, symbolTable, fileCtx);
     default:
+      printf("Expr op: %d\n", expr->op);
       assert(false);
   }
 }
@@ -3175,5 +3185,43 @@ CLEANUP_RIGHT_OPERAND:
   rightOperand->semaInfo.skipAnalysis = true;
 CLEANUP:
   expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeFromIncOp(
+    SyntaxAST *inc, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = inc->firstChild;
+  SemaType *operandType = SemaTypeFromExpr(
+      operand, /*parentExpr=*/inc, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP;
+  }
+  if (!SemaTypeIsNumeric(operandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    goto CLEANUP;
+  }
+  if (!SemaIsAssignable(operand, symbolTable)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"operand"SOURCE_COLOR_RESET
+        " of increment expression is not assignable\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    goto CLEANUP;
+  }
+
+  SemaTypeInfo *typeInfo = &inc->semaInfo.typeInfo;
+  typeInfo->type = operandType;
+  typeInfo->isTypeOwner = false;
+  return operandType;
+
+CLEANUP:
+  inc->semaInfo.skipAnalysis = true;
   return NULL;
 }

@@ -44,3 +44,13 @@
    61 |     [32;1mx[0m ^= [31;1mx2[0m; # error
 [31;1m[Error][0m f_assign_stmt.fart:63: bitwise operand of type [31;1mbool[0m does not match first operand of type [32;1mi32[0m
    63 |     [32;1mx[0m |= [31;1mtrue[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:66: expected numeric type, got [31;1mu8[][0m instead
+   66 |     [31;1mthis.t1[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:67: [31;1moperand[0m of increment expression is not assignable
+   67 |     [31;1mMain.g().t2[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:70: [31;1moperand[0m of increment expression is not assignable
+   70 |     [31;1mx2++[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:71: assignment expresssion of type [31;1mi64[0m cannot be implictly cast to LHS type [32;1mf32[0m
+   71 |     [32;1mx2[0m = [31;1mx++ + y--[0m; # correct, type i64
+[31;1m[Error][0m f_assign_stmt.fart:72: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi64[0m
+   72 |     [32;1my[0m = [31;1mx++ + x2--[0m; # correct, type f32

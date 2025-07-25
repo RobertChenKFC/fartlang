@@ -61,5 +61,14 @@ class Main {
     x ^= x2; # error
     x |= 4; # correct
     x |= true; # error
+
+    # Increment operators
+    this.t1++; # error
+    Main.g().t2++; # error
+    y *= Main.t3--; # correct
+    x2--; # correct
+    x2++++; # error
+    x2 = x++ + y--; # correct, type i64
+    y = x++ + x2--; # correct, type f32
   }
 }
