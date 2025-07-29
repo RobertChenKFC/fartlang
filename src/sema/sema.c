@@ -1796,93 +1796,86 @@ SemaType *SemaTypeFromComparisonOp(
   // otherwise the comparison operator returns bool, and it won't type check
   // with the subsequent comparison.
   //
-  // We will first traverse to the leftmost child of the comparison chain,
-  // and record all of the right children in a stack, then we can type check
-  // each operand in order.
+  // We traverse down the firstChild chain until we hit something that is not
+  // a comparison operator, recording everything on the chain to a stack.
   
-  Vector *operandsVec = VectorNew();
-  SyntaxAST *rootExpr = expr;
+  Vector *compVec = VectorNew();
   for (; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    VectorAdd(operandsVec, expr->lastChild);
+    VectorAdd(compVec, expr);
   }
-  VectorAdd(operandsVec, expr);
 
-  typedef enum {
-    FLOAT,
-    SIGNED,
-    UNSIGNED,
-    NON_NUMERIC
-  } TypeGroup;
-
-  void **operands = operandsVec->arr;
-  int numOperands = operandsVec->size;
-  int operandIndex;
-  SyntaxAST *firstOperand = operands[numOperands - 1];
-  SyntaxAST *failingOperand;
-  TypeGroup typeGroup;
-  for (operandIndex = numOperands - 1; operandIndex >= 0; --operandIndex) {
-    SyntaxAST *operand = failingOperand = operands[operandIndex];
+  void **comps = compVec->arr;
+  int numComps = compVec->size;
+  int compIndex = numComps - 1;
+  SyntaxAST *prevOperand = expr;
+  SemaType *prevOperandType = SemaTypeFromExpr(
+      prevOperand, /*parentExpr=*/comps[numComps - 1], symbolTable,
+      fileCtx);
+  if (!prevOperandType) {
+    prevOperand->semaInfo.skipAnalysis = true;
+    goto CLEANUP;
+  }
+  for (; compIndex >= 0; --compIndex) {
+    SyntaxAST *comp = comps[compIndex];
+    SyntaxAST *operand = comp->lastChild;
     SemaType *operandType = SemaTypeFromExpr(
-        operand, expr, symbolTable, fileCtx);
+        operand, /*parentExpr=*/comp, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
-    TypeGroup curTypeGroup;
-    if (SemaTypeIsFloat(operandType)) {
-      curTypeGroup = FLOAT;
-    } else if (SemaTypeIsSigned(operandType)) {
-      curTypeGroup = SIGNED;
-    } else if (SemaTypeIsUnsigned(operandType)) {
-      curTypeGroup = UNSIGNED;
-    } else {
-      curTypeGroup = NON_NUMERIC;
-    }
-    if (operand != firstOperand && curTypeGroup != typeGroup) {
+    bool isUnifiedTypeOwner;
+    SemaType *unifiedType = SemaTypeUnification(
+        prevOperandType, operandType, &isUnifiedTypeOwner);
+    bool typeChecks = SemaTypeIsNumeric(unifiedType) ||
+        ((comp->op == SYNTAX_OP_EQEQ || comp->op == SYNTAX_OP_NEQ) &&
+         SemaTypeEqual(prevOperandType, operandType));
+    if (!typeChecks) {
       SourceLocation *loc = &operand->loc;
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
               " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-      fprintf(stderr, "operand of "SOURCE_COLOR_RED);
-      switch (curTypeGroup) {
-        case FLOAT:    fprintf(stderr, "float"); break;
-        case SIGNED:   fprintf(stderr, "signed"); break;
-        case UNSIGNED: fprintf(stderr, "unsigned"); break;
-        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
-      }
-      fprintf(stderr, SOURCE_COLOR_RESET" type does not match operand of "
-              SOURCE_COLOR_GREEN);
-      switch (typeGroup) {
-        case FLOAT:    fprintf(stderr, "float"); break;
-        case SIGNED:   fprintf(stderr, "signed"); break;
-        case UNSIGNED: fprintf(stderr, "unsigned"); break;
-        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
-      }
-      fprintf(stderr, SOURCE_COLOR_RESET" type\n");
+      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
+      SemaTypePrint(stderr, prevOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" results in non-numeric type "
+          SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, unifiedType);
+      fprintf(stderr, SOURCE_COLOR_RESET"\n");
       SourceLocationPrint(
-          fileCtx->source, 2, SOURCE_COLOR_GREEN, &firstOperand->loc,
-          SOURCE_COLOR_RED, loc);
-      --operandIndex;
+          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &prevOperand->loc,
+          SOURCE_COLOR_BLUE, loc);
+    }
+    if (isUnifiedTypeOwner) {
+      SemaTypeDelete(unifiedType);
+    }
+    if (!typeChecks) {
+      --compIndex;
       goto CLEANUP;
     }
-    typeGroup = curTypeGroup;
+    prevOperand = operand;
+    prevOperandType = operandType;
   }
   SemaType *boolType = malloc(sizeof(SemaType));
   SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
-  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  for (int i = 0; i < numComps; ++i) {
+    SyntaxAST *comp = comps[i];
+    SemaTypeInfo *typeInfo = &comp->semaInfo.typeInfo;
     typeInfo->type = boolType;
-    typeInfo->isTypeOwner = expr == rootExpr;
+    typeInfo->isTypeOwner = i == 0;
   }
-  VectorDelete(operandsVec);
+  VectorDelete(compVec);
   return boolType;
 CLEANUP:
-  for (; operandIndex >= 0; --operandIndex) {
-    SyntaxAST *operand = operands[operandIndex];
+  for (; compIndex >= 0; --compIndex) {
+    SyntaxAST *comp = comps[compIndex];
+    SyntaxAST *operand = comp->lastChild;
     operand->semaInfo.skipAnalysis = true;
   }
-  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    expr->semaInfo.skipAnalysis = true;
+  for (int i = 0; i < numComps; ++i) {
+    SyntaxAST *comp = comps[i];
+    comp->semaInfo.skipAnalysis = true;
   }
-  VectorDelete(operandsVec);
+  VectorDelete(compVec);
   return NULL;
 }
 
