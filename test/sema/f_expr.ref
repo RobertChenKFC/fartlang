@@ -52,19 +52,19 @@
    37 |   var comp_lt_i32_0: [32;1mi32[0m = [31;1m3 < 5i16[0m; # correct, type bool
 [31;1m[Error][0m f_expr.fart:38: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
    38 |   var comp_lt_i32: [32;1mi32[0m = [31;1m3 < 5i16 <= 7i8[0m; # correct, type bool
-[31;1m[Error][0m f_expr.fart:39: unification of [33;1mi32[0m and [34;1mu8[0m results in non-numeric type [31;1many[0m
+[31;1m[Error][0m f_expr.fart:39: types [33;1mi32[0m and [34;1mu8[0m are not comparable
    39 |   var comp_gt_fail2 = [33;1m3[0m > [34;1m'a'[0m >= 7; # error
-[31;1m[Error][0m f_expr.fart:40: unification of [33;1mi16[0m and [34;1mu8[0m results in non-numeric type [31;1many[0m
+[31;1m[Error][0m f_expr.fart:40: types [33;1mi16[0m and [34;1mu8[0m are not comparable
    40 |   var comp_gt_fail3 = 3 > [33;1m5i16[0m >= [34;1m't'[0m; # error
 [31;1m[Error][0m f_expr.fart:41: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
    41 |   var comp_eq_f64: [32;1mi32[0m = [31;1m3. == 5. != 7.f64[0m; # correct, type bool
-[31;1m[Error][0m f_expr.fart:42: unification of [33;1mi32[0m and [34;1mu32[0m results in non-numeric type [31;1many[0m
+[31;1m[Error][0m f_expr.fart:42: types [33;1mi32[0m and [34;1mu32[0m are not comparable
    42 |   var comp_mix = [33;1m3[0m < [34;1m5u32[0m <= 7.; # error
-[31;1m[Error][0m f_expr.fart:43: unification of [33;1mi32[0m and [34;1mbool[0m results in non-numeric type [31;1many[0m
+[31;1m[Error][0m f_expr.fart:43: types [33;1mi32[0m and [34;1mbool[0m are not comparable
    43 |   var comp_wrong = [33;1m3[0m < [34;1mtrue[0m; # error
 [31;1m[Error][0m f_expr.fart:44: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
    44 |   var comp_non_numeric : [32;1mi32[0m = [31;1m"hello" == "world"[0m; # correct, type bool
-[31;1m[Error][0m f_expr.fart:45: unification of [33;1mi32[][0m and [34;1mMain[0m results in non-numeric type [31;1many[0m
+[31;1m[Error][0m f_expr.fart:45: types [33;1mi32[][0m and [34;1mMain[0m are not comparable
    45 |   var comp_non_numeric_2 = [33;1m(1 as i32[])[0m < [34;1m(2 as Main)[0m; # error
 [31;1m[Error][0m f_expr.fart:48: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
    48 |   var shift_i32 : [32;1mbool[0m = [31;1m3 << 5u32[0m; # correct, type i32

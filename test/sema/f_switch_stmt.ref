@@ -1,0 +1,11 @@
+[31;1m[Error][0m f_switch_stmt.fart:9: identifier [31;1mx[0m is not defined
+    9 |         [31;1mx[0m = 5; # error
+[31;1m[Error][0m f_switch_stmt.fart:11: types [33;1mi32[0m and [34;1mnil[0m are not comparable with operator ==
+    3 |     switch [33;1m3[0m {
+   11 |       case [34;1mnull[0m { # error
+[31;1m[Error][0m f_switch_stmt.fart:18: types [33;1mbool[0m and [34;1mi32[0m are not comparable with operator ==
+   16 |         switch [33;1mtrue[0m {
+   18 |           case [34;1m3[0m {} # error
+[31;1m[Error][0m f_switch_stmt.fart:19: types [33;1mbool[0m and [34;1mi32[0m are not comparable with operator ==
+   16 |         switch [33;1mtrue[0m {
+   19 |           case true, [34;1m5[0m {} # error

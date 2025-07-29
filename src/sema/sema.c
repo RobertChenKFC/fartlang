@@ -395,6 +395,15 @@ bool SemaTypeCheckIfStmt(
 // pushed, and the scope will later be popped after type checking
 bool SemaTypeCheckBody(
     SyntaxAST *body, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the type of the switch expression can be compared
+// with the type of each of the cases using the "==" operator, and all of the
+// bodies of the cases type check as well. The remaining arguments are used in
+// the same way as the type check function above
+bool SemaTypeCheckSwitchStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if two variables of type "type1" and "type2" are
+// comparable using the comparison operator "op"
+bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1823,32 +1832,18 @@ SemaType *SemaTypeFromComparisonOp(
     if (!operandType) {
       goto CLEANUP;
     }
-    bool isUnifiedTypeOwner;
-    SemaType *unifiedType = SemaTypeUnification(
-        prevOperandType, operandType, &isUnifiedTypeOwner);
-    bool typeChecks = SemaTypeIsNumeric(unifiedType) ||
-        ((comp->op == SYNTAX_OP_EQEQ || comp->op == SYNTAX_OP_NEQ) &&
-         SemaTypeEqual(prevOperandType, operandType));
-    if (!typeChecks) {
+    if (!SemaTypesAreComparable(prevOperandType, operandType, comp->op)) {
       SourceLocation *loc = &operand->loc;
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
               " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
+      fprintf(stderr, "types "SOURCE_COLOR_YELLOW);
       SemaTypePrint(stderr, prevOperandType);
       fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
       SemaTypePrint(stderr, operandType);
-      fprintf(stderr, SOURCE_COLOR_RESET" results in non-numeric type "
-          SOURCE_COLOR_RED);
-      SemaTypePrint(stderr, unifiedType);
-      fprintf(stderr, SOURCE_COLOR_RESET"\n");
+      fprintf(stderr, SOURCE_COLOR_RESET" are not comparable\n");
       SourceLocationPrint(
           fileCtx->source, 2, SOURCE_COLOR_YELLOW, &prevOperand->loc,
           SOURCE_COLOR_BLUE, loc);
-    }
-    if (isUnifiedTypeOwner) {
-      SemaTypeDelete(unifiedType);
-    }
-    if (!typeChecks) {
       --compIndex;
       goto CLEANUP;
     }
@@ -2560,6 +2555,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckAssignStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_IF_STMT:
       return SemaTypeCheckIfStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_SWITCH_STMT:
+      return SemaTypeCheckSwitchStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -3284,4 +3281,71 @@ bool SemaTypeCheckBody(
   }
   SemaPopScope(fileCtx, symbolTable);
   return success;
+}
+
+bool SemaTypeCheckSwitchStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  assert(stmt && stmt->kind == SYNTAX_AST_KIND_SWITCH_STMT);
+
+  bool success = true;
+  SyntaxAST *expr = stmt->firstChild;
+  SemaType *exprType = SemaTypeFromExpr(
+      expr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+  if (!exprType) {
+    success = false;
+    expr->semaInfo.skipAnalysis = true;
+  }
+  for (SyntaxAST *caseNode = expr->sibling; caseNode;
+       caseNode = caseNode->sibling) {
+    assert(caseNode->kind == SYNTAX_AST_KIND_CASE);
+    SyntaxAST *firstChild = caseNode->firstChild;
+    SyntaxAST *body;
+    if (firstChild->sibling) {
+      SyntaxAST *exprList = firstChild;
+      body = exprList->sibling;
+      for (SyntaxAST *caseExpr = exprList->firstChild; caseExpr;
+           caseExpr = caseExpr->sibling) {
+        SemaType *caseExprType = SemaTypeFromExpr(
+            caseExpr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+        if (!caseExprType) {
+          success = false;
+          caseExpr->semaInfo.skipAnalysis = true;
+        }
+        if (!SemaTypesAreComparable(exprType, caseExprType, SYNTAX_OP_EQEQ)) {
+          fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                  " %s:%d: ", fileCtx->path, caseNode->loc.from.lineNo + 1);
+          fprintf(stderr, "types "SOURCE_COLOR_YELLOW);
+          SemaTypePrint(stderr, exprType);
+          fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+          SemaTypePrint(stderr, caseExprType);
+          fprintf(stderr, SOURCE_COLOR_RESET" are not comparable with operator "
+              "==\n");
+          SourceLocationPrint(
+              fileCtx->source, 1, SOURCE_COLOR_YELLOW, &expr->loc);
+          SourceLocationPrint(
+              fileCtx->source, 1, SOURCE_COLOR_BLUE, &caseExpr->loc);
+          success = false;
+        }
+      }
+    } else {
+      body = firstChild;
+    }
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  return success;
+}
+
+bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op) {
+  bool isUnifiedTypeOwner;
+  SemaType *unifiedType = SemaTypeUnification(
+      type1, type2, &isUnifiedTypeOwner);
+  bool comparable = SemaTypeIsNumeric(unifiedType) ||
+        ((op == SYNTAX_OP_EQEQ || op == SYNTAX_OP_NEQ) &&
+         SemaTypeEqual(type1, type2));
+  if (isUnifiedTypeOwner) {
+    SemaTypeDelete(unifiedType);
+  }
+  return comparable;
 }
