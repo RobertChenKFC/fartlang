@@ -257,22 +257,8 @@ bool SemaTypeCheckVarInitList(
 // as the type check functions above
 bool SemaTypeCheckMethodDecl(
     SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx);
-// Populates the varaiable declared in "var" to "memberTable". Note that the
-// name of the identifier "varName" and the type of the variable "varType" are
-// specified as separate arguments to the function so that this is a general
-// function that can take on any form of variable declaration: class variables,
-// method variables and method parameters. The variable attribute "attr" is
-// also taken as a separate argument and will be used to set the attribute
-// of the SemaSymInfo of the variable.
-//
-// Note that there are two HashTable's: "memberTable", which is the table we
-// will populate the variable with, and "symbolTable", which is the symbol table
-// to lookup in the current scope (mainly to type check "varType"). Returns true
-// if and only if the the variable name doesn't already exist in the
-// "memberTable", and "varType" (if provided, can be NULL) is well-formed. The
-// "addToScope" argument specifies whether to also add the variable to the
-// current scope. The remaining arguments are used in the same way as the type
-// check functions above
+// Calls SemaPopulateSymbol with "variable" as "declKind". See
+// SemaPopulateSymbol for more info
 bool SemaPopulateVar(
     SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
     SemaAttr attr, bool addToScope, HashTable *symbolTable,
@@ -329,8 +315,8 @@ SemaType *SemaTypeFromMemberAccess(
     SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
     SemaFileCtx *fileCtx);
 // Returns true if and only if an expression or term stored in the AST node
-// "value" can be captured in a variable, ie. is not a class or a namespace.
-// Note that "value" must be type checked by the appropriate function
+// "value" can be captured in a variable, ie. is not a class, namespace or
+// label. Note that "value" must be type checked by the appropriate function
 // (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
 bool SemaValueIsCapturable(SyntaxAST *value);
 // Returns true if and only if the AST "node" is a namespace. Note that "node"
@@ -338,13 +324,15 @@ bool SemaValueIsCapturable(SyntaxAST *value);
 // SemaTypeFromTerm) before being passed to this function
 bool SemaNodeIsNamespace(SyntaxAST *node);
 // Calls SemaPrintErrorForUncapturableValue when "value" is a class or namespace
-// used in "parentExpr" and "parentExpr" is not an access operator. Note that
-// "parentExpr" must be type checked by the appropriate function prior to
-// calling. Returns true if and only if no errors were printed
+// used in "parentExpr" and "parentExpr" is not an access operator, or when
+// "value" is a label. Note that "parentExpr" must be type checked by the
+// appropriate function prior to calling. Returns true if and only if no errors
+// were printed
 bool SemaCheckErrorForUncapturableValue(
     SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx);
 // Print the error message for "value" when "value" is a class or namespace used
-// in "parentExpr", but "parentExpr" is not an access operator.
+// in "parentExpr", but "parentExpr" is not an access operator, or when "value"
+// is a "label"
 void SemaPrintErrorForUncapturableValue(SyntaxAST *value, SemaFileCtx *fileCtx);
 // Check if the operand of "expr" is an array type, and the index expression
 // is an unsigned type. If so, return the type of "expr" with one fewer array
@@ -404,6 +392,43 @@ bool SemaTypeCheckSwitchStmt(
 // Returns true if and only if two variables of type "type1" and "type2" are
 // comparable using the comparison operator "op"
 bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op);
+// Returns true if and only if the init, condition, iteration, body and label of
+// the for "stmt" type checks. The remaining arguments are used in the same way
+// as the type check function above
+bool SemaTypeCheckForStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Populates the symbol declared in "symbol" to "memberTable". Note that the
+// identifier of the symbol "symbolIdentifier" and the type of the variable
+// "symbolType" are specified as separate arguments to the function so that this
+// is a general function that can take on any form of symbol declaration: class
+// variables, method variables, method parameters and label declarations. The
+// attribute "attr" is also taken as a separate argument and will be used to set
+// the attribute of the SemaSymInfo of the symbol. A string "declKind" is also
+// taken as a parameter to indicate which kind of symbol (variable or label)
+// this declaration is declaring, which will be reported when an error message
+// is printed
+//
+// Note that there are two HashTable's: "memberTable", which is the table we
+// will populate the symbol with, and "symbolTable", which is the symbol table
+// to lookup in the current scope (mainly to type check "symbolType"). Returns
+// true if and only if the the symbol name doesn't already exist in the
+// "memberTable", and "symbolType" (if provided, can be NULL) is well-formed.
+// The "addToScope" argument specifies whether to also add the symbol to the
+// current scope. The remaining arguments are used in the same way as the type
+// check functions above
+bool SemaPopulateSymbol(
+    SyntaxAST *symbol, char *symbolIdentifier, SourceLocation *symbolLoc,
+    SyntaxAST *symbolType, SemaAttr attr, bool addToScope,
+    const char *declKind, HashTable *symbolTable, HashTable *memberTable,
+    SemaFileCtx *fileCtx);
+// Populates "label" into "symbolTable". Returns true if and only if the
+// identifier of "label" does not already exist in "symbolTable"
+bool SemaPopulateLabel(
+    SyntaxAST *label, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if the "value" is actually a reference to a label. "value" has to
+// be type checked by SemaTypeFromExpr or SemaTypeFromTerm before being passed
+// to this function
+bool SemaValueIsLabel(SyntaxAST *value);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -1170,6 +1195,9 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_METHOD_DECL:
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
+    case SYNTAX_AST_KIND_LABEL:
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
 DELETE_SYM_INFO:
       if (deleteSymInfo && !info->skipAnalysis) {
@@ -2461,68 +2489,9 @@ bool SemaPopulateVar(
     SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
     SemaAttr attr, bool addToScope, HashTable *symbolTable,
     HashTable *memberTable, SemaFileCtx *fileCtx) {
-  // Check if variable identifier is unique
-  HashTableEntry *entry = HashTableEntryRetrieve(
-      memberTable, varName);
-  if (entry) {
-    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-            " %s:%d: ", fileCtx->path, varLoc->from.lineNo + 1);
-    fprintf(stderr, "reuse of identifier "SOURCE_COLOR_RED"%s"
-            SOURCE_COLOR_RESET" for variable declaration\n",
-            varName);
-    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, varLoc);
-    goto CLEANUP;
-  }
-
-  // Check if variable type is valid
-  SemaSymInfo *varDeclSymInfo;
-  if (varType) {
-    assert(varType->kind == SYNTAX_AST_KIND_TYPE);
-    varDeclSymInfo = malloc(sizeof(SemaSymInfo));
-    var->semaInfo.symInfo = varDeclSymInfo;
-    SemaTypeInfo *varDeclTypeInfo = &varDeclSymInfo->typeInfo;
-    SemaTypeInfo *varTypeInfo = &varType->semaInfo.typeInfo;
-    SemaType *semaType = SemaTypeFromSyntaxType(
-        varType, symbolTable, fileCtx, var,
-        &varTypeInfo->isTypeOwner);
-    if (!semaType) {
-      free(varDeclSymInfo);
-      goto CLEANUP;
-    }
-
-    varDeclTypeInfo->type = varTypeInfo->type = semaType;
-    varDeclTypeInfo->isTypeOwner = false;
-    // set-to-a-later-stage: most SYNTAX_AST_KIND_TYPE nodes only have
-    // their SemaType avaiable after the type checking stage, but there are rare
-    // exceptions such as SemaPopulateMembers, which populates type information
-    // for class variables before the type checking stage. SemaDeleteASTSemaInfo
-    // relies on the stage to determine whether the SemaType is ready, so we
-    // modify the stage in this particular instance to the type check stage
-    varType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
-  } else {
-    // If "varType" is not provided, then type checking was already done at
-    // a previous stage. Retrive the previously-computed type here
-    varDeclSymInfo = var->semaInfo.symInfo;
-  }
-
-  HashTableEntryAdd(memberTable, varName, varDeclSymInfo);
-  entry = HashTableEntryRetrieve(memberTable, varName);
-  assert(entry);
-  varDeclSymInfo->entry = entry;
-  varDeclSymInfo->attr = attr;
-  if (addToScope) {
-    Vector *scopes = fileCtx->scopes;
-    varDeclSymInfo->nextInScope = scopes->arr[scopes->size - 1];
-    scopes->arr[scopes->size - 1] = varDeclSymInfo;
-  }
-  return true;
-
-CLEANUP:
-  var->semaInfo.skipAnalysis = true;
-  if (varType) {
-    varType->semaInfo.skipAnalysis = true;
-  }
-  return false;
+  return SemaPopulateSymbol(
+      var, varName, varLoc, varType, attr, addToScope, /*declKind=*/"variable",
+      symbolTable, memberTable, fileCtx);
 }
 
 void SemaPushScope(SemaFileCtx *fileCtx) {
@@ -2557,6 +2526,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckIfStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_SWITCH_STMT:
       return SemaTypeCheckSwitchStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_FOR_STMT:
+      return SemaTypeCheckForStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2801,12 +2772,13 @@ CLEANUP:
 }
 
 bool SemaValueIsCapturable(SyntaxAST *value) {
-  // A value is capturable if and only if it is not a class or a namespace.
+  // A value is capturable if and only if it is not a class, namespace or label.
   // - A namespace can only be referenced by an identifier
   // - A class can be referenced in two ways:
   //   - By the class identifier itself (if it is in the current scope or
   //     imported from a wildcard import)
   //   - Referenced indirectly via a namespace
+  // - A label can only be referenced by an identifier
   // Therefore, we only have to identify the cases where the value is an
   // identifier or a member access. In all other cases, the value would be
   // capturable
@@ -2816,6 +2788,7 @@ bool SemaValueIsCapturable(SyntaxAST *value) {
       switch (type->kind) {
         case SEMA_TYPE_KIND_CLASS:
         case SEMA_TYPE_KIND_NAMESPACE:
+        case SEMA_TYPE_KIND_LABEL:
           return false;
         case SEMA_TYPE_KIND_ARRAY:
         case SEMA_TYPE_KIND_FN:
@@ -2842,8 +2815,14 @@ bool SemaNodeIsNamespace(SyntaxAST *node) {
 
 bool SemaCheckErrorForUncapturableValue(
     SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx) {
-  if (SemaValueIsCapturable(value) ||
-      (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS)) {
+  if (SemaValueIsCapturable(value)) {
+    return true;
+  }
+  if (!SemaValueIsLabel(value) &&
+      parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
+    // If "value" is not capturable and is not a label, then it is a class
+    // or namespace. If the "parentExpr" that uses "value" is a member access,
+    // then no uncapturable value is used
     return true;
   }
   SemaPrintErrorForUncapturableValue(value, fileCtx);
@@ -2855,8 +2834,13 @@ void SemaPrintErrorForUncapturableValue(
   SourceLocation *loc = &value->loc;
   fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
           " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-  fprintf(stderr, SOURCE_COLOR_RED"value"SOURCE_COLOR_RESET
-          " is not used in an access operator\n");
+  if (SemaValueIsLabel(value)) {
+    fprintf(stderr, SOURCE_COLOR_RED"label"SOURCE_COLOR_RESET
+            " is not used in a break statement\n");
+  } else {
+    fprintf(stderr, SOURCE_COLOR_RED"value"SOURCE_COLOR_RESET
+            " is not used in an access operator\n");
+  }
   SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
 }
 
@@ -3348,4 +3332,160 @@ bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op) {
     SemaTypeDelete(unifiedType);
   }
   return comparable;
+}
+
+bool SemaTypeCheckForStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *init = stmt->firstChild;
+  SyntaxAST *cond = init->sibling;
+  SyntaxAST *iter = cond->sibling;
+  SyntaxAST *body = iter->sibling;
+  SyntaxAST *label = body->sibling;
+
+  bool success = true;
+  SemaPushScope(fileCtx);
+
+  // Type check label
+  if (label && !SemaPopulateLabel(label, symbolTable, fileCtx)) {
+    success = false;
+  }
+
+  // Type check initialization
+  if (init->kind == SYNTAX_AST_KIND_VAR_DECL) {
+    if (!SemaTypeCheckVarDeclStmt(init, symbolTable, fileCtx)) {
+      init->semaInfo.skipAnalysis = true;
+      success = false;
+    }
+  } else if (init->kind != SYNTAX_AST_KIND_PLACEHOLDER && !SemaTypeFromExpr(
+      init, /*parentExpr=*/NULL, symbolTable, fileCtx)) {
+    init->semaInfo.skipAnalysis = true;
+    success = false;
+  }
+
+  // Type check condition
+  if (cond->kind != SYNTAX_AST_KIND_PLACEHOLDER) {
+    SemaType *condType = SemaTypeFromExpr(
+        cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!condType) {
+      cond->semaInfo.skipAnalysis = true;
+    } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+      fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, condType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+      cond->semaInfo.skipAnalysis = true;
+    }
+  }
+
+  // Type check iteration
+  if (iter->kind != SYNTAX_AST_KIND_PLACEHOLDER && !SemaTypeFromExpr(
+        iter, /*parentExpr=*/NULL, symbolTable, fileCtx)) {
+    iter->semaInfo.skipAnalysis = true;
+  }
+
+  // Type check body
+  if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+    body->semaInfo.skipAnalysis = true;
+  }
+
+  SemaPopScope(fileCtx, symbolTable);
+
+  return success;
+}
+
+bool SemaPopulateSymbol(
+    SyntaxAST *symbol, char *symbolIdentifier, SourceLocation *symbolLoc,
+    SyntaxAST *symbolType, SemaAttr attr, bool addToScope,
+    const char *declKind, HashTable *symbolTable, HashTable *memberTable,
+    SemaFileCtx *fileCtx) {
+  // Check if symbol identifier is unique
+  HashTableEntry *entry = HashTableEntryRetrieve(
+      memberTable, symbolIdentifier);
+  if (entry) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, symbolLoc->from.lineNo + 1);
+    fprintf(stderr, "reuse of identifier "SOURCE_COLOR_RED"%s"
+            SOURCE_COLOR_RESET" for %s declaration\n",
+            symbolIdentifier, declKind);
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, symbolLoc);
+    goto CLEANUP;
+  }
+
+  // Check if variable type is valid
+  SemaSymInfo *symInfo;
+  if (symbolType) {
+    assert(symbolType->kind == SYNTAX_AST_KIND_TYPE);
+    symInfo = malloc(sizeof(SemaSymInfo));
+    symbol->semaInfo.symInfo = symInfo;
+    SemaTypeInfo *symTypeInfo = &symInfo->typeInfo;
+    SemaTypeInfo *typeInfo = &symbolType->semaInfo.typeInfo;
+    SemaType *semaType = SemaTypeFromSyntaxType(
+        symbolType, symbolTable, fileCtx, symbol, &typeInfo->isTypeOwner);
+    if (!semaType) {
+      free(symInfo);
+      goto CLEANUP;
+    }
+
+    symTypeInfo->type = typeInfo->type = semaType;
+    symTypeInfo->isTypeOwner = false;
+    // set-to-a-later-stage: most SYNTAX_AST_KIND_TYPE nodes only have
+    // their SemaType avaiable after the type checking stage, but there are rare
+    // exceptions such as SemaPopulateMembers, which populates type information
+    // for class variables before the type checking stage. SemaDeleteASTSemaInfo
+    // relies on the stage to determine whether the SemaType is ready, so we
+    // modify the stage in this particular instance to the type check stage
+    symbolType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
+  } else {
+    // If "varType" is not provided, then type checking was already done at
+    // a previous stage. Retrive the previously-computed type here
+    symInfo = symbol->semaInfo.symInfo;
+  }
+
+  HashTableEntryAdd(memberTable, symbolIdentifier, symInfo);
+  entry = HashTableEntryRetrieve(memberTable, symbolIdentifier);
+  assert(entry);
+  symInfo->entry = entry;
+  symInfo->attr = attr;
+  if (addToScope) {
+    Vector *scopes = fileCtx->scopes;
+    symInfo->nextInScope = scopes->arr[scopes->size - 1];
+    scopes->arr[scopes->size - 1] = symInfo;
+  }
+  return true;
+
+CLEANUP:
+  symbol->semaInfo.skipAnalysis = true;
+  if (symbolType) {
+    symbolType->semaInfo.skipAnalysis = true;
+  }
+  return false;
+
+}
+
+bool SemaPopulateLabel(
+    SyntaxAST *label, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  bool success = true;
+  SemaType *labelType = malloc(sizeof(SemaType));
+  labelType->kind = SEMA_TYPE_KIND_LABEL;
+  SemaSymInfo *labelSymInfo = malloc(sizeof(SemaSymInfo));
+  label->semaInfo.symInfo = labelSymInfo;
+  SemaTypeInfo *labelTypeInfo = &labelSymInfo->typeInfo;
+  labelTypeInfo->type = labelType;
+  labelTypeInfo->isTypeOwner = true;
+  if (!SemaPopulateSymbol(
+        label, label->string, &label->loc, /*symbolType=*/NULL, SEMA_ATTR_LABEL,
+        /*addToScope=*/true, /*declKind=*/"label", symbolTable, symbolTable,
+        fileCtx)) {
+    success = false;
+    SemaSymInfoDelete(labelSymInfo);
+  }
+  return success;
+}
+
+bool SemaValueIsLabel(SyntaxAST *value) {
+  return value->kind == SYNTAX_AST_KIND_IDENTIFIER &&
+    value->semaInfo.typeInfo.type->kind == SEMA_TYPE_KIND_LABEL;
 }

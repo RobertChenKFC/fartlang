@@ -1,0 +1,38 @@
+[31;1m[Error][0m f_for_stmt.fart:6: identifier [31;1mi[0m is not defined
+    6 |     for ; [31;1mi[0m < 5; i++ {} # error
+[31;1m[Error][0m f_for_stmt.fart:6: identifier [31;1mi[0m is not defined
+    6 |     for ; i < 5; [31;1mi[0m++ {} # error
+[31;1m[Error][0m f_for_stmt.fart:11: expected type bool, got type [31;1mvoid[0m instead
+   11 |     for this.f(); [31;1mthis.f()[0m; this.f() {} # error
+[31;1m[Error][0m f_for_stmt.fart:12: expected type bool, got type [31;1mi32[0m instead
+   12 |     for var i = 0; [31;1mi[0m; i++ {} # error
+[31;1m[Error][0m f_for_stmt.fart:15: reuse of identifier [31;1mi[0m for variable declaration
+   15 |     for var i = 0, j = 5, [31;1mi[0m = 3; ; {} # error
+[31;1m[Error][0m f_for_stmt.fart:17: assignment expresssion of type [31;1mbool[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   17 |     for [32;1mx[0m = [31;1mtrue[0m; ; {} # error
+[31;1m[Error][0m f_for_stmt.fart:26: reuse of identifier [31;1mx[0m for variable declaration
+   26 |     for var [31;1mx[0m = 0; ; {} # error
+[31;1m[Error][0m f_for_stmt.fart:27: expected type bool, got type [31;1mi32[0m instead
+   27 |     for var i = 0; [31;1mi[0m; i++ { # correct
+[31;1m[Error][0m f_for_stmt.fart:31: identifier [31;1mk[0m is not defined
+   31 |       i += [31;1mk[0m; # error
+[31;1m[Error][0m f_for_stmt.fart:32: identifier [31;1mj[0m is not defined
+   32 |       i += [31;1mj[0m; # error
+[31;1m[Error][0m f_for_stmt.fart:34: identifier [31;1mi[0m is not defined
+   34 |     x += [31;1mi[0m; # error
+[31;1m[Error][0m f_for_stmt.fart:39: reuse of identifier [31;1mlabel1[0m for label declaration
+   39 |       [31;1m> label1:[0m # error
+[31;1m[Error][0m f_for_stmt.fart:40: reuse of identifier [31;1mlabel1[0m for variable declaration
+   40 |       var [31;1mlabel1[0m = 10; # error
+[31;1m[Error][0m f_for_stmt.fart:43: reuse of identifier [31;1mlabel2[0m for label declaration
+   43 |         [31;1m> label2:[0m # error
+[31;1m[Error][0m f_for_stmt.fart:52: reuse of identifier [31;1mx[0m for label declaration
+   52 |     [31;1m> x:[0m # error
+[31;1m[Error][0m f_for_stmt.fart:56: [31;1mlabel[0m is not used in a break statement
+   56 |       [31;1mlabel[0m = 10; # error
+[31;1m[Error][0m f_for_stmt.fart:57: [31;1mlabel[0m is not used in a break statement
+   57 |       x = [31;1mlabel[0m; # error
+[31;1m[Error][0m f_for_stmt.fart:58: [31;1mlabel[0m is not used in a break statement
+   58 |       x = [31;1mlabel[0m.foo; # error
+[31;1m[Error][0m f_for_stmt.fart:59: [31;1mlabel[0m is not used in a break statement
+   59 |       [31;1mlabel[0m(1, 2, 3); # error

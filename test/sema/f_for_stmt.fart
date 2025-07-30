@@ -1,0 +1,63 @@
+class Main {
+  f() {
+    # For loops with various missing parts
+    for ; ; {} # correct
+    for var i = 0; i < 5; i++ {} # correct
+    for ; i < 5; i++ {} # error
+    for var i = 0; ; i++ {} # correct
+    for var i = 0; i < 5; {} # correct
+
+    # For loops with incorrect loop condition
+    for this.f(); this.f(); this.f() {} # error
+    for var i = 0; i; i++ {} # error
+
+    # For loops with different initialization
+    for var i = 0, j = 5, i = 3; ; {} # error
+    var x = 3; # correct
+    for x = true; ; {} # error
+    for this.f(); ; {} # correct
+
+    # For loops with different iterations
+    for ; ; x++ {} # correct
+    for ; ; x += 5 {} # correct
+    for ; ; this.f() {} # correct
+
+    # For loop scopes
+    for var x = 0; ; {} # error
+    for var i = 0; i; i++ { # correct
+      for var j = i; j < 5; j++ { # correct
+        var k = i + j; # correct
+      }
+      i += k; # error
+      i += j; # error
+    }
+    x += i; # error
+
+    # For loop labels
+    for ; ; {
+      for ; ; {}
+      > label1: # error
+      var label1 = 10; # error
+      for ; ; {
+        for ; ; {}
+        > label2: # error
+      }
+      > label2: # correct
+    }
+    > label1: # correct
+    for ; ; {
+    }
+    > label1: # correct
+    for ; ; {}
+    > x: # error
+
+    # Uncapturable labels
+    for ; ; {
+      label = 10; # error
+      x = label; # error
+      x = label.foo; # error
+      label(1, 2, 3); # error
+    }
+    > label:
+  }
+}
