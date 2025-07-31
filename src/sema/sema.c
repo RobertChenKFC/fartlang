@@ -439,6 +439,15 @@ bool SemaTypeCheckWhileStmt(
 // arguments are used in the same way as the type check function above
 bool SemaTypeCheckBreakStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the return "stmt" is contained within a function
+// or method, and the return expression (if provided) type checks and can be
+// implicitly type cast to the return type of the function/method. The remaining
+// arguments are used in the same way as the type check function above
+bool SemaTypeCheckReturnStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if the method we are currently in expects a return expression,
+// ie. it is a method or function that does not return void
+bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -2489,6 +2498,20 @@ bool SemaTypeCheckMethodDecl(
         success = false;
       }
     }
+
+    // If the method is expects a return expression, check if the last statement
+    // in the body is a return statement
+    SyntaxAST *lastStmt = body->lastChild;
+    if (SemaCurMethodExpectsReturnExpr(fileCtx) &&
+        (!lastStmt || lastStmt->kind != SYNTAX_AST_KIND_RETURN_STMT)) {
+      SourceLocation *loc = &methodDecl->method.nameLoc;
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+      fprintf(stderr, "missing last return statement in body of "
+          SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET"\n", methodDecl->method.name);
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    }
   }
 
   SemaPopScope(fileCtx, symbolTable);
@@ -2543,6 +2566,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckWhileStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_BREAK_STMT:
       return SemaTypeCheckBreakStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_RETURN_STMT:
+      return SemaTypeCheckReturnStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -3593,4 +3618,67 @@ bool SemaTypeCheckBreakStmt(
   }
 
   return success;
+}
+
+bool SemaTypeCheckReturnStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  assert(methodSymInfo);
+  SemaTypeInfo *methodTypeInfo = &methodSymInfo->typeInfo;
+  SemaType *methodType = methodTypeInfo->type;
+  assert(methodType->kind == SEMA_TYPE_KIND_FN);
+  SemaType *retType = methodType->retType;
+
+  bool success = true;
+  SyntaxAST *expr = stmt->firstChild;
+  bool expectReturnExpr = SemaCurMethodExpectsReturnExpr(fileCtx);
+  if (!expectReturnExpr && expr) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
+    fprintf(stderr, "unexpected "SOURCE_COLOR_RED"expression"SOURCE_COLOR_RESET
+        " inside the return statement\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &expr->loc);
+    success = false;
+  }
+  if (expectReturnExpr && !expr) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, stmt->loc.from.lineNo + 1);
+    fprintf(stderr, "missing expression in "SOURCE_COLOR_RED"return statement"
+        SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &stmt->loc);
+    success = false;
+  }
+  if (expr) {
+    SemaType *exprType = SemaTypeFromExpr(
+        expr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!exprType) {
+      success = false;
+      expr->semaInfo.skipAnalysis = true;
+    } else if (expectReturnExpr && !SemaTypeImplicitCast(exprType, retType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
+      fprintf(stderr, "cannot implicitly cast type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, exprType);
+      fprintf(stderr, SOURCE_COLOR_RESET" to type ");
+      SemaTypePrint(stderr, retType);
+      fprintf(stderr, " expected by the function/method\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &expr->loc);
+      success = false;
+    }
+  }
+  return success;
+}
+
+bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  assert(methodSymInfo);
+  SemaTypeInfo *methodTypeInfo = &methodSymInfo->typeInfo;
+  SemaType *methodType = methodTypeInfo->type;
+  assert(methodType->kind == SEMA_TYPE_KIND_FN);
+  SemaType *retType = methodType->retType;
+  bool isConstructor = methodSymInfo->attr == SEMA_ATTR_CTOR;
+  return !isConstructor && !SemaTypeIsPrimType(retType, SEMA_PRIM_TYPE_VOID);
 }

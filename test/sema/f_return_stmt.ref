@@ -1,0 +1,24 @@
+[31;1m[Error][0m f_return_stmt.fart:4: unexpected [31;1mexpression[0m inside the return statement
+    4 |     return [31;1m3[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:7: unexpected [31;1mexpression[0m inside the return statement
+    7 |       return [31;1mtrue[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:13: missing expression in [31;1mreturn statement[0m
+   13 |     [31;1mreturn;[0m # error
+[31;1m[Error][0m f_return_stmt.fart:14: cannot implicitly cast type [31;1mbool[0m to type f32 expected by the function/method
+   14 |     return [31;1mtrue[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:16: cannot implicitly cast type [31;1mnil[0m to type f32 expected by the function/method
+   16 |     return [31;1mnull[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:20: unexpected [31;1mexpression[0m inside the return statement
+   20 |     return [31;1m3[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:21: unexpected [31;1mexpression[0m inside the return statement
+   21 |     return [31;1mnull[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:28: cannot implicitly cast type [31;1mvoid[0m to type bool expected by the function/method
+   28 |     return [31;1mMain.f(null)[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:29: cannot implicitly cast type [31;1mf32[0m to type bool expected by the function/method
+   29 |     return [31;1mMain.g(null)[0m; # error
+[31;1m[Error][0m f_return_stmt.fart:30: missing expression in [31;1mreturn statement[0m
+   30 |     [31;1mreturn;[0m # correct
+[31;1m[Error][0m f_return_stmt.fart:33: missing last return statement in body of [31;1mempty[0m
+   33 |   fn [31;1mempty[0m() -> i32 {
+[31;1m[Error][0m f_return_stmt.fart:36: missing last return statement in body of [31;1mempty2[0m
+   36 |   [31;1mempty2[0m() -> u32 {
