@@ -12,10 +12,6 @@ CFG_CONVERT := $(DIR)/cfg_convert.py
 CHECKER := $(DIR)/check_isomorphism.py
 CHECKS := $(addsuffix .check,$(BISON_BASENAMES))
 
-.PHONY: debug
-debug:
-	@echo $(BISON_FILES)
-
 DEPS := $(DEPS) parse/cfg
 DEPS := $(DEPS) parse/lr1
 DEPS := $(DEPS) util/hashtable

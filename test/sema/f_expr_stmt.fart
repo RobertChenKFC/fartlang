@@ -1,0 +1,16 @@
+class Main {
+  new() {}  
+
+  g()
+  getId() -> i32
+  setId(id : i32)
+
+  f() {
+    Main.new().g(); # correct
+    Main.new().h(); # error
+    Main.new().setId(Main.new().getId()); # correct
+    Main.new().setId(Main.new().getId); # error
+    Main.new().setId(Main.new().getId() + 3); # correct
+    Main.new().setId(Main.new().getId() + "hello"); # error
+  }
+}

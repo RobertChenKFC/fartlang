@@ -90,6 +90,7 @@ extern const char *SYNTAX_TYPE_STRS[];
 
 // Operators
 #define SYNTAX_FOREACH_OP(ENUM) \
+  ENUM(SYNTAX_OP_ALLOC) \
   ENUM(SYNTAX_OP_TERNARY) \
   ENUM(SYNTAX_OP_LOGIC_OR) \
   ENUM(SYNTAX_OP_LOGIC_AND) \
@@ -187,10 +188,12 @@ struct SyntaxAST {
     // SYNTAX_AST_KIND_LITERAL
     struct {
       SyntaxType type;
-      uint64_t intVal;
-      double floatVal;
-      bool boolVal;
-      char *strVal;
+      union {
+        uint64_t intVal;
+        double floatVal;
+        bool boolVal;
+        char *strVal;
+      };
     } literal;
     // SYNTAX_AST_KIND_METHOD_DECL
     struct {

@@ -62,9 +62,11 @@ SemaType *SemaTypeFromSyntaxType(
 // Given the AST "methodDecl" of a method declaration, returns a SemaType
 // corresponding to the function type of this method if all the return type
 // and parameter type lookups for the method are successful, otherwise prints
-// an error message using "fileCtx" and NULL is returned
+// an error message using "fileCtx" and NULL is returned. If succeeds, also
+// sets the attribute "attr" of the method declaration
 SemaType *SemaTypeFromMethodDecl(
-    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaAttr *attr);
 // Construct a SemaType "type" from the base primitive type "primType"
 void SemaTypeFromSemaPrimType(SemaType *type, SemaPrimType primType);
 // Type checks all each variable declaration and statement in "ctx". Returns
@@ -73,12 +75,15 @@ bool SemaTypeCheck(SemaCtx *ctx);
 // Given the AST "term" of a term, returns the SemaType of this
 // expression. If the expression successfully type checks, then the
 // corresponding SemaType is returned. Otherwise, and error message is printed
-// using "fileCtx" and NULL is returned
+// using "fileCtx" and NULL is returned. The "parentExpr" that uses this term
+// is also provided (or NULL if there is no parent expression)
 SemaType *SemaTypeFromTerm(
-    SyntaxAST *term, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *term, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Same as SemaTypeFromTerm, but for AST "expr" of expressions instead
 SemaType *SemaTypeFromExpr(
-    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+    SyntaxAST *expr, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
 // Check if the type expressed by "syntaxType" matches any of the primitive
 // types. If so, update "type" to reflect the expressed type and return true.
 // Otherwise, return false
@@ -110,10 +115,6 @@ void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg);
 // no additional arguments. In particular, this init function sets the stage of
 // "info" to "SEMA_STAGE_TYPE_CHECK"
 void SemaASTInitTypeCheck(SemaInfo *info, va_list arg);
-// Checks if the an instance of the "right" type can be assigned to an instance
-// of the "left" type. This returns true if and only if (1) the "left" type is
-// "any" or (2) the "left" and "right" types are the same
-bool SemaTypeIsAssignable(SemaType *left, SemaType *right);
 // Checks if "type" is a float type
 bool SemaTypeIsFloat(SemaType *type);
 // Checks if "type" is a signed type
@@ -126,28 +127,327 @@ int SemaTypeBitwidth(SemaType *type);
 // in the AST node "expr" are all the signed or all unsigned types, and all have
 // the same bitwidth. If so, return the result type, otherwise return NULL.
 // The "symbolTable" and "ctx" are used to recursively type check the operands
-SemaType *SemaTypeCheckBitwiseOp(
+SemaType *SemaTypeFromBitwiseOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if the condition of ternary "expr" is of type bool, and the true and
 // false branches of the expression evaluate to the same type. If so, return
 // the type of the true branch, otherwise, return NULL. Remaining arguments are
 // used in the same way as above
-SemaType *SemaTypeCheckTernaryOp(
+SemaType *SemaTypeFromTernaryOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if all operands of the logic "expr" is of type bool. If so, return
 // the type of the last operand, otherwise return NULL. Remaining arguments
 // are used in the same way as above
-SemaType *SemaTypeCheckLogicOp(
+SemaType *SemaTypeFromLogicOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if all operands are float types, all are signed types or all are
 // unsigned types. If so, return the type with the largest bitwidth, otherwise
 // return NULL. Remaining arguments are used in the same way as above
-SemaType *SemaTypeCheckComparisonOp(
+SemaType *SemaTypeFromComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
 // Checks if "type" is a primitive type of kind "primType"
 bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
 // Checks if "expr" is a comparison expression
 bool SemaIsComparisonExpr(SyntaxAST *expr);
+// Performs the type unification procedure for "type1" and "type2". Returns
+// the unified type if the procedure succeeds, and NULL if the procedure fails.
+// "isTypeOwner" is set to true if and only if a new type is allocated and
+// returned
+SemaType *SemaTypeUnification(
+    SemaType *type1, SemaType *type2, bool *isTypeOwner);
+// Checks if "type1" can be implicitly cast to "type2"
+bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2);
+// Given the AST "expr" for an expression and its "type", if "type" is void,
+// prints an error message using "fileCtx". Returns true if and only if "type"
+// is not void
+bool SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx);
+// Checks if "type" is a class type
+bool SemaTypeIsClass(SemaType *type);
+// Checks if the expresShiftOpinside the alloc "expr" is of unsigned type, and
+// the type inside the alloc "expr" is well formed. If so, return the type of
+// the alloc expression, which is the type inside the alloc "expr" with one
+// additional array level. Otherwise, return NULL. Remaining arguments are
+// used in the same way as all the type check functions above
+SemaType *SemaTypeFromAlloc(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns a newly allocated type with one more array level than "baseType"
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType);
+// Checks if the left operand of the shift expression "expr" is of integral
+// type, and the right operand is of unsigned type. If so, return the type of
+// the shift expression, otherwise return NULL. The remaining arguments are
+// used in the same way as all the type check functions above
+SemaType *SemaTypeFromShiftOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if "type" is an integral type
+bool SemaTypeIsIntegral(SemaType *type);
+// Checks if applying type unification to the left and right operands of "expr"
+// results in a numeric type. If so, return the unified type, otherwise return
+// NULL. Additional type checks are performed for specific arithmetic operators
+// with the helper functions below. The remaining arguments are used in the same
+// way as all the type check functions above
+SemaType *SemaTypeFromArithOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if "type" is a numeric type
+bool SemaTypeIsNumeric(SemaType *type);
+// Check if "leftOperandType" and "rightOperandType" are both integral types.
+// The remaining arguments are used for error reporting
+bool SemaTypeCheckModOp(
+    SyntaxAST *leftOperand, SemaType *leftOperandType, SyntaxAST *rightOperand,
+    SemaType *rightOperandType, SemaFileCtx *fileCtx);
+// Check if "operandType" is not an unsigned types. The remaining arguments are
+// used for error reporting
+bool SemaTypeCheckNegOp(
+    SyntaxAST *operand, SemaType *operandType, SemaFileCtx *fileCtx);
+// Generic type check function for cast operation "expr". Extracts the operand
+// type and target type of the "expr" and feed them to the "check" function.
+// If the check passes, then
+// (1) If "retBoolType" is true, a new bool SemaType is created and returned
+// (2) If "retBoolType", the target type is returned
+// Otherwise, NULL is returned. The remaining arguments are used in the same way
+// as the above type checking functions
+typedef bool (*SemaCastOpCheckFn)(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+SemaType *SemaTypeFromCastOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaCastOpCheckFn check, bool retBoolType);
+// Check if the "operandType" is of type any
+bool SemaTypeCheckCastIsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// Check if the "operandType" is not a void type
+bool SemaTypeCheckCastAsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// Check for one of the following cases in order:
+// 1. If the operand is of type any or if the target type is any, check succeeds
+// 2. If the operand is of type nil, check if the target type is a class type
+// 3. Check if the operand type and the target type are both numeric types
+bool SemaTypeCheckCastIntoOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx);
+// If the stage currently stored in "info" is earlier than the provided "stage",
+// then update the stored stage to the provided "stage"
+void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage);
+// Check if the operand of "expr" is a function type, and each of the type of
+// the sub-expressions matches the argument types of the function type. If so,
+// return the return type of the function type, otherwise return NULL. The
+// remaining arguments are used in the same way as above
+SemaType *SemaTypeFromCall(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Check if "type" is a function type
+bool SemaTypeIsFunction(SemaType *type);
+// Returns true if and only if type checking the class variable declarations
+// stored in "varDecls" succeeds. There are two HashTable's: "memberTable", which
+// is the table that contains the variables, and "symbolTable", which is the
+// table lookup in the current scope. The remaining arguments are used in the
+// same way as the type check functions above
+bool SemaTypeCheckClassVarDecls(
+    SyntaxAST *varDecls, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
+// Returns true if and only if type checking the variable initializations stored
+// in "varInitList" succeeds. The remaining arguments are used in the same way
+// as the type check functions above
+bool SemaTypeCheckVarInitList(
+    SyntaxAST *varInitList, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
+// Returns true if and only if type checking the method body stored under
+// "methodDecl" succeeds, and the return value of the body is consistent with
+// the method declaration. The remaining arguments are used in the same way
+// as the type check functions above
+bool SemaTypeCheckMethodDecl(
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Calls SemaPopulateSymbol with "variable" as "declKind". See
+// SemaPopulateSymbol for more info
+bool SemaPopulateVar(
+    SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
+    SemaAttr attr, bool addToScope, HashTable *symbolTable,
+    HashTable *memberTable, SemaFileCtx *fileCtx);
+// Adds a new scope with no symbols to the "fileCtx"
+void SemaPushScope(SemaFileCtx *fileCtx);
+// Remove the most lately-pushed scope in "fileCtx", and removing all the
+// symbols in the scope from "symbolTable"
+void SemaPopScope(SemaFileCtx *fileCtx, HashTable *symbolTable);
+// Returns true if and only if type checking the statement stored in "stmt"
+// succeeds. The remaining arguments are used in the same way as the type check
+// functions above
+bool SemaTypeCheckStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if type checking the variable declaration statement
+// stored in "stmt" succeeds. Note that this function is specifically used for
+// variable declaration statements in method bodies and nowhere else! The
+// remaining arguments are used in the same way as the type check functions
+// above
+bool SemaTypeCheckVarDeclStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Sets skipAnalysis to true for "node" and all its descendants
+void SemaSkipAnalysisForSubtree(SyntaxAST *node);
+// Sets skipAnalysis to true for "node" and all its siblings and descendants
+void SemaSkipAnalysisForSubforest(SyntaxAST *node);
+// Checks if the AST node "thisNode" of the this literal is enclosed in a
+// constructor method. If so, return the type of the enclosing class, otherwise
+// return NULL. The remaining arguments are used in the same way as the type
+// checking functions above
+SemaType *SemaTypeFromThisLiteral(
+    SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns the namespace identifier string of the provided "importDecl". If
+// "loc" is provided (not NULL), will also set "loc" to the location of the
+// namespace identifier. There are three cases (decided in this order):
+// (1) If the import declaration is a wildcard import, returns NULL. "loc" will
+//     not be set in this case
+// (2) If the import declaration supplies a namespace, returns the supplied
+//     namespace
+// (3) Otherwise, return the last identifier of the module path
+char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc);
+// Populate "memberTable" with all the variables declared in "varDecl". See
+// SemaPopulateVar for usage of the remaining parameters. Returns true if every
+// variable was populated successfully
+bool SemaPopulateVarDecl(
+    SyntaxAST *varDecl, HashTable *symbolTable, HashTable *memberTable,
+    bool addToScope, SemaFileCtx *fileCtx);
+// Check if the "memberAccess" is well-formed by checking if the member access'
+// identifier is a member of the member access' operand, taking into account
+// whether the operand is a namespace, class or instance of a class. If type
+// check succeeds, returns the type of the member, otherwise return NULL. The
+// remaining arguments are used in the same way as the type check functions
+// above
+SemaType *SemaTypeFromMemberAccess(
+    SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx);
+// Returns true if and only if an expression or term stored in the AST node
+// "value" can be captured in a variable, ie. is not a class, namespace or
+// label. Note that "value" must be type checked by the appropriate function
+// (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
+bool SemaValueIsCapturable(SyntaxAST *value);
+// Returns true if and only if the AST "node" is a namespace. Note that "node"
+// must be type checked by the appropriate function (SemaTypeFromExpr or
+// SemaTypeFromTerm) before being passed to this function
+bool SemaNodeIsNamespace(SyntaxAST *node);
+// Calls SemaPrintErrorForUncapturableValue when "value" is a class or namespace
+// used in "parentExpr" and "parentExpr" is not an access operator, or when
+// "value" is a label. Note that "parentExpr" must be type checked by the
+// appropriate function prior to calling. Returns true if and only if no errors
+// were printed
+bool SemaCheckErrorForUncapturableValue(
+    SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx);
+// Print the error message for "value" when "value" is a class or namespace used
+// in "parentExpr", but "parentExpr" is not an access operator, or when "value"
+// is a "label"
+void SemaPrintErrorForUncapturableValue(SyntaxAST *value, SemaFileCtx *fileCtx);
+// Check if the operand of "expr" is an array type, and the index expression
+// is an unsigned type. If so, return the type of "expr" with one fewer array
+// dimension, otherwise return NULL. The remaining arguments are used in the
+// same way as above
+SemaType *SemaTypeFromIndexOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns a type with one fewer array level than "arrayType". A new type is
+// allocated if and only if "isTypeOwner" is set to true
+SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
+// Returns true if and only if type checking the expression statement
+// stored in "stmt" succeeds. The remaining arguments are used in the same way
+// as the type check functions above
+bool SemaTypeCheckExprStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if type checking the assignment statement stored
+// in "stmt" succeeds. The remaining arguments are used in the same way as the
+// type check functions above
+bool SemaTypeCheckAssignStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Type checks the RHS of "assign", checks if the LHS of "assign" is assignable,
+// and checks if the LHS type and RHS type are valid according to the assignment
+// operator. If so, return the type of the LHS, otherwise return NULL. The
+// remaining arguments are used in the same way as the type check functions
+// above
+SemaType *SemaTypeFromAssign(
+    SyntaxAST *assign, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Check if "expr" is assignable. Note that "expr" must be type checked by
+// SemaTypeFromExpr before being passed to this function
+bool SemaIsAssignable(SyntaxAST *expr, HashTable *symbolTable);
+// The implementation of SemaTypeFromArithOp. Passes the arithmetic operation
+// as a separate argument "op" instead of reading from the AST node "expr"
+SemaType *SemaTypeFromArithOpImpl(
+    SyntaxAST *expr, SyntaxOp op, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if the operand of the increment expression "inc" is a numeric type
+// and assignable. If so, return the type of the operand, otherwise return NULL.
+// The remaining arguments are used in the same way as the type checking
+// functions above
+SemaType *SemaTypeFromIncOp(
+    SyntaxAST *inc, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the conditions of the if statement "stmt" is of
+// type bool, and type checks the body of the if statement. The remaining
+// arguments are used in the same way as the type checking functions above
+bool SemaTypeCheckIfStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if all statements in the "body" type check
+// successfully. Note that before type checking, an additional scope will be
+// pushed, and the scope will later be popped after type checking
+bool SemaTypeCheckBody(
+    SyntaxAST *body, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the type of the switch expression can be compared
+// with the type of each of the cases using the "==" operator, and all of the
+// bodies of the cases type check as well. The remaining arguments are used in
+// the same way as the type check function above
+bool SemaTypeCheckSwitchStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if two variables of type "type1" and "type2" are
+// comparable using the comparison operator "op"
+bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op);
+// Returns true if and only if the init, condition, iteration, body and label of
+// the for "stmt" type checks. The remaining arguments are used in the same way
+// as the type check function above
+bool SemaTypeCheckForStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Populates the symbol declared in "symbol" to "memberTable". Note that the
+// identifier of the symbol "symbolIdentifier" and the type of the variable
+// "symbolType" are specified as separate arguments to the function so that this
+// is a general function that can take on any form of symbol declaration: class
+// variables, method variables, method parameters and label declarations. The
+// attribute "attr" is also taken as a separate argument and will be used to set
+// the attribute of the SemaSymInfo of the symbol. A string "declKind" is also
+// taken as a parameter to indicate which kind of symbol (variable or label)
+// this declaration is declaring, which will be reported when an error message
+// is printed
+//
+// Note that there are two HashTable's: "memberTable", which is the table we
+// will populate the symbol with, and "symbolTable", which is the symbol table
+// to lookup in the current scope (mainly to type check "symbolType"). Returns
+// true if and only if the the symbol name doesn't already exist in the
+// "memberTable", and "symbolType" (if provided, can be NULL) is well-formed.
+// The "addToScope" argument specifies whether to also add the symbol to the
+// current scope. The remaining arguments are used in the same way as the type
+// check functions above
+bool SemaPopulateSymbol(
+    SyntaxAST *symbol, char *symbolIdentifier, SourceLocation *symbolLoc,
+    SyntaxAST *symbolType, SemaAttr attr, bool addToScope,
+    const char *declKind, HashTable *symbolTable, HashTable *memberTable,
+    SemaFileCtx *fileCtx);
+// Populates "label" into "symbolTable". Returns true if and only if the
+// identifier of "label" does not already exist in "symbolTable"
+bool SemaPopulateLabel(
+    SyntaxAST *label, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Checks if the "value" is actually a reference to a label. "value" has to
+// be type checked by SemaTypeFromExpr or SemaTypeFromTerm before being passed
+// to this function
+bool SemaValueIsLabel(SyntaxAST *value);
+// Returns true if and only if the condition and body of the while "stmt" type
+// checks. The remaining arguments are used in the same way as the type check
+// function above
+bool SemaTypeCheckWhileStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the break "stmt" is contained within a loop,
+// and the break label (if provided) is actually of label type. The remaining
+// arguments are used in the same way as the type check function above
+bool SemaTypeCheckBreakStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the return "stmt" is contained within a function
+// or method, and the return expression (if provided) type checks and can be
+// implicitly type cast to the return type of the function/method. The remaining
+// arguments are used in the same way as the type check function above
+bool SemaTypeCheckReturnStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if the method we are currently in expects a return expression,
+// ie. it is a method or function that does not return void
+bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -195,6 +495,11 @@ SemaFileCtx *SemaFileCtxNew(
   fileCtx->node = node;
   fileCtx->symbolTable = HashTableNew(
       ParserStringHash, ParserStringEqual, NULL, NULL);
+  fileCtx->scopes = VectorNew();
+  fileCtx->classType = NULL;
+  fileCtx->methodSymInfo = NULL;
+  fileCtx->numLoopNests = 0;
+
   SemaASTInit(node, SemaASTInitAddAllFiles, fileCtx);
   return fileCtx;
 }
@@ -206,6 +511,7 @@ void SemaFileCtxDelete(void *p) {
   SourceDelete(fileCtx->source);
   SyntaxASTDelete(fileCtx->node);
   HashTableDelete(fileCtx->symbolTable);
+  VectorDelete(fileCtx->scopes);
   free(fileCtx);
 }
 
@@ -353,6 +659,7 @@ bool SemaPopulateClassSymbols(SemaCtx *ctx) {
         success = false;
       } else {
         SemaSymInfo *classInfo = malloc(sizeof(SemaSymInfo));
+        classInfo->attr = SEMA_ATTR_CLASS;
         classDecl->semaInfo.symInfo = classInfo;
         SemaType *type = malloc(sizeof(SemaType));
         type->kind = SEMA_TYPE_KIND_CLASS;
@@ -388,16 +695,7 @@ void SemaTypeDelete(SemaType *type) {
       }
       break;
     case SEMA_TYPE_KIND_FN:
-      if (type->isRetTypeOwner) {
-        SemaTypeDelete(type->retType);
-      }
-      for (int i = 0; i < type->paramTypes->size; ++i) {
-        if (type->isParamTypeOwner->arr[i]) {
-          SemaTypeDelete(type->paramTypes->arr[i]);
-        }
-      }
       VectorDelete(type->paramTypes);
-      VectorDelete(type->isParamTypeOwner);
       break;
     case SEMA_TYPE_KIND_CLASS:
       HashTableDelete(type->memberTable);
@@ -470,21 +768,8 @@ bool SemaPopulateImportSymbols(SemaCtx *ctx) {
           HashTableEntryAdd(symbolTable, symbol, importEntry->value);
         }
       } else {
-        char *namespace = importDecl->import.namespace;
         SourceLocation namespaceLoc;
-        if (!namespace) {
-          // If the import declaration does not specify a namespace and is not
-          // a wildcard import, then the default namespace is the last
-          // identifier in the module path
-          SyntaxAST *modulePath = importDecl->firstChild;
-          assert(modulePath && modulePath->kind == SYNTAX_AST_KIND_MODULE_PATH);
-          SyntaxAST *identifier = modulePath->lastChild;
-          assert(identifier && identifier->kind == SYNTAX_AST_KIND_IDENTIFIER);
-          namespace = identifier->string;
-          namespaceLoc = identifier->loc;
-        } else {
-          namespaceLoc = importDecl->import.extLoc;
-        }
+        char *namespace = SemaGetNamespaceIdentifier(importDecl, &namespaceLoc);
         HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, namespace);
         if (entry) {
           fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET" %s:%d: ",
@@ -532,6 +817,9 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
     for (SyntaxAST *classDecl = classDecls->firstChild; classDecl;
          classDecl = classDecl->sibling) {
       assert(classDecl && classDecl->kind == SYNTAX_AST_KIND_CLASS_DECL);
+
+      fileCtx->classType = classDecl->semaInfo.symInfo->typeInfo.type;
+
       char *classIdentifier = classDecl->string;
       HashTableEntry *classEntry = HashTableEntryRetrieve(
           symbolTable, classIdentifier);
@@ -545,48 +833,10 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
       assert(varDecls && varDecls->kind == SYNTAX_AST_KIND_STMTS);
       for (SyntaxAST *varDecl = varDecls->firstChild; varDecl;
            varDecl = varDecl->sibling) {
-        assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
-        SyntaxAST *varInitList = varDecl->firstChild;
-        assert(varInitList &&
-               varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
-        for (SyntaxAST *varInit = varInitList->firstChild; varInit;
-             varInit = varInit->sibling) {
-          assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
-
-          // Check if variable identifier is unique
-          char *varIdentifier = varInit->string;
-          HashTableEntry *entry = HashTableEntryRetrieve(
-              memberTable, varIdentifier);
-          if (entry) {
-            fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-                    " %s:%d: ", fileCtx->path, varInit->loc.from.lineNo + 1);
-            fprintf(stderr, "reuse of identifier "SOURCE_COLOR_RED"%s"
-                    SOURCE_COLOR_RESET" for variable declaration\n",
-                    varIdentifier);
-            SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
-                                &varInit->stringLoc);
-            success = false;
-            varInit->semaInfo.skipAnalysis = true;
-            continue;
-          }
-
-          // Check if variable type is valid
-          SyntaxAST *varType = varInit->firstChild;
-          assert(varType && varType->kind == SYNTAX_AST_KIND_TYPE);
-          SemaSymInfo *varInfo = malloc(sizeof(SemaSymInfo));
-          varInit->semaInfo.symInfo = varInfo;
-          SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
-          SemaType *semaType = SemaTypeFromSyntaxType(
-              varType, symbolTable, fileCtx, varInit,
-              &varTypeInfo->isTypeOwner);
-          if (!semaType) {
-            success = false;
-            varInit->semaInfo.skipAnalysis = true;
-            free(varInfo);
-            continue;
-          }
-          varTypeInfo->type = semaType;
-          HashTableEntryAdd(memberTable, varIdentifier, varInfo);
+        if (!SemaPopulateVarDecl(
+              varDecl, symbolTable, memberTable, /*addToScope=*/false,
+              fileCtx)) {
+          success = false;
         }
       }
 
@@ -610,13 +860,14 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
           SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED,
                               &methodDecl->method.nameLoc);
           success = false;
-          methodDecl->semaInfo.skipAnalysis = true;
+          SemaSkipAnalysisForSubtree(methodDecl);
           continue;
         }
 
         // Check if method return type and parameter types are valid
+        SemaAttr methodAttr;
         SemaType *methodType = SemaTypeFromMethodDecl(
-            methodDecl, symbolTable, fileCtx);
+            methodDecl, symbolTable, fileCtx, &methodAttr);
         if (!methodType) {
           success = false;
           methodDecl->semaInfo.skipAnalysis = true;
@@ -624,6 +875,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
         }
 
         SemaSymInfo *methodInfo = malloc(sizeof(SemaSymInfo));
+        methodInfo->attr = methodAttr;
         methodDecl->semaInfo.symInfo = methodInfo;
         SemaTypeInfo *methodTypeInfo = &methodInfo->typeInfo;
         methodTypeInfo->type = methodType;
@@ -783,6 +1035,7 @@ SemaType *SemaTypeFromSyntaxType(
       if (syntaxType->type.arrayLevels > 0) {
         type->kind = SEMA_TYPE_KIND_ARRAY;
         type->baseType = modulePathType;
+        type->isBaseTypeOwner = false;
         type->arrayLevels = syntaxType->type.arrayLevels;
       } else {
         free(type);
@@ -798,41 +1051,43 @@ SemaType *SemaTypeFromSyntaxType(
       SyntaxAST *retSyntaxType = syntaxType->lastChild;
       assert(retSyntaxType && retSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
 
+      SemaTypeInfo *retTypeInfo = &retSyntaxType->semaInfo.typeInfo;
       SemaType *retType = SemaTypeFromSyntaxType(
-          retSyntaxType, symbolTable, fileCtx, parentAST, &type->isRetTypeOwner);
+          retSyntaxType, symbolTable, fileCtx, parentAST,
+          &retTypeInfo->isTypeOwner);
       if (!retType) {
+        retSyntaxType->semaInfo.skipAnalysis = true;
         free(type);
         return NULL;
       }
+      retTypeInfo->type = retType;
+      // See set-to-a-later-stage for more info
+      retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
 
       Vector *paramTypes = VectorNew();
-      Vector *isParamTypeOwner = VectorNew();
       for (SyntaxAST *paramSyntaxType = paramSyntaxTypes->firstChild;
            paramSyntaxType; paramSyntaxType = paramSyntaxType->sibling) {
         assert(paramSyntaxType &&
                paramSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
-        bool isCurTypeOwner;
+        SemaTypeInfo *paramTypeInfo = &paramSyntaxType->semaInfo.typeInfo;
         SemaType *paramType = SemaTypeFromSyntaxType(
-            paramSyntaxType, symbolTable, fileCtx, parentAST, &isCurTypeOwner);
+            paramSyntaxType, symbolTable, fileCtx, parentAST,
+            &paramTypeInfo->isTypeOwner);
         if (!paramType) {
+          paramSyntaxType->semaInfo.skipAnalysis = true;
           free(type);
           SemaTypeDelete(retType);
-          for (int i = 0; i < paramTypes->size; ++i) {
-            if (isParamTypeOwner->arr[i]) {
-              SemaTypeDelete(paramTypes->arr[i]);
-            }
-          }
           VectorDelete(paramTypes);
-          VectorDelete(isParamTypeOwner);
         }
         VectorAdd(paramTypes, paramType);
-        VectorAdd(isParamTypeOwner, (void*)(int64_t)isCurTypeOwner);
+        paramTypeInfo->type = paramType;
+        // See set-to-a-later-stage for more info
+        paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
       }
 
       type->kind = SEMA_TYPE_KIND_FN;
       type->retType = retType;
       type->paramTypes = paramTypes;
-      type->isParamTypeOwner = isParamTypeOwner;
       break;
     } default: {
       // A syntax type that is not handled by the semantic checker
@@ -844,55 +1099,100 @@ SemaType *SemaTypeFromSyntaxType(
 }
 
 SemaType *SemaTypeFromMethodDecl(
-    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaAttr *attr) {
   SemaType *methodType = malloc(sizeof(SemaType));
   methodType->kind = SEMA_TYPE_KIND_FN;
 
   SyntaxAST *retSyntaxType = methodDecl->firstChild;
+  SyntaxAST *paramList = retSyntaxType->sibling;
+  SyntaxAST *param = paramList->firstChild;
   assert(retSyntaxType && retSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
-  SemaType *retType = SemaTypeFromSyntaxType(
-      retSyntaxType, symbolTable, fileCtx, methodDecl,
-      &methodType->isRetTypeOwner);
-  if (!retType) {
-    goto METHOD_TYPE_CLEANUP;
+  SemaTypeInfo *retTypeInfo = &retSyntaxType->semaInfo.typeInfo;
+
+  SemaAttr methodAttr;
+  switch (methodDecl->method.type) {
+    case SYNTAX_METHOD_TYPE_FN: {
+      // The parser indicates that a method is a constructor by setting the
+      // return type of the method to SYNTAX_TYPE_THIS
+      bool isCtor =
+          retSyntaxType->type.baseType == SYNTAX_TYPE_THIS &&
+          retSyntaxType->type.arrayLevels == 0 &&
+          !retSyntaxType->firstChild;
+      if (isCtor) {
+        methodAttr = SEMA_ATTR_CTOR;
+      } else {
+        methodAttr = SEMA_ATTR_FN;
+      }
+      break;
+    } case SYNTAX_METHOD_TYPE_METHOD: {
+      methodAttr = SEMA_ATTR_METHOD;
+      break;
+    } default: {
+      assert(false);
+    }
   }
-  methodType->retType = retType;
+  *attr = methodAttr;
+
+  SemaType *retType;
+  if (methodAttr == SEMA_ATTR_CTOR) {
+    // Since SYNTAX_TYPE_THIS cannot be converted to a valid SemaType, set it
+    // to the type of the current enclosing class
+    assert(fileCtx->classType);
+    retType = fileCtx->classType;
+    retTypeInfo->isTypeOwner = false;
+  } else {
+    retType = SemaTypeFromSyntaxType(
+        retSyntaxType, symbolTable, fileCtx, methodDecl,
+        &retTypeInfo->isTypeOwner);
+    if (!retType) {
+      goto RET_TYPE_CLEANUP;
+    }
+  }
+  retTypeInfo->type = methodType->retType = retType;
+  // See set-to-a-later-stage for more info
+  retSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
 
   Vector *paramTypes = VectorNew();
-  Vector *isParamTypeOwner = VectorNew();
+  if (methodAttr == SEMA_ATTR_METHOD) {
+    // Methods take on an implicit argument "this" of the enclosing class type
+    assert(fileCtx->classType);
+    VectorAdd(paramTypes, fileCtx->classType);
+  }
   methodType->paramTypes = paramTypes;
-  methodType->isParamTypeOwner = isParamTypeOwner;
-  SyntaxAST *paramList = retSyntaxType->sibling;
   assert(paramList && paramList->kind == SYNTAX_AST_KIND_PARAM_LIST);
-  for (SyntaxAST *param = paramList->firstChild; param;
-       param = param->sibling) {
+  for (; param; param = param->sibling) {
     assert(param->kind == SYNTAX_AST_KIND_PARAM);
-    bool isOwner;
     SyntaxAST *paramSyntaxType = param->firstChild;
+    SemaSymInfo *paramSymInfo = malloc(sizeof(SemaSymInfo));
+    param->semaInfo.symInfo = paramSymInfo;
+    SemaTypeInfo *paramTypeInfo = &paramSyntaxType->semaInfo.typeInfo;
     assert(paramSyntaxType && paramSyntaxType->kind == SYNTAX_AST_KIND_TYPE);
     SemaType *paramType = SemaTypeFromSyntaxType(
-        paramSyntaxType, symbolTable, fileCtx, methodDecl, &isOwner);
+        paramSyntaxType, symbolTable, fileCtx, methodDecl,
+        &paramTypeInfo->isTypeOwner);
     if (!paramType) {
-      goto VECTOR_CLEANUP;
+      VectorDelete(paramTypes);
+      free(paramSymInfo);
+      goto PARAM_CLEANUP;
     }
     VectorAdd(paramTypes, paramType);
-    VectorAdd(isParamTypeOwner, (void*)(int64_t)isOwner);
+    SemaTypeInfo *paramSymTypeInfo = &paramSymInfo->typeInfo;
+    paramSymTypeInfo->type = paramTypeInfo->type = paramType;
+    paramSymTypeInfo->isTypeOwner = false;
+
+    // See set-to-a-later-stage for more info
+    paramSyntaxType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
   }
   return methodType;
 
-VECTOR_CLEANUP:
-  for (int i = 0; i < paramTypes->size; ++i) {
-    bool isTypeOwner = (bool)(int64_t)isParamTypeOwner->arr[i];
-    if (isTypeOwner) {
-      SemaTypeDelete(paramTypes->arr[i]);
-    }
+RET_TYPE_CLEANUP:
+  retSyntaxType->semaInfo.skipAnalysis = true;
+PARAM_CLEANUP:
+  for (; param; param = param->sibling) {
+    param->semaInfo.skipAnalysis = true;
+    param->firstChild->semaInfo.skipAnalysis = true;
   }
-  VectorDelete(paramTypes);
-  VectorDelete(isParamTypeOwner);
-  if (methodType->isRetTypeOwner) {
-    SemaTypeDelete(retType);
-  }
-METHOD_TYPE_CLEANUP:
   free(methodType);
   return NULL;
 }
@@ -909,9 +1209,15 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node) {
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
       goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_VAR_INIT:
-      // TODO: handle var init for member variables and inside methods
-      // separately
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
+    case SYNTAX_AST_KIND_PARAM:
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
     case SYNTAX_AST_KIND_METHOD_DECL:
+      deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
+      goto DELETE_SYM_INFO;
+    case SYNTAX_AST_KIND_LABEL:
       deleteSymInfo = stage >= SEMA_STAGE_POPULATE_MEMBERS;
 DELETE_SYM_INFO:
       if (deleteSymInfo && !info->skipAnalysis) {
@@ -923,6 +1229,9 @@ DELETE_SYM_INFO:
       break;
     case SYNTAX_AST_KIND_OP:
     case SYNTAX_AST_KIND_LITERAL:
+    case SYNTAX_AST_KIND_TYPE:
+    case SYNTAX_AST_KIND_MEMBER_ACCESS:
+    case SYNTAX_AST_KIND_ASSIGN:
       if (stage >= SEMA_STAGE_TYPE_CHECK && !info->skipAnalysis) {
         SemaTypeInfoDelete(&info->typeInfo);
       }
@@ -946,87 +1255,48 @@ bool SemaTypeCheck(SemaCtx *ctx) {
     SyntaxAST *classDecls = module->lastChild;
     assert(classDecls && classDecls->kind == SYNTAX_AST_KIND_CLASS_DECLS);
     HashTable *symbolTable = fileCtx->symbolTable;
+
     for (SyntaxAST *classDecl = classDecls->firstChild; classDecl;
          classDecl = classDecl->sibling) {
       assert(classDecl && classDecl->kind == SYNTAX_AST_KIND_CLASS_DECL);
-      char *classIdentifier = classDecl->string;
-      HashTableEntry *classEntry = HashTableEntryRetrieve(
-          symbolTable, classIdentifier);
-      assert(classEntry);
-      SemaSymInfo *classInfo = classEntry->value;
-      SemaTypeInfo *classTypeInfo = &classInfo->typeInfo;
-      HashTable *memberTable = classTypeInfo->type->memberTable;
-      
+
+      fileCtx->classType = classDecl->semaInfo.symInfo->typeInfo.type;
+
       // Type check all class variable initializations
       SyntaxAST *varDecls = classDecl->firstChild;
-      assert(varDecls && varDecls->kind == SYNTAX_AST_KIND_STMTS);
-      for (SyntaxAST *varDecl = varDecls->firstChild; varDecl;
-           varDecl = varDecl->sibling) {
-        assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
-        SyntaxAST *varInitList = varDecl->firstChild;
-        assert(varInitList &&
-               varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
-        for (SyntaxAST *varInit = varInitList->firstChild; varInit;
-             varInit = varInit->sibling) {
-          assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
-          SyntaxAST *initExpr = varInit->lastChild;
-          SemaSymInfo *varInfo = varInit->semaInfo.symInfo;
-          SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
-          if (initExpr->kind != SYNTAX_AST_KIND_TYPE) {
-            SemaType *initExprType = SemaTypeFromExpr(
-                initExpr, symbolTable, fileCtx);
-            if (!initExprType) {
-              success = false;
-              continue;
-            }
-            if (varTypeInfo->type->kind == SEMA_TYPE_KIND_PLACEHOLDER) {
-              // This is an auto-deducted type, so replace the placeholder type
-              // with the newly generated type
-              if (varTypeInfo->isTypeOwner) {
-                SemaTypeDelete(varTypeInfo->type);
-              }
-              varTypeInfo->type = initExprType;
-              varTypeInfo->isTypeOwner = false;
-            } else {
-              // This variable is declared with a type, so must check if the
-              // types match
-              if (!SemaTypeIsAssignable(varTypeInfo->type, initExprType)) {
-                SyntaxAST *varType = varInit->firstChild;
-                SourceLocation *varTypeLoc = &varType->loc;
-                SourceLocation *initExprLoc = &initExpr->loc;
-                fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-                        " %s:%d: ", fileCtx->path,
-                        initExprLoc->from.lineNo + 1);
-                fprintf(stderr, "expected expression to be of type "
-                        SOURCE_COLOR_GREEN);
-                SemaTypePrint(stderr, varTypeInfo->type);
-                fprintf(stderr, SOURCE_COLOR_RESET", got type "
-                        SOURCE_COLOR_RED);
-                SemaTypePrint(stderr, initExprType);
-                fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
-                SourceLocationPrint(
-                    fileCtx->source, 2, SOURCE_COLOR_GREEN, varTypeLoc,
-                    SOURCE_COLOR_RED, initExprLoc);
-                success = false;
-              }
-            }
-          } else {
-            assert(varTypeInfo->type->kind != SEMA_TYPE_KIND_PLACEHOLDER);
-          }
+      SemaSymInfo *classInfo = classDecl->semaInfo.symInfo;
+      SemaTypeInfo *classTypeInfo = &classInfo->typeInfo;
+      HashTable *memberTable = classTypeInfo->type->memberTable;
+      if (!SemaTypeCheckClassVarDecls(
+            varDecls, memberTable, symbolTable, fileCtx)) {
+        success = false;
+      }
+
+      // Type check all methods
+      SyntaxAST *methodDecls = varDecls->sibling;
+      assert(methodDecls && methodDecls->kind == SYNTAX_AST_KIND_METHOD_DECLS);
+      for (SyntaxAST *methodDecl = methodDecls->firstChild; methodDecl;
+           methodDecl = methodDecl->sibling) {
+        assert(methodDecl && methodDecl->kind == SYNTAX_AST_KIND_METHOD_DECL);
+        fileCtx->methodSymInfo = methodDecl->semaInfo.symInfo;
+
+        if (!SemaTypeCheckMethodDecl(methodDecl, symbolTable, fileCtx)) {
+          success = false;
         }
       }
     }
+
     SemaASTInit(module, SemaASTInitTypeCheck);
   }
   return success;
 }
 
 SemaType *SemaTypeFromTerm(
-    SyntaxAST *term, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *term, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
   SemaType *type = malloc(sizeof(SemaType));
   switch (term->kind) {
     case SYNTAX_AST_KIND_LITERAL: {
-      // TODO: handle other kinds of literals
       switch (term->literal.type) {
         case SYNTAX_TYPE_U64:
         case SYNTAX_TYPE_I64:
@@ -1040,6 +1310,7 @@ SemaType *SemaTypeFromTerm(
         case SYNTAX_TYPE_F32:
         case SYNTAX_TYPE_BOOL:
         case SYNTAX_TYPE_ANY:
+        case SYNTAX_TYPE_NULL:
           assert(SemaCheckAllPrimTypes(term->literal.type, type));
           break;
         case SYNTAX_TYPE_STR: {
@@ -1051,8 +1322,12 @@ SemaType *SemaTypeFromTerm(
           type->isBaseTypeOwner = true;
           type->arrayLevels = 1;
           break;
+        } case SYNTAX_TYPE_THIS: {
+          free(type);
+          return SemaTypeFromThisLiteral(term, symbolTable, fileCtx);
         } default: {
-          break;
+          printf("Literal kind: %d\n", term->literal.type);
+          assert(false);
         }
       }
       SemaTypeInfo *typeInfo = &term->semaInfo.typeInfo;
@@ -1075,17 +1350,20 @@ SemaType *SemaTypeFromTerm(
         break;
       }
       SemaSymInfo *varInfo = entry->value;
-      term->semaInfo.symInfo = varInfo;
+      SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
+      SemaTypeInfo *typeInfo = &term->semaInfo.typeInfo;
+      typeInfo->type = varTypeInfo->type;
+      typeInfo->isTypeOwner = false;
+      free(type);
+      type = typeInfo->type;
+
+      if (!SemaCheckErrorForUncapturableValue(term, parentExpr, fileCtx)) {
+        type = NULL;
+        term->semaInfo.skipAnalysis = true;
+      }
       break;
-    }
-
-    // TODO: continue here. Add more cases for different terms: identifier,
-    // allocations
-
-    default: {
-      // DEBUG
+    } default: {
       printf("Term kind: %d\n", term->kind);
-
       assert(false);
     }
   }
@@ -1093,29 +1371,69 @@ SemaType *SemaTypeFromTerm(
 }
 
 SemaType *SemaTypeFromExpr(
-    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+    SyntaxAST *expr, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  if (expr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
+    return SemaTypeFromMemberAccess(expr, parentExpr, symbolTable, fileCtx);
+  }
+  if (expr->kind == SYNTAX_AST_KIND_ASSIGN) {
+    return SemaTypeFromAssign(expr, symbolTable, fileCtx);
+  }
   if (expr->kind != SYNTAX_AST_KIND_OP) {
-    return SemaTypeFromTerm(expr, symbolTable, fileCtx);
+    return SemaTypeFromTerm(expr, parentExpr, symbolTable, fileCtx);
   }
   switch (expr->op) {
+    case SYNTAX_OP_ALLOC:
+      return SemaTypeFromAlloc(expr, symbolTable, fileCtx);
     case SYNTAX_OP_TERNARY:
-      return SemaTypeCheckTernaryOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromTernaryOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LOGIC_OR:
     case SYNTAX_OP_LOGIC_AND:
-      return SemaTypeCheckLogicOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_NOT:
+      return SemaTypeFromLogicOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_BIT_OR:
     case SYNTAX_OP_BIT_AND:
     case SYNTAX_OP_BIT_XOR:
     case SYNTAX_OP_BIT_NOT:
-      return SemaTypeCheckBitwiseOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromBitwiseOp(expr, symbolTable, fileCtx);
     case SYNTAX_OP_LT:
     case SYNTAX_OP_LE:
     case SYNTAX_OP_EQEQ:
     case SYNTAX_OP_NEQ:
     case SYNTAX_OP_GT:
     case SYNTAX_OP_GE:
-      return SemaTypeCheckComparisonOp(expr, symbolTable, fileCtx);
+      return SemaTypeFromComparisonOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_LSHIFT:
+    case SYNTAX_OP_RSHIFT:
+      return SemaTypeFromShiftOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_ADD:
+    case SYNTAX_OP_SUB:
+    case SYNTAX_OP_MUL:
+    case SYNTAX_OP_DIV:
+    case SYNTAX_OP_MOD:
+    case SYNTAX_OP_NEG:
+      return SemaTypeFromArithOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_CAST_IS:
+      return SemaTypeFromCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastIsOp,
+          /*retBoolType=*/true);
+    case SYNTAX_OP_CAST_AS:
+      return SemaTypeFromCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastAsOp,
+          /*retBoolType=*/false);
+    case SYNTAX_OP_CAST_INTO:
+      return SemaTypeFromCastOp(
+          expr, symbolTable, fileCtx, SemaTypeCheckCastIntoOp,
+          /*retBoolType=*/false);
+    case SYNTAX_OP_CALL:
+      return SemaTypeFromCall(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_ARRAY_ACCESS:
+      return SemaTypeFromIndexOp(expr, symbolTable, fileCtx);
+    case SYNTAX_OP_INC:
+    case SYNTAX_OP_DEC:
+      return SemaTypeFromIncOp(expr, symbolTable, fileCtx);
     default:
+      printf("Expr op: %d\n", expr->op);
       assert(false);
   }
 }
@@ -1161,6 +1479,9 @@ bool SemaCheckAllPrimTypes(SyntaxType syntaxType, SemaType *type) {
     case SYNTAX_TYPE_VOID:
       SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_VOID);
       return true;
+    case SYNTAX_TYPE_NULL:
+      SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_NIL);
+      return true;
     default:
       return false;
   }
@@ -1181,7 +1502,7 @@ void SemaTypePrint(FILE *file, SemaType *type) {
       }
       break;
     } case SEMA_TYPE_KIND_FN: {
-      fprintf(file, "(");
+      fprintf(file, "fn (");
       Vector *paramTypes = type->paramTypes;
       int n = paramTypes->size;
       for (int i = 0; i < n; ++i) {
@@ -1234,18 +1555,23 @@ void SemaTypePrint(FILE *file, SemaType *type) {
         case SEMA_PRIM_TYPE_VOID:
           fprintf(file, "void");
           break;
+        case SEMA_PRIM_TYPE_NIL:
+          fprintf(file, "nil");
+          break;
       }
       break;
     } case SEMA_TYPE_KIND_CLASS: {
+      // TODO: improve type printing by also sourcing the location of where
+      // each type is declared if the types happen to have the same name
       fprintf(file, "%s", type->node->string);
+      break;
     } case SEMA_TYPE_KIND_NAMESPACE: {
-      char *namespace = type->node->import.namespace;
+      char *namespace = SemaGetNamespaceIdentifier(type->node, /*loc=*/NULL);
       assert(namespace);
       fprintf(file, "%s", namespace);
+      break;
     } default: {
-      // DEBUG
       printf("Sema type kind: %d\n", type->kind);
-
       assert(false);
     }
   }
@@ -1277,37 +1603,31 @@ bool SemaTypeEqual(SemaType *type1, SemaType *type2) {
     case SEMA_TYPE_KIND_CLASS:
     case SEMA_TYPE_KIND_NAMESPACE:
       return type1->node == type2->node;
+    default:
+      assert(false);
   }
 }
 
 void SemaASTInitAddAllFiles(SemaInfo *info, va_list arg) {
   SemaFileCtx *fileCtx = va_arg(arg, SemaFileCtx*);
-  info->stage = SEMA_STAGE_ADD_ALL_FILES;
+  SemaInfoUpdateStage(info, SEMA_STAGE_ADD_ALL_FILES);
   info->fileCtx = fileCtx;
 }
 
 void SemaASTInitPopulateClassSymbols(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_CLASS_SYMBOLS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_CLASS_SYMBOLS);
 }
 
 void SemaASTInitPopulateImportSymbols(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_IMPORT_SYMBOLS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_IMPORT_SYMBOLS);
 }
 
 void SemaASTInitPopulateMembers(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_POPULATE_MEMBERS;
+  SemaInfoUpdateStage(info, SEMA_STAGE_POPULATE_MEMBERS);
 }
 
 void SemaASTInitTypeCheck(SemaInfo *info, va_list arg) {
-  info->stage = SEMA_STAGE_TYPE_CHECK;
-}
-
-bool SemaTypeIsAssignable(SemaType *left, SemaType *right) {
-  if (left->kind == SEMA_TYPE_KIND_PRIM_TYPE &&
-      left->primType == SEMA_PRIM_TYPE_ANY) {
-    return true;
-  }
-  return SemaTypeEqual(left, right);
+  SemaInfoUpdateStage(info, SEMA_STAGE_TYPE_CHECK);
 }
 
 bool SemaTypeIsFloat(SemaType *type) {
@@ -1379,19 +1699,18 @@ int SemaTypeBitwidth(SemaType *type) {
   }
 }
 
-SemaType *SemaTypeCheckBitwiseOp(
+SemaType *SemaTypeFromBitwiseOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *firstOperand = expr->firstChild, *operand = firstOperand;
   SemaType *firstOperandType = SemaTypeFromExpr(
-      firstOperand, symbolTable, fileCtx);
+      firstOperand, expr, symbolTable, fileCtx);
   if (!firstOperandType) {
     goto CLEANUP;
   }
-  if (!SemaTypeIsSigned(firstOperandType) &&
-      !SemaTypeIsUnsigned(firstOperandType)) {
+  if (!SemaTypeIsIntegral(firstOperandType)) {
     fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
             " %s:%d: ", fileCtx->path, firstOperand->loc.from.lineNo + 1);
-    fprintf(stderr, "expected signed or unsigned type for bitwise operand, "
+    fprintf(stderr, "expected integral type for bitwise operand, "
             "got "SOURCE_COLOR_RED);
     SemaTypePrint(stderr, firstOperandType);
     fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
@@ -1401,7 +1720,8 @@ SemaType *SemaTypeCheckBitwiseOp(
     goto CLEANUP;
   }
   for (operand = firstOperand->sibling; operand; operand = operand->sibling) {
-    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    SemaType *operandType = SemaTypeFromExpr(
+        operand, expr, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
@@ -1433,21 +1753,21 @@ CLEANUP:
   return NULL;
 }
 
-SemaType *SemaTypeCheckTernaryOp(
+SemaType *SemaTypeFromTernaryOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *trueNode = expr->firstChild;
   SyntaxAST *condNode = trueNode->sibling;
   SyntaxAST *falseNode = condNode->sibling;
   SemaType *condType = SemaTypeFromExpr(
-      condNode, symbolTable, fileCtx);
+      condNode, expr, symbolTable, fileCtx);
   if (!condType) {
     goto TERNARY_OP_SKIP_COND;
   }
-  SemaType *trueType = SemaTypeFromExpr(trueNode, symbolTable, fileCtx);
+  SemaType *trueType = SemaTypeFromExpr(trueNode, expr, symbolTable, fileCtx);
   if (!trueType) {
     goto TERNARY_OP_SKIP_TRUE;
   }
-  SemaType *falseType = SemaTypeFromExpr(falseNode, symbolTable, fileCtx);
+  SemaType *falseType = SemaTypeFromExpr(falseNode, expr, symbolTable, fileCtx);
   if (!trueType) {
     goto TERNARY_OP_SKIP_FALSE;
   }
@@ -1462,27 +1782,16 @@ SemaType *SemaTypeCheckTernaryOp(
     SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
     goto TERNARY_OP_SKIP_EXPR;
   }
-  if (!SemaTypeEqual(trueType, falseType)) {
-    SourceLocation *trueLoc = &trueNode->loc;
-    SourceLocation *falseLoc = &falseNode->loc;
-    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
-            " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
-    fprintf(stderr, "mismatch types "SOURCE_COLOR_BLUE);
-    SemaTypePrint(stderr, trueType);
-    fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_YELLOW);
-    SemaTypePrint(stderr, falseType);
-    fprintf(stderr, SOURCE_COLOR_RESET" for ternary operator\n");
-    // TODO: improve type printing by also sourcing the location of where
-    // each type is declared if the types happen to have the same name
-    SourceLocationPrint(
-        fileCtx->source, 2, SOURCE_COLOR_BLUE, &trueNode->loc,
-        SOURCE_COLOR_YELLOW, &falseNode->loc);
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  SemaType *unifiedType = SemaTypeUnification(
+      trueType, falseType, &typeInfo->isTypeOwner);
+  if (!unifiedType) {
+    SemaErrorIfVoid(trueNode, trueType, fileCtx);
+    SemaErrorIfVoid(falseNode, falseType, fileCtx);
     goto TERNARY_OP_SKIP_EXPR;
   }
-  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
-  typeInfo->type = trueType;
-  typeInfo->isTypeOwner = false;
-  return trueType;
+  typeInfo->type = unifiedType;
+  return unifiedType;
 TERNARY_OP_SKIP_COND:
   condNode->semaInfo.skipAnalysis = true;
 TERNARY_OP_SKIP_TRUE:
@@ -1494,12 +1803,12 @@ TERNARY_OP_SKIP_EXPR:
   return NULL;
 }
 
-SemaType *SemaTypeCheckLogicOp(
+SemaType *SemaTypeFromLogicOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   SyntaxAST *operand;
   SemaType *operandType;
   for (operand = expr->firstChild; operand; operand = operand->sibling) {
-    operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+    operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
@@ -1528,7 +1837,7 @@ CLEANUP:
   return NULL;
 }
 
-SemaType *SemaTypeCheckComparisonOp(
+SemaType *SemaTypeFromComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
   // The AST of the expression 3 < 5 > 7 == 9 looks like this:
   //
@@ -1544,92 +1853,72 @@ SemaType *SemaTypeCheckComparisonOp(
   // otherwise the comparison operator returns bool, and it won't type check
   // with the subsequent comparison.
   //
-  // We will first traverse to the leftmost child of the comparison chain,
-  // and record all of the right children in a stack, then we can type check
-  // each operand in order.
+  // We traverse down the firstChild chain until we hit something that is not
+  // a comparison operator, recording everything on the chain to a stack.
   
-  Vector *operandsVec = VectorNew();
-  SyntaxAST *rootExpr = expr;
+  Vector *compVec = VectorNew();
   for (; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    VectorAdd(operandsVec, expr->lastChild);
+    VectorAdd(compVec, expr);
   }
-  VectorAdd(operandsVec, expr);
 
-  typedef enum {
-    FLOAT,
-    SIGNED,
-    UNSIGNED,
-    NON_NUMERIC
-  } TypeGroup;
-
-  void **operands = operandsVec->arr;
-  int numOperands = operandsVec->size;
-  int operandIndex;
-  SyntaxAST *firstOperand = operands[numOperands - 1];
-  SyntaxAST *failingOperand;
-  TypeGroup typeGroup;
-  for (operandIndex = numOperands - 1; operandIndex >= 0; --operandIndex) {
-    SyntaxAST *operand = failingOperand = operands[operandIndex];
-    SemaType *operandType = SemaTypeFromExpr(operand, symbolTable, fileCtx);
+  void **comps = compVec->arr;
+  int numComps = compVec->size;
+  int compIndex = numComps - 1;
+  SyntaxAST *prevOperand = expr;
+  SemaType *prevOperandType = SemaTypeFromExpr(
+      prevOperand, /*parentExpr=*/comps[numComps - 1], symbolTable,
+      fileCtx);
+  if (!prevOperandType) {
+    prevOperand->semaInfo.skipAnalysis = true;
+    goto CLEANUP;
+  }
+  for (; compIndex >= 0; --compIndex) {
+    SyntaxAST *comp = comps[compIndex];
+    SyntaxAST *operand = comp->lastChild;
+    SemaType *operandType = SemaTypeFromExpr(
+        operand, /*parentExpr=*/comp, symbolTable, fileCtx);
     if (!operandType) {
       goto CLEANUP;
     }
-    TypeGroup curTypeGroup;
-    if (SemaTypeIsFloat(operandType)) {
-      curTypeGroup = FLOAT;
-    } else if (SemaTypeIsSigned(operandType)) {
-      curTypeGroup = SIGNED;
-    } else if (SemaTypeIsUnsigned(operandType)) {
-      curTypeGroup = UNSIGNED;
-    } else {
-      curTypeGroup = NON_NUMERIC;
-    }
-    if (operand != firstOperand && curTypeGroup != typeGroup) {
+    if (!SemaTypesAreComparable(prevOperandType, operandType, comp->op)) {
       SourceLocation *loc = &operand->loc;
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
               " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
-      fprintf(stderr, "operand of "SOURCE_COLOR_RED);
-      switch (curTypeGroup) {
-        case FLOAT:    fprintf(stderr, "float"); break;
-        case SIGNED:   fprintf(stderr, "signed"); break;
-        case UNSIGNED: fprintf(stderr, "unsigned"); break;
-        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
-      }
-      fprintf(stderr, SOURCE_COLOR_RESET" type does not match operand of "
-              SOURCE_COLOR_GREEN);
-      switch (typeGroup) {
-        case FLOAT:    fprintf(stderr, "float"); break;
-        case SIGNED:   fprintf(stderr, "signed"); break;
-        case UNSIGNED: fprintf(stderr, "unsigned"); break;
-        case NON_NUMERIC: fprintf(stderr, "non-numeric"); break;
-      }
-      fprintf(stderr, SOURCE_COLOR_RESET" type\n");
+      fprintf(stderr, "types "SOURCE_COLOR_YELLOW);
+      SemaTypePrint(stderr, prevOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" are not comparable\n");
       SourceLocationPrint(
-          fileCtx->source, 2, SOURCE_COLOR_GREEN, &firstOperand->loc,
-          SOURCE_COLOR_RED, loc);
-      --operandIndex;
+          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &prevOperand->loc,
+          SOURCE_COLOR_BLUE, loc);
+      --compIndex;
       goto CLEANUP;
     }
-    typeGroup = curTypeGroup;
+    prevOperand = operand;
+    prevOperandType = operandType;
   }
   SemaType *boolType = malloc(sizeof(SemaType));
   SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
-  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  for (int i = 0; i < numComps; ++i) {
+    SyntaxAST *comp = comps[i];
+    SemaTypeInfo *typeInfo = &comp->semaInfo.typeInfo;
     typeInfo->type = boolType;
-    typeInfo->isTypeOwner = expr == rootExpr;
+    typeInfo->isTypeOwner = i == 0;
   }
-  VectorDelete(operandsVec);
+  VectorDelete(compVec);
   return boolType;
 CLEANUP:
-  for (; operandIndex >= 0; --operandIndex) {
-    SyntaxAST *operand = operands[operandIndex];
+  for (; compIndex >= 0; --compIndex) {
+    SyntaxAST *comp = comps[compIndex];
+    SyntaxAST *operand = comp->lastChild;
     operand->semaInfo.skipAnalysis = true;
   }
-  for (expr = rootExpr; SemaIsComparisonExpr(expr); expr = expr->firstChild) {
-    expr->semaInfo.skipAnalysis = true;
+  for (int i = 0; i < numComps; ++i) {
+    SyntaxAST *comp = comps[i];
+    comp->semaInfo.skipAnalysis = true;
   }
-  VectorDelete(operandsVec);
+  VectorDelete(compVec);
   return NULL;
 }
 
@@ -1653,4 +1942,1743 @@ bool SemaIsComparisonExpr(SyntaxAST *expr) {
     default:
       return false;
   }
+}
+
+SemaType *SemaTypeUnification(
+    SemaType *type1, SemaType *type2, bool *isTypeOwner) {
+  *isTypeOwner = false;
+  if ((SemaTypeIsSigned(type1) && SemaTypeIsSigned(type2)) ||
+      (SemaTypeIsUnsigned(type1) && SemaTypeIsUnsigned(type2))) {
+    SemaType *ret =
+        SemaTypeBitwidth(type1) >= SemaTypeBitwidth(type2) ? type1 : type2;
+    return ret;
+  }
+  if ((SemaTypeIsFloat(type1) && SemaTypeIsNumeric(type2)) ||
+      (SemaTypeIsNumeric(type1) && SemaTypeIsFloat(type2))) {
+    int width1 = SemaTypeBitwidth(type1);
+    int width2 = SemaTypeBitwidth(type2);
+    int width = width1 > width2 ? width1 : width2;
+    SemaType *type = malloc(sizeof(SemaType));
+    *isTypeOwner = true;
+    switch (width) {
+      case 32:
+        SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_F32);
+        break;
+      case 64:
+        SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_F64);
+        break;
+      default:
+        assert(false);
+    }
+    return type;
+  }
+  if (SemaTypeIsClass(type1) && SemaTypeIsPrimType(type2, SEMA_PRIM_TYPE_NIL)) {
+    return type1;
+  }
+  if (SemaTypeIsClass(type2) && SemaTypeIsPrimType(type1, SEMA_PRIM_TYPE_NIL)) {
+    return type2;
+  }
+  if (SemaTypeEqual(type1, type2)) {
+    return type1;
+  }
+  if (SemaTypeIsPrimType(type1, SEMA_PRIM_TYPE_VOID) ||
+      SemaTypeIsPrimType(type2, SEMA_PRIM_TYPE_VOID)) {
+    return NULL;
+  }
+  *isTypeOwner = true;
+  SemaType *type = malloc(sizeof(SemaType));
+  SemaTypeFromSemaPrimType(type, SEMA_PRIM_TYPE_ANY);
+  return type;
+}
+
+bool SemaTypeImplicitCast(SemaType *type1, SemaType *type2) {
+  bool isTypeOwner;
+  SemaType *type = SemaTypeUnification(type1, type2, &isTypeOwner);
+  if (!type) {
+    return false;
+  }
+  bool implicitCast = SemaTypeEqual(type2, type);
+  if (isTypeOwner) {
+    SemaTypeDelete(type);
+  }
+  return implicitCast;
+}
+
+bool SemaErrorIfVoid(SyntaxAST *expr, SemaType *type, SemaFileCtx *fileCtx) {
+  if (!SemaTypeIsPrimType(type, SEMA_PRIM_TYPE_VOID)) {
+    return true;
+  }
+  SourceLocation *loc = &expr->loc;
+  fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+          " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+  fprintf(stderr, "invalid usage of "SOURCE_COLOR_RED" void type\n");
+  SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+  return false;
+}
+
+bool SemaTypeIsClass(SemaType *type) {
+  return type->kind == SEMA_TYPE_KIND_CLASS;
+}
+
+SemaType *SemaTypeFromAlloc(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *countExpr = expr->firstChild;
+  SyntaxAST *syntaxBaseType = expr->lastChild;
+  SemaType *countType = SemaTypeFromExpr(
+      expr->firstChild, expr, symbolTable, fileCtx);
+  if (!countType) {
+    goto ALLOC_SKIP_COUNT_EXPR;
+  }
+  if (!SemaTypeIsUnsigned(countType)) {
+    SourceLocation *loc = &countExpr->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected expression to be of unsigned type, got type "
+            SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, countType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto ALLOC_SKIP_TYPE;
+  }
+  bool isTypeOwner;
+  SemaType *baseType = SemaTypeFromSyntaxType(syntaxBaseType, symbolTable,
+      fileCtx, expr, &isTypeOwner);
+  if (!baseType) {
+    goto ALLOC_SKIP_TYPE;
+  }
+  SemaTypeInfo *syntaxBaseTypeInfo = &syntaxBaseType->semaInfo.typeInfo;
+  syntaxBaseTypeInfo->type = baseType;
+  syntaxBaseTypeInfo->isTypeOwner = isTypeOwner;
+  SemaType *type = SemaTypeIncreaseArrayLevel(baseType);
+  SemaTypeInfo *exprTypeInfo = &expr->semaInfo.typeInfo;
+  exprTypeInfo->type = type;
+  exprTypeInfo->isTypeOwner = true;
+  return type;
+ALLOC_SKIP_COUNT_EXPR:
+  countExpr->semaInfo.skipAnalysis = true;
+ALLOC_SKIP_TYPE:
+  syntaxBaseType->semaInfo.skipAnalysis = true;
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeIncreaseArrayLevel(SemaType *baseType) {
+  bool baseTypeIsArray = baseType->kind == SEMA_TYPE_KIND_ARRAY;
+  SemaType *type = malloc(sizeof(SemaType));
+  type->kind = SEMA_TYPE_KIND_ARRAY;
+  type->isBaseTypeOwner = false;
+  if (baseTypeIsArray) {
+    // To avoid nested array types (an array type whose base type is also an
+    // array type), we specially handle array types here
+    type->baseType = baseType->baseType;
+    type->arrayLevels = baseType->arrayLevels + 1;
+  } else {
+    type->baseType = baseType;
+    type->arrayLevels = 1;
+  }
+  return type;
+}
+
+SemaType *SemaTypeFromShiftOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *leftOperand = expr->firstChild;
+  SyntaxAST *rightOperand = leftOperand->sibling;
+  assert(!rightOperand->sibling);
+  SemaType *leftOperandType = SemaTypeFromExpr(
+      leftOperand, expr, symbolTable, fileCtx);
+  if (!leftOperandType) {
+    goto CLEANUP_LEFT_OPERAND;
+  }
+  if (!SemaTypeIsIntegral(leftOperandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected integral type for shift operand, "
+            "got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, leftOperandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
+    goto CLEANUP_RIGHT_OPERAND;
+  }
+  SemaType *rightOperandType = SemaTypeFromExpr(
+      rightOperand, expr, symbolTable, fileCtx);
+  if (!SemaTypeIsUnsigned(rightOperandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected unsigned type for shift operand, got "
+            SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, rightOperandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &rightOperand->loc);
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = leftOperandType;
+  typeInfo->isTypeOwner = false;
+  return leftOperandType;
+CLEANUP_LEFT_OPERAND:
+  leftOperand->semaInfo.skipAnalysis = true;
+CLEANUP_RIGHT_OPERAND:
+  rightOperand->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsIntegral(SemaType *type) {
+  return SemaTypeIsSigned(type) || SemaTypeIsUnsigned(type);
+}
+
+SemaType *SemaTypeFromArithOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  return SemaTypeFromArithOpImpl(expr, expr->op, symbolTable, fileCtx);
+}
+
+bool SemaTypeIsNumeric(SemaType *type) {
+  return SemaTypeIsIntegral(type) || SemaTypeIsFloat(type);
+}
+
+bool SemaTypeCheckModOp(
+    SyntaxAST *leftOperand, SemaType *leftOperandType, SyntaxAST *rightOperand,
+    SemaType *rightOperandType, SemaFileCtx *fileCtx) {
+  SyntaxAST *operands[] = {leftOperand, rightOperand};
+  SemaType *operandTypes[] = {leftOperandType, rightOperandType};
+  for (int i = 0; i < 2; ++i) {
+    SyntaxAST *operand = operands[i];
+    SemaType *operandType = operandTypes[i];
+    if (!SemaTypeIsIntegral(operandType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+      fprintf(stderr, "expected integral type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, operandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SemaTypeCheckNegOp(
+    SyntaxAST *operand, SemaType *operandType, SemaFileCtx *fileCtx) {
+  if (SemaTypeIsUnsigned(operandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected float or signed type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    return false;
+  }
+  return true;
+}
+
+SemaType *SemaTypeFromCastOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx,
+    SemaCastOpCheckFn check, bool retBoolType) {
+  SyntaxAST *operand = expr->firstChild;
+  SyntaxAST *target = operand->sibling;
+  assert(!target->sibling);
+  SemaType *operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP_OPERAND;
+  }
+  bool isTypeOwner;
+  SemaType *targetType = SemaTypeFromSyntaxType(
+      target, symbolTable, fileCtx, target, &isTypeOwner);
+  if (!targetType) {
+    goto CLEANUP_TARGET;
+  }
+  SemaTypeInfo *typeInfo = &target->semaInfo.typeInfo;
+  typeInfo->type = targetType;
+  typeInfo->isTypeOwner = isTypeOwner;
+  if (!check(operand, operandType, target, targetType, fileCtx)) {
+    goto CLEANUP;
+  }
+  typeInfo = &expr->semaInfo.typeInfo;
+  if (retBoolType) {
+    SemaType *boolType = malloc(sizeof(SemaType));
+    SemaTypeFromSemaPrimType(boolType, SEMA_PRIM_TYPE_BOOL);
+    typeInfo->type = boolType;
+    typeInfo->isTypeOwner = true;
+    return boolType;
+  }
+  typeInfo->type = targetType;
+  typeInfo->isTypeOwner = false;
+  return targetType;
+
+CLEANUP_OPERAND:
+  operand->semaInfo.skipAnalysis = true;
+CLEANUP_TARGET:
+  target->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeCheckCastIsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  if (!SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_ANY)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected type any, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    return false;
+  }
+  return true;
+}
+
+bool SemaTypeCheckCastAsOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  return SemaErrorIfVoid(operand, operandType, fileCtx);
+}
+
+bool SemaTypeCheckCastIntoOp(
+    SyntaxAST *operand, SemaType *operandType, SyntaxAST *target,
+    SemaType *targetType, SemaFileCtx *fileCtx) {
+  if (SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_ANY) ||
+      SemaTypeIsPrimType(targetType, SEMA_PRIM_TYPE_ANY)) {
+    return true;
+  }
+  if (SemaTypeIsPrimType(operandType, SEMA_PRIM_TYPE_NIL)) {
+    if (!SemaTypeIsClass(targetType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, target->loc.from.lineNo + 1);
+      fprintf(stderr, "expected a class type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, targetType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &target->loc);
+      return false;
+    }
+    return true;
+  }
+  SemaType *types[] = {operandType, targetType};
+  SyntaxAST *nodes[] = {operand, target};
+  for (int i = 0; i < 2; ++i) {
+    SemaType *type = types[i];
+    SyntaxAST *node = nodes[i];
+    if (!SemaTypeIsNumeric(type)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, node->loc.from.lineNo + 1);
+      fprintf(stderr, "expected a numeric type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, type);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &node->loc);
+      return false;
+    }
+  }
+  return true;
+}
+
+void SemaInfoUpdateStage(SemaInfo *info, SemaStage stage) {
+  if (info->stage < stage) {
+    info->stage = stage;
+  }
+}
+
+SemaType *SemaTypeFromCall(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *function = expr->firstChild;
+  SyntaxAST *args = function->sibling;
+  assert(!args->sibling);
+  SyntaxAST *arg = args->firstChild;
+  SemaType *functionType = SemaTypeFromExpr(
+      function, expr, symbolTable, fileCtx);
+  if (!functionType) {
+    goto CLEANUP_FUNCTION;
+  }
+  if (!SemaTypeIsFunction(functionType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+    fprintf(stderr, "expected a function type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, functionType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &function->loc);
+    goto CLEANUP_ARGS;
+  }
+  Vector *paramTypesVec = functionType->paramTypes;
+  void **paramTypes = paramTypesVec->arr;
+  int numParams = paramTypesVec->size, i;
+  for (i = 0; arg && i < numParams; arg = arg->sibling, ++i) {
+    SemaType *argType = SemaTypeFromExpr(arg, expr, symbolTable, fileCtx);
+    if (!argType) {
+      goto CLEANUP_ARGS;
+    }
+    SemaType *paramType = paramTypes[i];
+    if (!SemaTypeImplicitCast(argType, paramType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+      fprintf(stderr, "cannot implicitly cast type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, argType);
+      fprintf(stderr, SOURCE_COLOR_RESET" to type "SOURCE_COLOR_GREEN);
+      SemaTypePrint(stderr, paramType);
+      fprintf(stderr, SOURCE_COLOR_RESET" expected by the function\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
+          SOURCE_COLOR_RED, &arg->loc);
+      arg = arg->sibling;
+      goto CLEANUP_ARGS;
+    }
+  }
+  int numArgs = i;
+  for (SyntaxAST *curArg = arg; curArg; curArg = curArg->sibling) {
+    ++numArgs;
+  }
+  if (numArgs != numParams) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, function->loc.from.lineNo + 1);
+    fprintf(stderr, "expected "SOURCE_COLOR_GREEN"%d"SOURCE_COLOR_RESET
+        " arguments to the function, got "SOURCE_COLOR_RED"%d"SOURCE_COLOR_RESET
+        " arguments instead\n", numParams, numArgs);
+    if (numArgs == 0) {
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_GREEN, &function->loc);
+    } else {
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_GREEN, &function->loc,
+          SOURCE_COLOR_RED, &args->loc);
+    }
+    goto CLEANUP_ARGS;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = functionType->retType;
+  typeInfo->isTypeOwner = false;
+  return functionType->retType;
+
+CLEANUP_FUNCTION:
+  function->semaInfo.skipAnalysis = true;
+CLEANUP_ARGS:
+  for (; arg; arg = arg->sibling) {
+    arg->semaInfo.skipAnalysis = true;
+  }
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeIsFunction(SemaType *type) {
+  return type->kind == SEMA_TYPE_KIND_FN;
+}
+
+bool SemaTypeCheckClassVarDecls(
+    SyntaxAST *varDecls, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  assert(varDecls && varDecls->kind == SYNTAX_AST_KIND_STMTS);
+  bool success = true;
+  for (SyntaxAST *varDecl = varDecls->firstChild; varDecl;
+       varDecl = varDecl->sibling) {
+    assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
+    SyntaxAST *varInitList = varDecl->firstChild;
+    if (!SemaTypeCheckVarInitList(
+          varInitList, memberTable, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  return success;
+}
+
+bool SemaTypeCheckVarInitList(
+    SyntaxAST *varInitList, HashTable *memberTable, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  assert(varInitList &&
+         varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
+  bool success = true;
+  for (SyntaxAST *varInit = varInitList->firstChild; varInit;
+       varInit = varInit->sibling) {
+    assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
+    SyntaxAST *varType = varInit->firstChild;
+    SyntaxAST *initExpr = varType->sibling;
+    if (varInit->semaInfo.skipAnalysis) {
+      // If analysis for variable initialization should be skipped, then it
+      // should be skipped for the initialization expression as well
+      SemaSkipAnalysisForSubtree(initExpr);
+      continue;
+    }
+    SemaSymInfo *varInfo = varInit->semaInfo.symInfo;
+    SemaTypeInfo *varTypeInfo = &varInfo->typeInfo;
+    if (initExpr) {
+      SemaType *initExprType = SemaTypeFromExpr(
+          initExpr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+      if (!initExprType) {
+        success = false;
+        goto REMOVE_VAR;
+      }
+      if (varTypeInfo->type->kind == SEMA_TYPE_KIND_PLACEHOLDER) {
+        // This is an auto-deducted type, so replace the placeholder type
+        // with the newly generated type
+        if (varTypeInfo->isTypeOwner) {
+          SemaTypeDelete(varTypeInfo->type);
+        }
+        varTypeInfo->type = initExprType;
+        varTypeInfo->isTypeOwner = false;
+      } else {
+        // This variable is declared with a type, so must check if the
+        // initialization expression can implicit cast to the declared
+        // type
+        if (!SemaTypeImplicitCast(initExprType, varTypeInfo->type)) {
+          SourceLocation *varTypeLoc = &varType->loc;
+          SourceLocation *initExprLoc = &initExpr->loc;
+          fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                  " %s:%d: ", fileCtx->path,
+                  initExprLoc->from.lineNo + 1);
+          fprintf(stderr, "expected expression to be of type "
+                  SOURCE_COLOR_GREEN);
+          SemaTypePrint(stderr, varTypeInfo->type);
+          fprintf(stderr, SOURCE_COLOR_RESET", got type "
+                  SOURCE_COLOR_RED);
+          SemaTypePrint(stderr, initExprType);
+          fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+          SourceLocationPrint(
+              fileCtx->source, 2, SOURCE_COLOR_GREEN, varTypeLoc,
+              SOURCE_COLOR_RED, initExprLoc);
+          success = false;
+          goto REMOVE_VAR;
+        }
+      }
+    } else {
+      assert(varTypeInfo->type->kind != SEMA_TYPE_KIND_PLACEHOLDER);
+    }
+    continue;
+REMOVE_VAR:
+    // If type checking did not succeed, then we should remove the variable
+    // from its member table. We also set the entry of the SemaSymInfo to NULL
+    // so that SemaPopScope can know not to delete the entry from the member
+    // table again
+    HashTableEntryDelete(memberTable, varInfo->entry);
+    varInfo->entry = NULL;
+  }
+  if (!success) {
+  }
+  return success;
+}
+
+bool SemaTypeCheckMethodDecl(
+    SyntaxAST *methodDecl, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  assert(methodDecl && methodDecl->kind == SYNTAX_AST_KIND_METHOD_DECL);
+  SyntaxAST *retType = methodDecl->firstChild;
+  assert(retType && retType->kind == SYNTAX_AST_KIND_TYPE);
+  SyntaxAST *paramList = retType->sibling;
+  assert(paramList && paramList->kind == SYNTAX_AST_KIND_PARAM_LIST);
+
+  SemaPushScope(fileCtx);
+
+  bool success = true;
+  // Populate the method parameters
+  for (SyntaxAST *param = paramList->firstChild; param;
+       param = param->sibling) {
+    assert(param && param->kind == SYNTAX_AST_KIND_PARAM);
+    // "varType" is not provided here because parameter types were already
+    // type checked in SemaTypeFromMethodDecl, which is called in
+    // SemaPopulateMembers
+    
+    if (!SemaPopulateVar(
+        param, param->string, &param->stringLoc, /*varType=*/NULL,
+        /*attr=*/SEMA_ATTR_VAR, /*addToScope=*/true, symbolTable, symbolTable,
+        fileCtx)) {
+      success = false;
+    }
+  }
+
+  // Type check the method body
+  SyntaxAST *body = paramList->sibling;
+  if (body) {
+    assert(body->kind == SYNTAX_AST_KIND_STMTS);
+    for (SyntaxAST *stmt = body->firstChild; stmt; stmt = stmt->sibling) {
+      if (!SemaTypeCheckStmt(stmt, symbolTable, fileCtx)) {
+        success = false;
+      }
+    }
+
+    // If the method is expects a return expression, check if the last statement
+    // in the body is a return statement
+    SyntaxAST *lastStmt = body->lastChild;
+    if (SemaCurMethodExpectsReturnExpr(fileCtx) &&
+        (!lastStmt || lastStmt->kind != SYNTAX_AST_KIND_RETURN_STMT)) {
+      SourceLocation *loc = &methodDecl->method.nameLoc;
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+      fprintf(stderr, "missing last return statement in body of "
+          SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET"\n", methodDecl->method.name);
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    }
+  }
+
+  SemaPopScope(fileCtx, symbolTable);
+
+  return success;
+}
+
+bool SemaPopulateVar(
+    SyntaxAST *var, char *varName, SourceLocation *varLoc, SyntaxAST *varType,
+    SemaAttr attr, bool addToScope, HashTable *symbolTable,
+    HashTable *memberTable, SemaFileCtx *fileCtx) {
+  return SemaPopulateSymbol(
+      var, varName, varLoc, varType, attr, addToScope, /*declKind=*/"variable",
+      symbolTable, memberTable, fileCtx);
+}
+
+void SemaPushScope(SemaFileCtx *fileCtx) {
+  VectorAdd(fileCtx->scopes, NULL);
+}
+
+void SemaPopScope(SemaFileCtx *fileCtx, HashTable *symbolTable) {
+  Vector *scopes = fileCtx->scopes;
+  for (SemaSymInfo *symInfo = scopes->arr[--scopes->size]; symInfo;
+       symInfo = symInfo->nextInScope) {
+    // Note that it is possible for a variable to already be removed from the
+    // table because of type check failures, so we check that the entry is
+    // still in the table before removing it
+    HashTableEntry *entry = symInfo->entry;
+    if (entry) {
+      HashTableEntryDelete(symbolTable, entry);
+    }
+  }
+}
+
+bool SemaTypeCheckStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  assert(stmt);
+  switch (stmt->kind) {
+    case SYNTAX_AST_KIND_VAR_DECL:
+      return SemaTypeCheckVarDeclStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_EXPR_STMT:
+      return SemaTypeCheckExprStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_ASSIGN_STMT:
+      return SemaTypeCheckAssignStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_IF_STMT:
+      return SemaTypeCheckIfStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_SWITCH_STMT:
+      return SemaTypeCheckSwitchStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_FOR_STMT:
+      return SemaTypeCheckForStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_WHILE_STMT:
+      return SemaTypeCheckWhileStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_BREAK_STMT:
+      return SemaTypeCheckBreakStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_RETURN_STMT:
+      return SemaTypeCheckReturnStmt(stmt, symbolTable, fileCtx);
+    default:
+      printf("Stmt kind: %d\n", stmt->kind);
+      assert(false);
+  }
+}
+
+bool SemaTypeCheckVarDeclStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  bool success = true;
+  if (!SemaPopulateVarDecl(
+        stmt, symbolTable, symbolTable, /*addToScope=*/true, fileCtx)) {
+    success = false;
+  }
+
+  SyntaxAST *varInitList = stmt->firstChild;
+  if (!SemaTypeCheckVarInitList(
+        varInitList, symbolTable, symbolTable, fileCtx)) {
+    success = false;
+  }
+
+  return success;
+}
+
+void SemaSkipAnalysisForSubtree(SyntaxAST *node) {
+  if (!node) {
+    return;
+  }
+  node->semaInfo.skipAnalysis = true;
+  SemaSkipAnalysisForSubforest(node->firstChild);
+}
+
+void SemaSkipAnalysisForSubforest(SyntaxAST *node) {
+  if (!node) {
+    return;
+  }
+  node->semaInfo.skipAnalysis = true;
+  SemaSkipAnalysisForSubforest(node->firstChild);
+  SemaSkipAnalysisForSubforest(node->sibling);
+}
+
+SemaType *SemaTypeFromThisLiteral(
+    SyntaxAST *thisNode, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  if (!methodSymInfo ||
+      (methodSymInfo->attr != SEMA_ATTR_CTOR &&
+       methodSymInfo->attr != SEMA_ATTR_METHOD)) {
+    SourceLocation *loc = &thisNode->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "cannot refer to "SOURCE_COLOR_RED"this"
+            SOURCE_COLOR_RESET" outside of constructor or method bodies\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  SemaType *thisType = fileCtx->classType;
+  assert(thisType);
+  SemaTypeInfo *thisInfo = &thisNode->semaInfo.typeInfo;
+  thisInfo->type = thisType;
+  thisInfo->isTypeOwner = false;
+  return thisType;
+CLEANUP:
+  thisNode->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+char *SemaGetNamespaceIdentifier(SyntaxAST *importDecl, SourceLocation *loc) {
+  if (importDecl->import.isWildcard) {
+    return NULL;
+  }
+  char *namespace = importDecl->import.namespace;
+  if (!namespace) {
+    // If the import declaration does not specify a namespace and is not
+    // a wildcard import, then the default namespace is the last
+    // identifier in the module path
+    SyntaxAST *modulePath = importDecl->firstChild;
+    assert(modulePath && modulePath->kind == SYNTAX_AST_KIND_MODULE_PATH);
+    SyntaxAST *identifier = modulePath->lastChild;
+    assert(identifier && identifier->kind == SYNTAX_AST_KIND_IDENTIFIER);
+    namespace = identifier->string;
+    if (loc) {
+      *loc = identifier->loc;
+    }
+  } else {
+    if (loc) {
+      *loc = importDecl->import.extLoc;
+    }
+  }
+  return namespace;
+}
+
+bool SemaPopulateVarDecl(
+    SyntaxAST *varDecl, HashTable *symbolTable, HashTable *memberTable,
+    bool addToScope, SemaFileCtx *fileCtx) {
+  assert(varDecl && varDecl->kind == SYNTAX_AST_KIND_VAR_DECL);
+
+  bool success = true;
+  unsigned varDeclModifiers = varDecl->varDeclModifiers;
+  SemaAttr attr;
+  if (varDeclModifiers & SYNTAX_VAR_DECL_STATIC) {
+    if (varDeclModifiers & SYNTAX_VAR_DECL_CONST) {
+      attr = SEMA_ATTR_STATIC_CONST;
+    } else {
+      attr = SEMA_ATTR_STATIC_VAR;
+    }
+  } else {
+    if (varDeclModifiers & SYNTAX_VAR_DECL_CONST) {
+      attr = SEMA_ATTR_CONST;
+    } else {
+      attr = SEMA_ATTR_VAR;
+    }
+  }
+
+  SyntaxAST *varInitList = varDecl->firstChild;
+  assert(varInitList &&
+         varInitList->kind == SYNTAX_AST_KIND_VAR_INIT_LIST);
+  for (SyntaxAST *varInit = varInitList->firstChild; varInit;
+       varInit = varInit->sibling) {
+    assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
+
+    if (!SemaPopulateVar(varInit, varInit->string, &varInit->stringLoc,
+          varInit->firstChild, attr, addToScope, symbolTable, memberTable,
+          fileCtx)) {
+      success = false;
+    }
+  }
+  return success;
+}
+
+SemaType *SemaTypeFromMemberAccess(
+    SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = memberAccess->firstChild;
+  char *identifier = memberAccess->string;
+  SemaType *operandType = SemaTypeFromExpr(
+      operand, memberAccess, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP;
+  }
+  if (operandType->kind != SEMA_TYPE_KIND_CLASS &&
+      operandType->kind != SEMA_TYPE_KIND_NAMESPACE) {
+    SourceLocation *loc = &operand->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected a namespace, class or instance of class, got "
+        "type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  HashTableEntry *memberEntry =
+      HashTableEntryRetrieve(operandType->memberTable, identifier);
+  if (!memberEntry) {
+    SourceLocation *loc = &memberAccess->stringLoc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a member of "
+        "type "SOURCE_COLOR_GREEN, identifier);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc, SOURCE_COLOR_RED,
+        loc);
+    goto CLEANUP;
+  }
+  SemaSymInfo *memberSymInfo = memberEntry->value;
+  SemaTypeInfo *memberTypeInfo = &memberSymInfo->typeInfo;
+  SemaAttr memberAttr = memberSymInfo->attr;
+  SemaType *memberType = memberTypeInfo->type;
+
+  if (!SemaCheckErrorForUncapturableValue(memberAccess, parentExpr, fileCtx)) {
+    goto CLEANUP;
+  }
+
+  bool operandIsCapturable = SemaValueIsCapturable(operand);
+  if (operandIsCapturable) {
+    // Operand is an instance of a class, so it can access any method or
+    // non-static variable of the class
+    if (memberAttr != SEMA_ATTR_METHOD && memberAttr != SEMA_ATTR_VAR &&
+        memberAttr != SEMA_ATTR_CONST) {
+        SourceLocation *loc = &memberAccess->stringLoc;
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+        fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a "
+            "method or non-static variable of type "SOURCE_COLOR_GREEN,
+            identifier);
+        SemaTypePrint(stderr, operandType);
+        fprintf(stderr, SOURCE_COLOR_RESET"\n");
+        SourceLocationPrint(
+            fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc,
+            SOURCE_COLOR_RED, loc);
+        goto CLEANUP;
+    }
+  } else if (operandType->kind == SEMA_TYPE_KIND_CLASS) {
+    // Operand is a class, so it can access anything other than non-static
+    // variables of the class
+    if (memberAttr == SEMA_ATTR_VAR || memberAttr == SEMA_ATTR_CONST) {
+        SourceLocation *loc = &memberAccess->stringLoc;
+        fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+        fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is a "
+            "non-static variable of type "SOURCE_COLOR_GREEN,
+            identifier);
+        SemaTypePrint(stderr, operandType);
+        fprintf(stderr, SOURCE_COLOR_RESET"\n");
+        SourceLocationPrint(
+            fileCtx->source, 2, SOURCE_COLOR_GREEN, &operand->loc,
+            SOURCE_COLOR_RED, loc);
+        goto CLEANUP;
+    }
+  } else {
+    assert(operandType->kind == SEMA_TYPE_KIND_NAMESPACE);
+  }
+
+  SemaTypeInfo *typeInfo = &memberAccess->semaInfo.typeInfo;
+  if (operandIsCapturable && memberAttr == SEMA_ATTR_METHOD) {
+    // If we are refering to a method via an instance of the class, the type
+    // of the member access should be a new function type without the first
+    // parameter (implicit this)
+    assert(memberType->kind == SEMA_TYPE_KIND_FN);
+    SemaType *type = malloc(sizeof(SemaType));
+    type->kind = SEMA_TYPE_KIND_FN;
+    type->retType = memberType->retType;
+    Vector *memberParams = memberType->paramTypes;
+    int numParams = memberParams->size;
+    Vector *params = VectorNew();
+    type->paramTypes = params;
+    for (int i = 1; i < numParams; ++i) {
+      VectorAdd(params, memberParams->arr[i]);
+    }
+    typeInfo->type = type;
+    typeInfo->isTypeOwner = true;
+  } else {
+    typeInfo->type = memberType;
+    typeInfo->isTypeOwner = false;
+  }
+  return typeInfo->type;
+
+CLEANUP:
+  memberAccess->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaValueIsCapturable(SyntaxAST *value) {
+  // A value is capturable if and only if it is not a class, namespace or label.
+  // - A namespace can only be referenced by an identifier
+  // - A class can be referenced in two ways:
+  //   - By the class identifier itself (if it is in the current scope or
+  //     imported from a wildcard import)
+  //   - Referenced indirectly via a namespace
+  // - A label can only be referenced by an identifier
+  // Therefore, we only have to identify the cases where the value is an
+  // identifier or a member access. In all other cases, the value would be
+  // capturable
+  switch (value->kind) {
+    case SYNTAX_AST_KIND_IDENTIFIER: {
+      SemaType *type = value->semaInfo.typeInfo.type;
+      switch (type->kind) {
+        case SEMA_TYPE_KIND_CLASS:
+        case SEMA_TYPE_KIND_NAMESPACE:
+        case SEMA_TYPE_KIND_LABEL:
+          return false;
+        case SEMA_TYPE_KIND_ARRAY:
+        case SEMA_TYPE_KIND_FN:
+        case SEMA_TYPE_KIND_PRIM_TYPE:
+          return true;
+        default:
+          printf("Type kind: %d\n", type->kind);
+          assert(false);
+      }
+    } case SYNTAX_AST_KIND_MEMBER_ACCESS: {
+      SyntaxAST *operand = value->firstChild;
+      assert(operand);
+      return !SemaNodeIsNamespace(operand);
+    } default: {
+      return true;
+    }
+  }
+}
+
+bool SemaNodeIsNamespace(SyntaxAST *node) {
+  return node->kind == SYNTAX_AST_KIND_IDENTIFIER &&
+         node->semaInfo.typeInfo.type->kind == SEMA_TYPE_KIND_NAMESPACE;
+}
+
+bool SemaCheckErrorForUncapturableValue(
+    SyntaxAST *value, SyntaxAST *parentExpr, SemaFileCtx *fileCtx) {
+  if (SemaValueIsCapturable(value)) {
+    return true;
+  }
+  if (SemaValueIsLabel(value)) {
+    if (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_BREAK_STMT) {
+      return true;
+    }
+  } else if (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
+    // If "value" is not capturable and is not a label, then it is a class
+    // or namespace. If the "parentExpr" that uses "value" is a member access,
+    // then no uncapturable value is used
+    return true;
+  }
+  SemaPrintErrorForUncapturableValue(value, fileCtx);
+  return false;
+}
+
+void SemaPrintErrorForUncapturableValue(
+    SyntaxAST *value, SemaFileCtx *fileCtx) {
+  SourceLocation *loc = &value->loc;
+  fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+          " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+  if (SemaValueIsLabel(value)) {
+    fprintf(stderr, SOURCE_COLOR_RED"label"SOURCE_COLOR_RESET
+            " is not used in a break statement\n");
+  } else {
+    fprintf(stderr, SOURCE_COLOR_RED"value"SOURCE_COLOR_RESET
+            " is not used in an access operator\n");
+  }
+  SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+}
+
+SemaType *SemaTypeFromIndexOp(
+    SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = expr->firstChild;
+  SyntaxAST *index = operand->sibling;
+  assert(!index->sibling);
+
+  SemaType *operandType = SemaTypeFromExpr(operand, expr, symbolTable, fileCtx);
+  if (!operandType) {
+    goto OPERAND_CLEANUP;
+  }
+  if (operandType->kind != SEMA_TYPE_KIND_ARRAY) {
+    SourceLocation *loc = &operand->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected an array type, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto INDEX_CLEANUP;
+  }
+  SemaType *indexType = SemaTypeFromExpr(index, expr, symbolTable, fileCtx);
+  if (!indexType) {
+    goto INDEX_CLEANUP;
+  }
+  if (!SemaTypeIsUnsigned(indexType)) {
+    SourceLocation *loc = &index->loc;
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, loc->from.lineNo + 1);
+    fprintf(stderr, "expected an unsigned type, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, indexType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, loc);
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = SemaTypeDecreaseArrayLevel(
+      operandType, &typeInfo->isTypeOwner);
+  return typeInfo->type;
+
+OPERAND_CLEANUP:
+  operand->semaInfo.skipAnalysis = true;
+INDEX_CLEANUP:
+  index->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner) {
+  if (arrayType->arrayLevels == 1) {
+    *isTypeOwner = false;
+    return arrayType->baseType;
+  }
+  *isTypeOwner = true;
+  SemaType *baseType = malloc(sizeof(SemaType));
+  baseType->kind = SEMA_TYPE_KIND_ARRAY;
+  baseType->baseType = arrayType->baseType;
+  baseType->isBaseTypeOwner = false;
+  baseType->arrayLevels = arrayType->arrayLevels - 1;
+  return baseType;
+}
+
+bool SemaTypeCheckExprStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *expr = stmt->firstChild;
+  return SemaTypeFromExpr(
+      expr, /*parentExpr=*/NULL, symbolTable, fileCtx) != NULL;
+}
+
+bool SemaTypeCheckAssignStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *assign = stmt->firstChild;
+  return SemaTypeFromExpr(
+      assign, /*parentExpr=*/NULL, symbolTable, fileCtx) != NULL;
+}
+
+SemaType *SemaTypeFromAssign(
+    SyntaxAST *assign, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *lhs = assign->firstChild;
+  SyntaxAST *rhs = lhs->sibling;
+  assert(!rhs->sibling);
+
+  // Get the type of the expression to assign
+  SemaType *type;
+  SyntaxOp arithOp;
+  bool isArithOp = false, isShiftOp = false, isBitwiseOp = false;
+  switch (assign->op) {
+    case SYNTAX_OP_EQ: {
+      SemaType *rhsType = SemaTypeFromExpr(
+          rhs, /*parentExpr=*/NULL, symbolTable, fileCtx);
+      if (!rhsType) {
+        goto CLEANUP_RHS;
+      }
+      SemaType *lhsType = SemaTypeFromExpr(
+          lhs, /*parentExpr=*/NULL, symbolTable, fileCtx);
+      if (!lhsType) {
+        goto CLEANUP_LHS;
+      }
+      SemaTypeInfo *typeInfo = &assign->semaInfo.typeInfo;
+      typeInfo->type = type = rhsType;
+      typeInfo->isTypeOwner = false;
+      break;
+    } case SYNTAX_OP_ADD_EQ: {
+      arithOp = SYNTAX_OP_ADD;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_SUB_EQ: {
+      arithOp = SYNTAX_OP_SUB;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_MUL_EQ: {
+      arithOp = SYNTAX_OP_MUL;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_DIV_EQ: {
+      arithOp = SYNTAX_OP_DIV;
+      isArithOp = true;
+      break;
+    } case SYNTAX_OP_MOD_EQ: {
+      arithOp = SYNTAX_OP_MOD;
+      isArithOp = true;
+      break;
+    }
+    case SYNTAX_OP_LSHIFT_EQ:
+    case SYNTAX_OP_RSHIFT_EQ: {
+      isShiftOp = true;
+      break;
+    }
+    case SYNTAX_OP_BIT_AND_EQ:
+    case SYNTAX_OP_BIT_XOR_EQ:
+    case SYNTAX_OP_BIT_OR_EQ: {
+      isBitwiseOp = true;
+      break;
+    } default: {
+      printf("Assign op: %d\n", assign->op);
+      assert(false);
+    }
+  }
+  if (isArithOp) {
+    type = SemaTypeFromArithOpImpl(assign, arithOp, symbolTable, fileCtx);
+  } else if (isShiftOp) {
+    type = SemaTypeFromShiftOp(assign, symbolTable, fileCtx);
+  } else if (isBitwiseOp) {
+    type = SemaTypeFromBitwiseOp(assign, symbolTable, fileCtx);
+  }
+  if (!type) {
+    goto ASSIGN_CLEANUP;
+  }
+
+  // Check if the type of the expression to assign can be implicitly cast
+  // to the type of the LHS
+  SemaType *lhsType = lhs->semaInfo.typeInfo.type;
+  if (!SemaTypeImplicitCast(type, lhsType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, lhs->loc.from.lineNo + 1);
+    fprintf(stderr, "assignment expresssion of type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, type);
+    fprintf(stderr, SOURCE_COLOR_RESET" cannot be implictly cast to LHS type "
+        SOURCE_COLOR_GREEN);
+    SemaTypePrint(stderr, lhsType);
+    fprintf(stderr, SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 2, SOURCE_COLOR_GREEN, &lhs->loc, SOURCE_COLOR_RED,
+        &rhs->loc);
+    goto CLEANUP;
+  }
+
+  // Check if the LHS is assignable
+  if (!SemaIsAssignable(lhs, symbolTable)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, lhs->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"LHS"SOURCE_COLOR_RESET" of assignment is "
+        "not assignable\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &lhs->loc);
+    goto CLEANUP;
+  }
+
+  // Set the type of the assignment to the LHS type
+  SemaTypeInfo *typeInfo = &assign->semaInfo.typeInfo;
+  // This type might be previously assigned to by SemaTypeFromArithOpImpl,
+  // so we have to delete it before replacing it with the LHS type
+  SemaTypeInfoDelete(typeInfo);
+  typeInfo->type = lhsType;
+  typeInfo->isTypeOwner = false;
+  return lhsType;
+
+CLEANUP_RHS:
+  rhs->semaInfo.skipAnalysis = true;
+CLEANUP_LHS:
+  lhs->semaInfo.skipAnalysis = true;
+ASSIGN_CLEANUP:
+  assign->semaInfo.skipAnalysis = true;
+CLEANUP:
+  return NULL;
+}
+
+bool SemaIsAssignable(SyntaxAST *expr, HashTable *symbolTable) {
+  SemaType *exprType = expr->semaInfo.typeInfo.type;
+  switch (expr->kind) {
+    case SYNTAX_AST_KIND_IDENTIFIER: {
+      if (exprType->kind == SEMA_TYPE_KIND_CLASS ||
+          exprType->kind == SEMA_TYPE_KIND_NAMESPACE) {
+        return false;
+      }
+      char *identifier = expr->string;
+      HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, identifier);
+      assert(entry);
+      SemaSymInfo *symInfo = entry->value;
+      SemaAttr attr = symInfo->attr;
+      return attr == SEMA_ATTR_VAR || attr == SEMA_ATTR_STATIC_VAR;
+    } case SYNTAX_AST_KIND_OP: {
+      return expr->op == SYNTAX_OP_ARRAY_ACCESS;
+    } case SYNTAX_AST_KIND_MEMBER_ACCESS: {
+      SyntaxAST *operand = expr->firstChild;
+      SemaType *operandType = operand->semaInfo.typeInfo.type;
+      if (operandType->kind == SEMA_TYPE_KIND_NAMESPACE) {
+        // Since the operand is a namespace, the expression can only be a class,
+        // which is not assignable
+        return false;
+      }
+      assert(operandType->kind == SEMA_TYPE_KIND_CLASS);
+      char *identifier = expr->string;
+      HashTableEntry *memberEntry = HashTableEntryRetrieve(
+          operandType->memberTable, identifier);
+      assert(memberEntry);
+      SemaSymInfo *memberInfo = memberEntry->value;
+      SemaAttr attr = memberInfo->attr;
+      return attr == SEMA_ATTR_VAR || attr == SEMA_ATTR_STATIC_VAR;
+    } default: {
+      return false;
+    }
+  }
+}
+
+SemaType *SemaTypeFromArithOpImpl(
+    SyntaxAST *expr, SyntaxOp op, HashTable *symbolTable,
+    SemaFileCtx *fileCtx) {
+  SyntaxAST *leftOperand = expr->firstChild;
+  bool hasOneOperand = op == SYNTAX_OP_NEG;
+  SyntaxAST *rightOperand;
+  if (!hasOneOperand) {
+    rightOperand = leftOperand->sibling;
+    assert(!rightOperand->sibling);
+  }
+
+  SemaType *leftOperandType = SemaTypeFromExpr(
+      leftOperand, expr, symbolTable, fileCtx);
+  if (!leftOperandType) {
+    goto CLEANUP_LEFT_OPERAND;
+  }
+  SemaType *rightOperandType;
+  if (!hasOneOperand) {
+    rightOperandType = SemaTypeFromExpr(
+        rightOperand, expr, symbolTable, fileCtx);
+    if (!rightOperandType) {
+      goto CLEANUP_RIGHT_OPERAND;
+    }
+  }
+  SemaType *exprType;
+  bool isTypeOwner;
+  if (hasOneOperand) {
+    exprType = leftOperandType;
+    isTypeOwner = false;
+  } else {
+    exprType = SemaTypeUnification(
+        leftOperandType, rightOperandType, &isTypeOwner);
+  }
+  if (!SemaTypeIsNumeric(exprType)) {
+    if (hasOneOperand) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, leftOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &leftOperand->loc);
+    } else {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, rightOperand->loc.from.lineNo + 1);
+      fprintf(stderr, "unification of "SOURCE_COLOR_YELLOW);
+      SemaTypePrint(stderr, leftOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+      SemaTypePrint(stderr, rightOperandType);
+      fprintf(stderr, SOURCE_COLOR_RESET" result in non-numeric type "
+          SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, exprType);
+      fprintf(stderr, SOURCE_COLOR_RESET"\n");
+      SourceLocationPrint(
+          fileCtx->source, 2, SOURCE_COLOR_YELLOW, &leftOperand->loc,
+            SOURCE_COLOR_BLUE, &rightOperand->loc);
+      if (isTypeOwner) {
+        SemaTypeDelete(exprType);
+      }
+    }
+    goto CLEANUP;
+  }
+  bool typeCheckSucceeds;
+  switch (op) {
+    case SYNTAX_OP_MOD:
+      typeCheckSucceeds = SemaTypeCheckModOp(
+          leftOperand, leftOperandType, rightOperand, rightOperandType,
+          fileCtx);
+      break;
+    case SYNTAX_OP_NEG:
+      typeCheckSucceeds = SemaTypeCheckNegOp(
+          leftOperand, leftOperandType, fileCtx);
+      break;
+    default:
+      typeCheckSucceeds = true;
+      break;
+  }
+  if (!typeCheckSucceeds) {
+    if (isTypeOwner) {
+      SemaTypeDelete(exprType);
+    }
+    goto CLEANUP;
+  }
+  SemaTypeInfo *typeInfo = &expr->semaInfo.typeInfo;
+  typeInfo->type = exprType;
+  typeInfo->isTypeOwner = isTypeOwner;
+  return exprType;
+CLEANUP_LEFT_OPERAND:
+  leftOperand->semaInfo.skipAnalysis = true;
+CLEANUP_RIGHT_OPERAND:
+  rightOperand->semaInfo.skipAnalysis = true;
+CLEANUP:
+  expr->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+SemaType *SemaTypeFromIncOp(
+    SyntaxAST *inc, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *operand = inc->firstChild;
+  SemaType *operandType = SemaTypeFromExpr(
+      operand, /*parentExpr=*/inc, symbolTable, fileCtx);
+  if (!operandType) {
+    goto CLEANUP;
+  }
+  if (!SemaTypeIsNumeric(operandType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, "expected numeric type, got "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, operandType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    goto CLEANUP;
+  }
+  if (!SemaIsAssignable(operand, symbolTable)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, operand->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"operand"SOURCE_COLOR_RESET
+        " of increment expression is not assignable\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &operand->loc);
+    goto CLEANUP;
+  }
+
+  SemaTypeInfo *typeInfo = &inc->semaInfo.typeInfo;
+  typeInfo->type = operandType;
+  typeInfo->isTypeOwner = false;
+  return operandType;
+
+CLEANUP:
+  inc->semaInfo.skipAnalysis = true;
+  return NULL;
+}
+
+bool SemaTypeCheckIfStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  bool success = false;
+  // The children of an if statement are:
+  // ifCond ifBody (elseIfCond elseIfBody)* (elseBody)?
+  // Therefore, the following loop iterates over each (cond, body) pair until
+  // there are no such pairs left
+  SyntaxAST *cond, *body;
+  for (cond = stmt->firstChild; cond && (body = cond->sibling);
+       cond = body->sibling) {
+    SemaType *condType = SemaTypeFromExpr(
+        cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!condType) {
+      success = false;
+    } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+      fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, condType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+      success = false;
+    }
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  if (cond) {
+    // If there is a children left, however, this children is the else body
+    body = cond;
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  if (!success) {
+    stmt->semaInfo.skipAnalysis = true;
+  }
+  return success;
+}
+
+bool SemaTypeCheckBody(
+    SyntaxAST *body, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaPushScope(fileCtx);
+  assert(body && body->kind == SYNTAX_AST_KIND_STMTS);
+  bool success = true;
+  for (SyntaxAST *stmt = body->firstChild; stmt; stmt = stmt->sibling) {
+    if (!SemaTypeCheckStmt(stmt, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  SemaPopScope(fileCtx, symbolTable);
+  return success;
+}
+
+bool SemaTypeCheckSwitchStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  assert(stmt && stmt->kind == SYNTAX_AST_KIND_SWITCH_STMT);
+
+  bool success = true;
+  SyntaxAST *expr = stmt->firstChild;
+  SemaType *exprType = SemaTypeFromExpr(
+      expr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+  if (!exprType) {
+    success = false;
+    expr->semaInfo.skipAnalysis = true;
+  }
+  for (SyntaxAST *caseNode = expr->sibling; caseNode;
+       caseNode = caseNode->sibling) {
+    assert(caseNode->kind == SYNTAX_AST_KIND_CASE);
+    SyntaxAST *firstChild = caseNode->firstChild;
+    SyntaxAST *body;
+    if (firstChild->sibling) {
+      SyntaxAST *exprList = firstChild;
+      body = exprList->sibling;
+      for (SyntaxAST *caseExpr = exprList->firstChild; caseExpr;
+           caseExpr = caseExpr->sibling) {
+        SemaType *caseExprType = SemaTypeFromExpr(
+            caseExpr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+        if (!caseExprType) {
+          success = false;
+          caseExpr->semaInfo.skipAnalysis = true;
+        }
+        if (!SemaTypesAreComparable(exprType, caseExprType, SYNTAX_OP_EQEQ)) {
+          fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+                  " %s:%d: ", fileCtx->path, caseNode->loc.from.lineNo + 1);
+          fprintf(stderr, "types "SOURCE_COLOR_YELLOW);
+          SemaTypePrint(stderr, exprType);
+          fprintf(stderr, SOURCE_COLOR_RESET" and "SOURCE_COLOR_BLUE);
+          SemaTypePrint(stderr, caseExprType);
+          fprintf(stderr, SOURCE_COLOR_RESET" are not comparable with operator "
+              "==\n");
+          SourceLocationPrint(
+              fileCtx->source, 1, SOURCE_COLOR_YELLOW, &expr->loc);
+          SourceLocationPrint(
+              fileCtx->source, 1, SOURCE_COLOR_BLUE, &caseExpr->loc);
+          success = false;
+        }
+      }
+    } else {
+      body = firstChild;
+    }
+    if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+      success = false;
+    }
+  }
+  return success;
+}
+
+bool SemaTypesAreComparable(SemaType *type1, SemaType *type2, SyntaxOp op) {
+  bool isUnifiedTypeOwner;
+  SemaType *unifiedType = SemaTypeUnification(
+      type1, type2, &isUnifiedTypeOwner);
+  bool comparable = SemaTypeIsNumeric(unifiedType) ||
+        ((op == SYNTAX_OP_EQEQ || op == SYNTAX_OP_NEQ) &&
+         SemaTypeEqual(type1, type2));
+  if (isUnifiedTypeOwner) {
+    SemaTypeDelete(unifiedType);
+  }
+  return comparable;
+}
+
+bool SemaTypeCheckForStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *init = stmt->firstChild;
+  SyntaxAST *cond = init->sibling;
+  SyntaxAST *iter = cond->sibling;
+  SyntaxAST *body = iter->sibling;
+  SyntaxAST *label = body->sibling;
+
+  bool success = true;
+  SemaPushScope(fileCtx);
+
+  // Type check label
+  if (label && !SemaPopulateLabel(label, symbolTable, fileCtx)) {
+    success = false;
+  }
+
+  // Type check initialization
+  if (init->kind == SYNTAX_AST_KIND_VAR_DECL) {
+    if (!SemaTypeCheckVarDeclStmt(init, symbolTable, fileCtx)) {
+      init->semaInfo.skipAnalysis = true;
+      success = false;
+    }
+  } else if (init->kind != SYNTAX_AST_KIND_PLACEHOLDER && !SemaTypeFromExpr(
+      init, /*parentExpr=*/NULL, symbolTable, fileCtx)) {
+    init->semaInfo.skipAnalysis = true;
+    success = false;
+  }
+
+  // Type check condition
+  if (cond->kind != SYNTAX_AST_KIND_PLACEHOLDER) {
+    SemaType *condType = SemaTypeFromExpr(
+        cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!condType) {
+      cond->semaInfo.skipAnalysis = true;
+      success = false;
+    } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+      fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, condType);
+      fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+      success = false;
+    }
+  }
+
+  // Type check iteration
+  if (iter->kind != SYNTAX_AST_KIND_PLACEHOLDER && !SemaTypeFromExpr(
+        iter, /*parentExpr=*/NULL, symbolTable, fileCtx)) {
+    iter->semaInfo.skipAnalysis = true;
+    success = false;
+  }
+
+  // Type check body
+  ++fileCtx->numLoopNests;
+  if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+    body->semaInfo.skipAnalysis = true;
+    success = false;
+  }
+  --fileCtx->numLoopNests;
+
+  SemaPopScope(fileCtx, symbolTable);
+
+  return success;
+}
+
+bool SemaPopulateSymbol(
+    SyntaxAST *symbol, char *symbolIdentifier, SourceLocation *symbolLoc,
+    SyntaxAST *symbolType, SemaAttr attr, bool addToScope,
+    const char *declKind, HashTable *symbolTable, HashTable *memberTable,
+    SemaFileCtx *fileCtx) {
+  // Check if symbol identifier is unique
+  HashTableEntry *entry = HashTableEntryRetrieve(
+      memberTable, symbolIdentifier);
+  if (entry) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, symbolLoc->from.lineNo + 1);
+    fprintf(stderr, "reuse of identifier "SOURCE_COLOR_RED"%s"
+            SOURCE_COLOR_RESET" for %s declaration\n",
+            symbolIdentifier, declKind);
+    SourceLocationPrint(fileCtx->source, 1, SOURCE_COLOR_RED, symbolLoc);
+    goto CLEANUP;
+  }
+
+  // Check if variable type is valid
+  SemaSymInfo *symInfo;
+  if (symbolType) {
+    assert(symbolType->kind == SYNTAX_AST_KIND_TYPE);
+    symInfo = malloc(sizeof(SemaSymInfo));
+    symbol->semaInfo.symInfo = symInfo;
+    SemaTypeInfo *symTypeInfo = &symInfo->typeInfo;
+    SemaTypeInfo *typeInfo = &symbolType->semaInfo.typeInfo;
+    SemaType *semaType = SemaTypeFromSyntaxType(
+        symbolType, symbolTable, fileCtx, symbol, &typeInfo->isTypeOwner);
+    if (!semaType) {
+      free(symInfo);
+      goto CLEANUP;
+    }
+
+    symTypeInfo->type = typeInfo->type = semaType;
+    symTypeInfo->isTypeOwner = false;
+    // set-to-a-later-stage: most SYNTAX_AST_KIND_TYPE nodes only have
+    // their SemaType avaiable after the type checking stage, but there are rare
+    // exceptions such as SemaPopulateMembers, which populates type information
+    // for class variables before the type checking stage. SemaDeleteASTSemaInfo
+    // relies on the stage to determine whether the SemaType is ready, so we
+    // modify the stage in this particular instance to the type check stage
+    symbolType->semaInfo.stage = SEMA_STAGE_TYPE_CHECK;
+  } else {
+    // If "varType" is not provided, then type checking was already done at
+    // a previous stage. Retrive the previously-computed type here
+    symInfo = symbol->semaInfo.symInfo;
+  }
+
+  HashTableEntryAdd(memberTable, symbolIdentifier, symInfo);
+  entry = HashTableEntryRetrieve(memberTable, symbolIdentifier);
+  assert(entry);
+  symInfo->entry = entry;
+  symInfo->attr = attr;
+  if (addToScope) {
+    Vector *scopes = fileCtx->scopes;
+    symInfo->nextInScope = scopes->arr[scopes->size - 1];
+    scopes->arr[scopes->size - 1] = symInfo;
+  }
+  return true;
+
+CLEANUP:
+  symbol->semaInfo.skipAnalysis = true;
+  if (symbolType) {
+    symbolType->semaInfo.skipAnalysis = true;
+  }
+  return false;
+}
+
+bool SemaPopulateLabel(
+    SyntaxAST *label, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  bool success = true;
+  SemaType *labelType = malloc(sizeof(SemaType));
+  labelType->kind = SEMA_TYPE_KIND_LABEL;
+  SemaSymInfo *labelSymInfo = malloc(sizeof(SemaSymInfo));
+  label->semaInfo.symInfo = labelSymInfo;
+  SemaTypeInfo *labelTypeInfo = &labelSymInfo->typeInfo;
+  labelTypeInfo->type = labelType;
+  labelTypeInfo->isTypeOwner = true;
+  if (!SemaPopulateSymbol(
+        label, label->string, &label->loc, /*symbolType=*/NULL, SEMA_ATTR_LABEL,
+        /*addToScope=*/true, /*declKind=*/"label", symbolTable, symbolTable,
+        fileCtx)) {
+    success = false;
+    SemaSymInfoDelete(labelSymInfo);
+  }
+  return success;
+}
+
+bool SemaValueIsLabel(SyntaxAST *value) {
+  return value->kind == SYNTAX_AST_KIND_IDENTIFIER &&
+    value->semaInfo.typeInfo.type->kind == SEMA_TYPE_KIND_LABEL;
+}
+
+bool SemaTypeCheckWhileStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *cond = stmt->firstChild;
+  SyntaxAST *body = cond->sibling;
+  SyntaxAST *label = body->sibling;
+
+  SemaPushScope(fileCtx);
+
+  // Type check label
+  bool success = true;
+  if (label && !SemaPopulateLabel(label, symbolTable, fileCtx)) {
+    success = false;
+  }
+
+  // Type check condition
+  SemaType *condType = SemaTypeFromExpr(
+      cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+  if (!condType) {
+    cond->semaInfo.skipAnalysis = true;
+    success = false;
+  } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+    fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, condType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+    success = false;
+  }
+
+  // Type check body
+  ++fileCtx->numLoopNests;
+  if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+    success = false;
+    body->semaInfo.skipAnalysis = true;
+  }
+  --fileCtx->numLoopNests;
+
+  SemaPopScope(fileCtx, symbolTable);
+
+  return success;
+}
+
+bool SemaTypeCheckBreakStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *label = stmt->firstChild;
+  bool success = true;
+  if (fileCtx->numLoopNests == 0) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, stmt->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"break"SOURCE_COLOR_RESET" used outside of "
+        "a loop\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &stmt->loc);
+    success = false;
+  }
+
+  if (label) {
+    assert(label->kind == SYNTAX_AST_KIND_LABEL);
+    // We modify the label kind to an identifier so that the type checking
+    // function can correctly lookup its type
+    label->kind = SYNTAX_AST_KIND_IDENTIFIER;
+    SemaType *labelType = SemaTypeFromTerm(
+        label, /*parentExpr=*/stmt, symbolTable, fileCtx);
+    if (!labelType) {
+      success = false;
+      label->semaInfo.skipAnalysis = true;
+    } else if (!SemaValueIsLabel(label)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, label->loc.from.lineNo + 1);
+      fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a label\n",
+          label->string);
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &label->loc);
+      success = false;
+    }
+  }
+
+  return success;
+}
+
+bool SemaTypeCheckReturnStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  assert(methodSymInfo);
+  SemaTypeInfo *methodTypeInfo = &methodSymInfo->typeInfo;
+  SemaType *methodType = methodTypeInfo->type;
+  assert(methodType->kind == SEMA_TYPE_KIND_FN);
+  SemaType *retType = methodType->retType;
+
+  bool success = true;
+  SyntaxAST *expr = stmt->firstChild;
+  bool expectReturnExpr = SemaCurMethodExpectsReturnExpr(fileCtx);
+  if (!expectReturnExpr && expr) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
+    fprintf(stderr, "unexpected "SOURCE_COLOR_RED"expression"SOURCE_COLOR_RESET
+        " inside the return statement\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &expr->loc);
+    success = false;
+  }
+  if (expectReturnExpr && !expr) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, stmt->loc.from.lineNo + 1);
+    fprintf(stderr, "missing expression in "SOURCE_COLOR_RED"return statement"
+        SOURCE_COLOR_RESET"\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &stmt->loc);
+    success = false;
+  }
+  if (expr) {
+    SemaType *exprType = SemaTypeFromExpr(
+        expr, /*parentExpr=*/NULL, symbolTable, fileCtx);
+    if (!exprType) {
+      success = false;
+      expr->semaInfo.skipAnalysis = true;
+    } else if (expectReturnExpr && !SemaTypeImplicitCast(exprType, retType)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, expr->loc.from.lineNo + 1);
+      fprintf(stderr, "cannot implicitly cast type "SOURCE_COLOR_RED);
+      SemaTypePrint(stderr, exprType);
+      fprintf(stderr, SOURCE_COLOR_RESET" to type ");
+      SemaTypePrint(stderr, retType);
+      fprintf(stderr, " expected by the function/method\n");
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &expr->loc);
+      success = false;
+    }
+  }
+  return success;
+}
+
+bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx) {
+  SemaSymInfo *methodSymInfo = fileCtx->methodSymInfo;
+  assert(methodSymInfo);
+  SemaTypeInfo *methodTypeInfo = &methodSymInfo->typeInfo;
+  SemaType *methodType = methodTypeInfo->type;
+  assert(methodType->kind == SEMA_TYPE_KIND_FN);
+  SemaType *retType = methodType->retType;
+  bool isConstructor = methodSymInfo->attr == SEMA_ATTR_CTOR;
+  return !isConstructor && !SemaTypeIsPrimType(retType, SEMA_PRIM_TYPE_VOID);
 }

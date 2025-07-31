@@ -1,3 +1,8 @@
+import dir1.file3;
+import dir1.file3 as File3;
+import dir1.file4;
+import dir1.file4.*;
+
 class Main {
   # Simple terms with auto type deduction
   var s_i32 = 5;
@@ -17,40 +22,23 @@ class Main {
   var p_bool: i32 = true; # correct, type bool
   var p_str: bool = "hello"; # correct, type u8[]
   var p_char: bool = 'h'; # correct, type u8
+  var p_null0 : bool = null; # error
+  var p_null1 : Main = null; # correct
 
   # Any should be able take on any value
   var any_str: any = "goodbye";
   var any_char: any = 'h';
 
-  # Ternary operator
-  var tern_i32: bool = 3 if true else 5; # correct, type i32
-  var tern_cond = 3 if 4 else 5.; # error
-  var tern_mismatch = 3 if true else 5.; # error
-  var tern_nested_mismatch = 3 if (false if true else 5) else 5.; # error
+  # Parenthsized expression
+  var paren_expr: bool = (10); # correct, type i32
 
-  # Bitwise operator
-  var bit_i32: bool = 3 ^ 5; # correct, type i32
-  var bit_u16: bool = 3u16 | 5u16; # correct, type u16
-  var bit_sign = 3 & 5u32; # error
-  var bit_not: bool = ~9; # correct, type i32
-  var bit_mismatch = 3u8 & 5u16; # error
-  var bit_f32 = 1. ^ 2.; # error
-  var bit_bool = true ^ false; # error
-  var bit_nested_bool = (true & true) ^ false; # error
-
-  # Logic operator
-  var logic_and: i32 = true and false; # correct, type bool
-  var logic_or: i32 = false or true; # correct, type bool
-  var logic_i32 = false or 5; # error
-  var logic_str = "hello" and true; # error
-  var logic_nested_str = false and "hello" and true; # error
-
-  # Comparison operator
-  var comp_lt_i32_0: i32 = 3 < 5i16; # correct, type bool
-  var comp_lt_i32: i32 = 3 < 5i16 <= 7i8; # correct, type bool
-  var comp_gt_fail2 = 3 > 'a' >= 7; # error
-  var comp_gt_fail3 = 3 > 5i16 >= 't'; # error
-  var comp_eq_f64: i32 = 3. == 5. != 7.f64; # correct, type bool
-  var comp_mix = 3 < 5u32 <= 7.; # error
-  var comp_wrong = 3 < true; # error
+  # Should not be able to store any class or namespaces
+  var class_var : bool = Main; # error
+  var namespace_var : bool = file3; # error
+  var namespace_var_2 = File3; # error 
+  var namespace_var_3 = file3; # error
+  var namespace_var_4 = file4; # error
+  # TODO: enable this later once member access is implemented
+  # var class_var_2 = file4.Foo; # error
+  var class_var_3 = Foo; # error
 }

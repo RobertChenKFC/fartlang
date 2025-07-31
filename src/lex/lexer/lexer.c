@@ -175,8 +175,6 @@ Lexer *LexerFromConfig(LexerConfig *config) {
   lexer->stateTokenIDs = stateTokenIDs;
   lexer->ignoreTokenID = config->ignoreNfa ? numNfas - 1
                                            : LEXER_TOKEN_ID_NONE;
-  lexer->traversedTokenIDs = VectorNew();
-  lexer->traversedPoints = VectorNew();
   lexer->filename = NULL;
   lexer->source = NULL;
   lexer->point.lineNo = 0;
@@ -218,8 +216,6 @@ Lexer *LexerFromFile(FILE *file) {
   for (int i = 0; i < lexer->numStates; ++i)
     fscanf(file, "%d ", &lexer->stateTokenIDs[i]);
   fscanf(file, "%d", &lexer->ignoreTokenID);
-  lexer->traversedTokenIDs = VectorNew();
-  lexer->traversedPoints = VectorNew();
   lexer->filename = NULL;
   lexer->source = NULL;
   return lexer;
@@ -230,8 +226,6 @@ void LexerDelete(Lexer *lexer) {
   free(lexer->transitionStateTos);
   free(lexer->transitionOffsets);
   free(lexer->stateTokenIDs);
-  VectorDelete(lexer->traversedTokenIDs);
-  VectorDelete(lexer->traversedPoints);
   if (lexer->source)
     SourceDelete(lexer->source);
   free(lexer);
@@ -250,6 +244,10 @@ LexerToken *LexerNextToken(Lexer *lexer) {
   SourcePoint *point = &lexer->point;
   int lastLine = source->lines->size - 1;
   int ignoreTokenID = lexer->ignoreTokenID;
+  int *transitionStateFroms = lexer->transitionStateFroms;
+  int *transitionStateTos = lexer->transitionStateTos;
+  int *transitionOffsets = lexer->transitionOffsets;
+  int *stateTokenIDs = lexer->stateTokenIDs;
 
   while (true) {
     if (point->lineNo == lastLine)
@@ -258,17 +256,11 @@ LexerToken *LexerNextToken(Lexer *lexer) {
     token->loc.from = *point;
 
     int state = 0;
-    int *transitionStateFroms = lexer->transitionStateFroms;
-    int *transitionStateTos = lexer->transitionStateTos;
-    int *transitionOffsets = lexer->transitionOffsets;
-    int *stateTokenIDs = lexer->stateTokenIDs;
-    Vector *traversedTokenIDs = lexer->traversedTokenIDs;
-    traversedTokenIDs->size = 0;
-    Vector *traversedPoints = lexer->traversedPoints;
-    traversedPoints->size = 0;
+    SourcePoint lastAcceptedPoint;
+    int lastAcceptedTokenId = LEXER_TOKEN_ID_NONE;
     if (stateTokenIDs[state] != LEXER_TOKEN_ID_NONE) {
-      VectorAdd(traversedTokenIDs, (void*)(long long)stateTokenIDs[state]);
-      VectorAdd(traversedPoints, point);
+      lastAcceptedTokenId = stateTokenIDs[state];
+      lastAcceptedPoint = *point;
     }
     while (point->lineNo != lastLine) {
       unsigned char a = SourceGetFromPoint(source, point);
@@ -279,13 +271,13 @@ LexerToken *LexerNextToken(Lexer *lexer) {
         break;
       state = transitionStateTos[pos];
       if (stateTokenIDs[state] != LEXER_TOKEN_ID_NONE) {
-        VectorAdd(traversedTokenIDs, (void*)(long long)stateTokenIDs[state]);
-        VectorAdd(traversedPoints, point);
+        lastAcceptedTokenId = stateTokenIDs[state];
+        lastAcceptedPoint = *point;
       }
       SourcePointIncrement(source, point);
     }
 
-    if (traversedTokenIDs->size == 0) {
+    if (lastAcceptedTokenId == LEXER_TOKEN_ID_NONE) {
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET" %s:%d: ",
               lexer->filename, point->lineNo + 1);
       if (point->lineNo != lastLine) {
@@ -320,7 +312,7 @@ LexerToken *LexerNextToken(Lexer *lexer) {
       return NULL;
     }
     SourcePointDecrement(source, point);
-    *point = *((SourcePoint*)traversedPoints->arr[traversedPoints->size - 1]);
+    *point = lastAcceptedPoint;
     token->loc.to = *point;
     token->str = source->file +
         (int)(long long)source->lines->arr[token->loc.from.lineNo] +
@@ -329,8 +321,7 @@ LexerToken *LexerNextToken(Lexer *lexer) {
         token->loc.to.charNo -
         (int)(long long)source->lines->arr[token->loc.from.lineNo] -
         token->loc.from.charNo + 1;
-    token->tokenID =
-        (int)(long long)traversedTokenIDs->arr[traversedTokenIDs->size - 1];
+    token->tokenID = lastAcceptedTokenId;
     SourcePointIncrement(source, point);
 
     if (token->tokenID != ignoreTokenID)

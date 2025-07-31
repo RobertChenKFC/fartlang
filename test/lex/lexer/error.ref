@@ -6,3 +6,5 @@
     2 | 123.456.789.012  9.8.7.6.qwerty.com.tw@gmail.com[32;1m[0m[31;1m.[0mtw unreachable.edu.tw
 [31;1m[Error][0m 7.in:4: Unexpected end of file.
     3 | [32;1m9.10.11.[0m
+[31;1m[Error][0m 11.in:1: Unexpected character '[31;1mi[0m'.
+    1 | 9[32;1m[0m[31;1mi[0m

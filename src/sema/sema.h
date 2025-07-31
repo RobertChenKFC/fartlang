@@ -21,7 +21,8 @@ typedef enum {
   SEMA_TYPE_KIND_PRIM_TYPE,
   SEMA_TYPE_KIND_CLASS,
   SEMA_TYPE_KIND_NAMESPACE,
-  SEMA_TYPE_KIND_PLACEHOLDER
+  SEMA_TYPE_KIND_PLACEHOLDER,
+  SEMA_TYPE_KIND_LABEL,
 } SemaTypeKind;
 
 // The primitive types
@@ -38,7 +39,8 @@ typedef enum {
   SEMA_PRIM_TYPE_F32,
   SEMA_PRIM_TYPE_BOOL,
   SEMA_PRIM_TYPE_ANY,
-  SEMA_PRIM_TYPE_VOID
+  SEMA_PRIM_TYPE_VOID,
+  SEMA_PRIM_TYPE_NIL
 } SemaPrimType;
 
 // Attributes of each symbol
@@ -47,9 +49,11 @@ typedef enum {
   SEMA_ATTR_CONST,
   SEMA_ATTR_STATIC_VAR,
   SEMA_ATTR_STATIC_CONST,
+  SEMA_ATTR_CLASS,
   SEMA_ATTR_CTOR,
   SEMA_ATTR_FN,
   SEMA_ATTR_METHOD,
+  SEMA_ATTR_LABEL,
 } SemaAttr;
 
 // Different stages of the semantic analysis
@@ -69,9 +73,7 @@ struct SemaType {
   union {
     // Recursive types: SEMA_TYPE_KIND_ARRAY and SEMA_TYPE_KIND_FN. Recursive
     // types are types constructed from other types. Therefore, recursive
-    // pointers to other SemaType are stored. In addition, a boolean type owner
-    // flag will accompany each recursive pointer, indicating whether this
-    // SemaType is the owner of the recursive types or not
+    // pointers to other SemaType are stored
     //
     // For type kind SEMA_TYPE_KIND_ARRAY: records the type of each array
     // element in "baseType", and records the number of array dimensions in
@@ -90,8 +92,6 @@ struct SemaType {
     struct {
       SemaType *retType;
       Vector *paramTypes;
-      bool isRetTypeOwner;
-      Vector *isParamTypeOwner;
     };
 
     // For type kind SEMA_TYPE_KIND_PRIM_TYPE: which primitive type this is
@@ -136,7 +136,7 @@ struct SemaSymInfo {
   SemaTypeInfo typeInfo;
 
   union {
-    // SYNTAX_AST_KIND_VAR_INIT
+    // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_METHOD_DECL
     struct {
       // The attributes of the declared symbol
       SemaAttr attr;
@@ -160,14 +160,14 @@ struct SemaInfo {
     // A pointer to SemaSymInfo is stored for the following kinds of AST nodes:
     // SYNTAX_AST_KIND_CLASS_DECL, SYNTAX_AST_KIND_IMPORT_DECL,
     // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_METHOD_DECL,
-    // SYNTAX_AST_KIND_IDENTIFIER
+    // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_LABEL
     // Note that the AST node that declares the symbol will be the owner of
     // "symInfo", so in the case of variable initialization and uses, the
     // initialization will be the owner of "symInfo".
     SemaSymInfo *symInfo;
 
     // A pointer to SemaTypeInfo is stored for the following kinds of AST nodes:
-    // SYNTAX_AST_KIND_LITERAL, SYNTAX_AST_KIND_OP
+    // SYNTAX_AST_KIND_LITERAL, SYNTAX_AST_KIND_OP, SYNTAX_AST_KIND_ASSIGN
     SemaTypeInfo typeInfo;
   };
 
@@ -216,6 +216,15 @@ struct SemaFileCtx {
   // have any symbols declared, then NULL is pushed into scopes. Otherwise, the
   // latest symbol of type SemaSymInfo* is pushed
   Vector *scopes;
+  // The type of the current class we are semantic checking
+  SemaType *classType;
+  // The symbol info of the current method we are semantic checking. If we are
+  // not currently in any method, this will be set to NULL
+  SemaSymInfo *methodSymInfo;
+  // The number of loop nests we are currently in. For instance, if we are
+  // inside a while loop that is inside a for loop, this value will be 2. If
+  // we are not inside any loop, this value will be 0
+  int numLoopNests;
 };
 
 // The context of the current semantic checking. The purpose of each field is

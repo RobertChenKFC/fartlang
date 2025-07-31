@@ -1,0 +1,40 @@
+class Main {
+  f() {
+    break; # error
+    break x; # error
+
+    var x = 5;
+    while true {
+      break; # correct
+      break x; # error
+      for ; ; {
+        break; # correct
+        break label; # correct
+        while false {
+          break; # correct
+          break label; # correct
+          break label2; # correct
+          break label3; # error
+        }
+        > label2:
+        for ; ; {
+          break; # correct
+          break label2; # error
+          break label3; # correct
+        }
+        > label3:
+      }
+      > label:
+
+      break; # correct
+      break label; # error
+      break label2; # error
+      break label3; # error
+      break Main; # error
+    }
+    > x: # error
+
+    break; # error
+    break label; # error
+  }
+}

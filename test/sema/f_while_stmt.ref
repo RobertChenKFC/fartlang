@@ -1,0 +1,16 @@
+[31;1m[Error][0m f_while_stmt.fart:6: expected type bool, got type [31;1mi32[0m instead
+    6 |     while [31;1m3 + 5[0m {} # error
+[31;1m[Error][0m f_while_stmt.fart:7: expected type bool, got type [31;1mvoid[0m instead
+    7 |     while [31;1mthis.f()[0m {} # error
+[31;1m[Error][0m f_while_stmt.fart:12: expected type bool, got type [31;1mu8[][0m instead
+   12 |       while [31;1m"hello"[0m { # error
+[31;1m[Error][0m f_while_stmt.fart:17: identifier [31;1my[0m is not defined
+   17 |       x += [31;1my[0m; # error
+[31;1m[Error][0m f_while_stmt.fart:18: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   18 |       [32;1mx[0m *= [31;1m5.[0m; # error
+[31;1m[Error][0m f_while_stmt.fart:25: reuse of identifier [31;1mlabel1[0m for label declaration
+   25 |       [31;1m> label1:[0m # error
+[31;1m[Error][0m f_while_stmt.fart:26: [31;1mlabel[0m is not used in a break statement
+   26 |       [31;1mlabel1[0m = 5; # error
+[31;1m[Error][0m f_while_stmt.fart:33: reuse of identifier [31;1mlabel2[0m for label declaration
+   33 |         [31;1m> label2:[0m # error

@@ -1,0 +1,29 @@
+class Main {
+  var x1 = 10; # correct
+  var x2 = x1; # error
+
+  fn main(x: f64, y: f32) {
+    var Main = 5; # error
+
+    var x = 5; # error
+    var y = 5; # error
+    var x0 : bool = x; # correct, type f64
+    var y0 : bool = y; # correct, type f32
+    var z0; # error
+
+    var x1 = 10; # correct
+    var x1 = 10.; # error
+    var x2: bool = x1; # correct, type i32
+    var x2 = 'h'; # error
+    var x3 : bool = x3; # correct, type u8
+  }
+
+  fn random_fn() {
+    var variable = x; # error
+    var variable2 = variable; # error
+    var variable3 : bool = variable; # error
+    var x : bool = "hello"; # correct, type u8[]
+    var x1 : i32 = true; # correct, type bool
+    var x2 : bool = null; # correct, type nil
+  }
+}

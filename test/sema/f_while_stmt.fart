@@ -1,0 +1,39 @@
+class Main {
+  f() {
+    # While condition
+    while true {} # correct
+    while 3 < 5 {} # correct
+    while 3 + 5 {} # error
+    while this.f() {} # error
+
+    # While body
+    var x = 0;
+    while x != 5 { # correct
+      while "hello" { # error
+        var y = x + 3; # correct
+        x += y; # correct
+      }
+      x += 3; # correct
+      x += y; # error
+      x *= 5.; # error
+      var y = 5; # correct
+    }
+
+    # While label
+    while x * 3 == 6 { # correct
+      while true {}
+      > label1: # error
+      label1 = 5; # error
+      while true {
+        while false {}
+        > label3: # correct
+        while false {}
+        > label3: # correct
+        while false {}
+        > label2: # error
+      }
+      > label2: # correct
+    }
+    > label1: # correct
+  }
+}

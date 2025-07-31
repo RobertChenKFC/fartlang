@@ -1,0 +1,76 @@
+import dir1.file4;
+
+class Main {
+  var t1 : u8[];
+  const var t2 = 0;
+  static var t3 = 0;
+  static const var t4 = 0;
+
+  fn g() -> Main
+
+  f() {
+    # Assignment and implicit type casting
+    var x = 5;
+    x = 10; # correct
+    x = true; # error
+    var y = 5i64;
+    y = x = 10; # correct
+    x = y = 10; # error
+
+    # Assignment targets
+    var t1 = [i32] * 10u32;
+    var t2 = true;
+    const var t3 = 'A';
+    static var t4 = false;
+    static const var t5 = false;
+    t1[0u32] = 5; # correct
+    t2 = false; # correct
+    t3 = 'B'; # error
+    t4 = true; # correct
+    t5 = true; # error
+    this.t1 = "hello"; # correct
+    this.t2 = 1; # error
+    Main.t3 = 2; # correct
+    Main.t4 = 3; # error
+    Main.g() = null; # error
+    1 = 2 = 3; # error
+    (x as Main) = null; # error
+    file4 = 3; # error
+    file4.Foo = null; # error
+    Main = Main.g(); # error
+
+    # Assignment operators
+    x += 5; # correct
+    x += true; # error
+    x -= 3u8; # error
+    x -= "hello"; # error
+    x *= 2; # correct
+    x *= null; # error
+    x *= 5.; # error
+    this.t2 /= 5.; # error
+    x /= 3i16; # correct
+    x /= this; # error
+    x %= 10; # correct
+    var x2 = 3.;
+    x2 %= 10; # error
+    x <<= 3u32; # correct
+    x <<= 3; # error
+    x >>= 2u32; # correct
+    x >>= x2; # error
+    x &= 1; # correct
+    x &= 1i16; # error
+    x ^= 2; # correct
+    x ^= x2; # error
+    x |= 4; # correct
+    x |= true; # error
+
+    # Increment operators
+    this.t1++; # error
+    Main.g().t2++; # error
+    y *= Main.t3--; # correct
+    x2--; # correct
+    x2++++; # error
+    x2 = x++ + y--; # correct, type i64
+    y = x++ + x2--; # correct, type f32
+  }
+}

@@ -1,5 +1,5 @@
 class MethodDecl {
-    MethodDecl() {}
+    new() {}
 
     someFancyMethod(x: u32, y: MethodDecl, z: i32) -> bool[] {
     }

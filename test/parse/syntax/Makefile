@@ -16,13 +16,19 @@ DEPS := $(DEPS) util/bitset
 DEPS := $(DEPS) util/hashtable
 DEPS := $(DEPS) util/source
 DEPS := $(DEPS) util/vector
+# Special dependency: syntax.c includes handlers.c
+$(BIN_DIR)/syntax.o: $(SRC_DIR)/handlers.c
 
 include $(MK)/c_cmp_test.mk
-$(OUT_FILES): $(BIN) | $(DIR)
-	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
-
 BIN_DIR := $(dir $(BIN))
-CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/lexer.txt
-CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/parser.txt
+COMPILER_FILES := $(BIN_DIR)/lexer.txt
+COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/parser.txt
+DEL_COMPILER_FILES := $(addsuffix .del,$(COMPILER_FILES))
+$(OUT_FILES)&: $(BIN) $(DEL_COMPILER_FILES) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
+$(DEL_COMPILER_FILES): %.del:
+	rm -f $*
+
+CLEAN_FILES := $(CLEAN_FILES) $(COMPILER_FILES)
 
 include $(MK)/pop.mk

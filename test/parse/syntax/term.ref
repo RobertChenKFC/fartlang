@@ -279,8 +279,8 @@ SYNTAX_AST_KIND_MODULE: 1:1~77:1:
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
                             SYNTAX_AST_KIND_LITERAL: 73:14~73:17: type SYNTAX_TYPE_U8, value 0
                 SYNTAX_AST_KIND_VAR_DECL: 76:3~76:19: 
-                    SYNTAX_AST_KIND_VAR_INIT_LIST: 76:7~76:17: 
-                        SYNTAX_AST_KIND_VAR_INIT: 76:7~76:17: variable: expr: 
+                    SYNTAX_AST_KIND_VAR_INIT_LIST: 76:7~76:18: 
+                        SYNTAX_AST_KIND_VAR_INIT: 76:7~76:18: variable: expr: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 76:15~76:17: type SYNTAX_TYPE_I32, value 123
+                            SYNTAX_AST_KIND_LITERAL: 76:14~76:18: type SYNTAX_TYPE_I32, value 123
             SYNTAX_AST_KIND_METHOD_DECLS: -2147483648:-2147483648~-2147483647:-2147483647: 

@@ -1,0 +1,64 @@
+[31;1m[Error][0m f_term_in_method.fart:5: cannot refer to [31;1mthis[0m outside of constructor or method bodies
+    5 |   var x = [31;1mthis[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:8: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+    8 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Main
+[31;1m[Error][0m f_term_in_method.fart:12: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+   12 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Main
+[31;1m[Error][0m f_term_in_method.fart:16: cannot refer to [31;1mthis[0m outside of constructor or method bodies
+   16 |     var x0 = [31;1mthis[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:22: expected expression to be of type [32;1mbool[0m, got type [31;1mFoo[0m instead
+   22 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Foo
+[31;1m[Error][0m f_term_in_method.fart:26: expected expression to be of type [32;1mbool[0m, got type [31;1mFoo[0m instead
+   26 |     var x0 : [32;1mbool[0m = [31;1mthis[0m; # correct, type Foo
+[31;1m[Error][0m f_term_in_method.fart:36: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   36 |     var x0 : [32;1mbool[0m = [31;1mthis.x[0m; # correct, type i32
+[31;1m[Error][0m f_term_in_method.fart:37: [31;1mx[0m is a non-static variable of type [32;1mBar[0m
+   37 |     var x1 = [32;1mBar[0m.[31;1mx[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:38: [31;1my[0m is not a method or non-static variable of type [32;1mBar[0m
+   38 |     var y0 = [32;1mthis[0m.[31;1my[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:39: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+   39 |     var y1 : [32;1mbool[0m = [31;1mBar.y[0m; # correct, type u32
+[31;1m[Error][0m f_term_in_method.fart:40: [31;1mfoo[0m is not a member of type [32;1mBar[0m
+   40 |     var z0 = [32;1mthis[0m.[31;1mfoo[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:41: [31;1mfoo[0m is not a member of type [32;1mBar[0m
+   41 |     var z1 = [32;1mBar[0m.[31;1mfoo[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:49: expected [32;1m2[0m arguments to the function, got [31;1m0[0m arguments instead
+   49 |     var bar : bool = [32;1mBar.new[0m(); # error
+[31;1m[Error][0m f_term_in_method.fart:50: expected [32;1m2[0m arguments to the function, got [31;1m1[0m arguments instead
+   50 |     var bar_2 = [32;1mBar.new[0m([31;1mnull[0m); # error
+[31;1m[Error][0m f_term_in_method.fart:51: expected [32;1m2[0m arguments to the function, got [31;1m3[0m arguments instead
+   51 |     var bar_3 = [32;1mBar.new[0m([31;1mnull, null, null[0m); # error
+[31;1m[Error][0m f_term_in_method.fart:52: cannot implicitly cast type [31;1mi32[0m to type [32;1mMain[0m expected by the function
+   52 |     var bar_4 = [32;1mBar.new[0m([31;1m1[0m, null); # error
+[31;1m[Error][0m f_term_in_method.fart:53: expected expression to be of type [32;1mbool[0m, got type [31;1mBar[0m instead
+   53 |     var bar_5 : [32;1mbool[0m = [31;1mBar.new(null, null)[0m; # correct, type Bar
+[31;1m[Error][0m f_term_in_method.fart:54: expected expression to be of type [32;1mbool[0m, got type [31;1mfn (Main, Foo) -> Bar[0m instead
+   54 |     var bar_new : [32;1mbool[0m = [31;1mBar.new[0m; # correct, type fn (Main, Foo) -> Bar
+[31;1m[Error][0m f_term_in_method.fart:55: [31;1mnew[0m is not a method or non-static variable of type [32;1mBar[0m
+   55 |     var this_new = [32;1mthis[0m.[31;1mnew[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:57: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   57 |     var this_f1_call : [32;1mbool[0m = [31;1mthis.f1(1., 1.f64)[0m; # correct, type f64
+[31;1m[Error][0m f_term_in_method.fart:58: expected expression to be of type [32;1mbool[0m, got type [31;1mfn (f32, f64) -> f64[0m instead
+   58 |     var this_f1 : [32;1mbool[0m = [31;1mthis.f1[0m; # correct, type fn (f32, f64) -> f64
+[31;1m[Error][0m f_term_in_method.fart:59: expected expression to be of type [32;1mbool[0m, got type [31;1mfn (Bar, f32, f64) -> f64[0m instead
+   59 |     var bar_f1 : [32;1mbool[0m = [31;1mBar.f1[0m; # correct, type fn (Bar, f32, f64) -> f64
+[31;1m[Error][0m f_term_in_method.fart:60: [31;1mf[0m is not a member of type [32;1mBar[0m
+   60 |     var this_f = [32;1mthis[0m.[31;1mf[0m(); # error
+[31;1m[Error][0m f_term_in_method.fart:64: [31;1mBar[0m is not a namespace
+   64 |     var x0 : [31;1mBar[0m.x; # error
+[31;1m[Error][0m f_term_in_method.fart:65: [31;1mBar[0m is not a namespace
+   65 |     var x1 : [31;1mBar[0m.f1; # error
+[31;1m[Error][0m f_term_in_method.fart:66: invalid type expression
+   66 |     var x1 : [31;1mBar.a.b[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:68: identifier [31;1my0[0m is not a class 
+   68 |     var z0 : [31;1my0[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:72: expected expression to be of type [32;1mbool[0m, got type [31;1mBar[0m instead
+   72 |     var z10 : [32;1mbool[0m = [31;1m(null as Bar).z.z.z.z.z.z.z.z.z.z[0m; # correct, type Bar
+[31;1m[Error][0m f_term_in_method.fart:73: [31;1mvalue[0m is not used in an access operator
+   73 |     var namespace = [31;1mfile6[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:74: [31;1mvalue[0m is not used in an access operator
+   74 |     var namespace_class = [31;1mfile6.Foo[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:75: [31;1mx[0m is a non-static variable of type [32;1mFoo[0m
+   75 |     var namespace_class_var = [32;1mfile6.Foo[0m.[31;1mx[0m; # error
+[31;1m[Error][0m f_term_in_method.fart:76: expected expression to be of type [32;1mBar[0m, got type [31;1mBar[0m instead
+   76 |     var namespace_class_static : [32;1mBar[0m = [31;1mfile6.Foo.y[0m; # correct, type u32

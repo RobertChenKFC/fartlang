@@ -47,8 +47,6 @@ struct Lexer {
   int *transitionOffsets;
   int *stateTokenIDs;
   int ignoreTokenID;
-  Vector *traversedTokenIDs;
-  Vector *traversedPoints;
   const char *filename;
   Source *source;
   SourcePoint point;

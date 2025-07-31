@@ -1,0 +1,170 @@
+[31;1m[Error][0m f_expr.fart:3: expected expression to be of unsigned type, got type [31;1mi32[0m instead
+    3 |   var alloc_i32_signed : bool = [i32] * [31;1m5[0m; # error
+[31;1m[Error][0m f_expr.fart:4: identifier [31;1mHello[0m is not a class 
+    4 |   var alloc_i32_baseType : bool = [[31;1mHello[0m] * 5u32; # error
+[31;1m[Error][0m f_expr.fart:5: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[][0m instead
+    5 |   var alloc_i32_1d : [32;1mbool[0m = [31;1m[i32] * 5u32[0m; # correct, type i32[]
+[31;1m[Error][0m f_expr.fart:6: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[][][0m instead
+    6 |   var alloc_i32_2d : [32;1mbool[0m = [31;1m[i32[]] * 5u32[0m; # correct, type i32[][]
+[31;1m[Error][0m f_expr.fart:7: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[][0m instead
+    7 |   var alloc_Main_1d : [32;1mbool[0m = [31;1m[Main] * 5u32[0m; # correct, type Main[]
+[31;1m[Error][0m f_expr.fart:8: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[][][0m instead
+    8 |   var alloc_Main_2d : [32;1mbool[0m = [31;1m[Main[]] * 5u32[0m; # correct, type Main[][]
+[31;1m[Error][0m f_expr.fart:11: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   11 |   var tern_i32: [32;1mbool[0m = [31;1m3 if true else 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:12: expected condition to be of type bool, got type [31;1mi32[0m instead
+   12 |   var tern_cond = 3 if [31;1m4[0m else 5.; # error
+[31;1m[Error][0m f_expr.fart:14: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
+   14 |   var tern_signed: [32;1mbool[0m = [31;1m3 if true else 5i64[0m; # correct, type i64
+[31;1m[Error][0m f_expr.fart:15: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+   15 |   var tern_unsigned: [32;1mbool[0m = [31;1m'a' if true else 5u32[0m; # correct, type u32
+[31;1m[Error][0m f_expr.fart:16: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   16 |   var tern_float: [32;1mbool[0m = [31;1m3.f64 if true else 5.[0m; # correct, type f64
+[31;1m[Error][0m f_expr.fart:17: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   17 |   var tern_f32: [32;1mbool[0m = [31;1m3 if true else 5.[0m; # correct, type f32
+[31;1m[Error][0m f_expr.fart:20: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   20 |   var bit_i32: [32;1mbool[0m = [31;1m3 ^ 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:21: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
+   21 |   var bit_u16: [32;1mbool[0m = [31;1m3u16 | 5u16[0m; # correct, type u16
+[31;1m[Error][0m f_expr.fart:22: bitwise operand of type [31;1mu32[0m does not match first operand of type [32;1mi32[0m
+   22 |   var bit_sign = [32;1m3[0m & [31;1m5u32[0m; # error
+[31;1m[Error][0m f_expr.fart:23: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   23 |   var bit_not: [32;1mbool[0m = [31;1m~9[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:24: bitwise operand of type [31;1mu16[0m does not match first operand of type [32;1mu8[0m
+   24 |   var bit_mismatch = [32;1m3u8[0m & [31;1m5u16[0m; # error
+[31;1m[Error][0m f_expr.fart:25: expected integral type for bitwise operand, got [31;1mf32[0m instead
+   25 |   var bit_f32 = [31;1m1.[0m ^ 2.; # error
+[31;1m[Error][0m f_expr.fart:26: expected integral type for bitwise operand, got [31;1mbool[0m instead
+   26 |   var bit_bool = [31;1mtrue[0m ^ false; # error
+[31;1m[Error][0m f_expr.fart:27: expected integral type for bitwise operand, got [31;1mbool[0m instead
+   27 |   var bit_nested_bool = ([31;1mtrue[0m & true) ^ false; # error
+[31;1m[Error][0m f_expr.fart:30: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   30 |   var logic_and: [32;1mi32[0m = [31;1mtrue and false[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:31: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   31 |   var logic_or: [32;1mi32[0m = [31;1mfalse or true[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:32: expected operand of logical operator to be of type bool, got type [31;1mi32[0m instead
+   32 |   var logic_i32 = false or [31;1m5[0m; # error
+[31;1m[Error][0m f_expr.fart:33: expected operand of logical operator to be of type bool, got type [31;1mu8[][0m instead
+   33 |   var logic_str = [31;1m"hello"[0m and true; # error
+[31;1m[Error][0m f_expr.fart:34: expected operand of logical operator to be of type bool, got type [31;1mu8[][0m instead
+   34 |   var logic_nested_str = false and [31;1m"hello"[0m and true; # error
+[31;1m[Error][0m f_expr.fart:37: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   37 |   var comp_lt_i32_0: [32;1mi32[0m = [31;1m3 < 5i16[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:38: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   38 |   var comp_lt_i32: [32;1mi32[0m = [31;1m3 < 5i16 <= 7i8[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:39: types [33;1mi32[0m and [34;1mu8[0m are not comparable
+   39 |   var comp_gt_fail2 = [33;1m3[0m > [34;1m'a'[0m >= 7; # error
+[31;1m[Error][0m f_expr.fart:40: types [33;1mi16[0m and [34;1mu8[0m are not comparable
+   40 |   var comp_gt_fail3 = 3 > [33;1m5i16[0m >= [34;1m't'[0m; # error
+[31;1m[Error][0m f_expr.fart:41: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   41 |   var comp_eq_f64: [32;1mi32[0m = [31;1m3. == 5. != 7.f64[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:42: types [33;1mi32[0m and [34;1mu32[0m are not comparable
+   42 |   var comp_mix = [33;1m3[0m < [34;1m5u32[0m <= 7.; # error
+[31;1m[Error][0m f_expr.fart:43: types [33;1mi32[0m and [34;1mbool[0m are not comparable
+   43 |   var comp_wrong = [33;1m3[0m < [34;1mtrue[0m; # error
+[31;1m[Error][0m f_expr.fart:44: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   44 |   var comp_non_numeric : [32;1mi32[0m = [31;1m"hello" == "world"[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:45: types [33;1mi32[][0m and [34;1mMain[0m are not comparable
+   45 |   var comp_non_numeric_2 = [33;1m(1 as i32[])[0m < [34;1m(2 as Main)[0m; # error
+[31;1m[Error][0m f_expr.fart:48: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   48 |   var shift_i32 : [32;1mbool[0m = [31;1m3 << 5u32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:49: expected expression to be of type [32;1mbool[0m, got type [31;1mu16[0m instead
+   49 |   var shift_u16 : [32;1mbool[0m = [31;1m3u16 << 'h'[0m; # correct, type u16
+[31;1m[Error][0m f_expr.fart:50: expected integral type for shift operand, got [31;1mf32[0m instead
+   50 |   var shift_not_integral = [31;1m3.[0m << 3u32; # error
+[31;1m[Error][0m f_expr.fart:51: expected unsigned type for shift operand, got [31;1mi32[0m instead
+   51 |   var shift_not_unsigned = 3 << [31;1m3[0m; # error
+[31;1m[Error][0m f_expr.fart:54: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   54 |   var arith_i32 : [32;1mbool[0m = [31;1m3 + 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:55: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   55 |   var arith_3_op_i32 : [32;1mbool[0m = [31;1m3 - 5 - 7[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:56: expected expression to be of type [32;1mbool[0m, got type [31;1mu32[0m instead
+   56 |   var arith_unify_u32 : [32;1mbool[0m = [31;1m3u8 * 5u16 * 7u32[0m; # correct, type u32
+[31;1m[Error][0m f_expr.fart:57: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   57 |   var arith_unify_f32 : [32;1mbool[0m = [31;1m3i8 / 5i16 / 7.[0m; # correct, type f32
+[31;1m[Error][0m f_expr.fart:58: expected expression to be of type [32;1mbool[0m, got type [31;1mf64[0m instead
+   58 |   var arith_unify_f64 : [32;1mbool[0m = [31;1m3u8 + 3.f64[0m; # correct, type f64
+[31;1m[Error][0m f_expr.fart:59: unification of [33;1mi32[0m and [34;1mu32[0m result in non-numeric type [31;1many[0m
+   59 |   var arith_unify_signed_unsigned = [33;1m3[0m - [34;1m5u32[0m; # error
+[31;1m[Error][0m f_expr.fart:60: unification of [33;1mi32[0m and [34;1mbool[0m result in non-numeric type [31;1many[0m
+   60 |   var arith_unify_non_numeric = [33;1m3[0m * [34;1mfalse[0m; # error
+[31;1m[Error][0m f_expr.fart:61: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   61 |   var arith_rem : [32;1mbool[0m = [31;1m3 % 5[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:62: expected integral type, got [31;1mf32[0m instead
+   62 |   var arith_rem_integral_1 = [31;1m3.[0m % 5; # error
+[31;1m[Error][0m f_expr.fart:63: expected integral type, got [31;1mf64[0m instead
+   63 |   var arith_rem_integral_2 = 3 % [31;1m3.f64[0m; # error
+[31;1m[Error][0m f_expr.fart:64: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   64 |   var arith_neg : [32;1mbool[0m = [31;1m-3[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:65: expected float or signed type, got [31;1mu32[0m instead
+   65 |   var arith_neg_unsigned = -[31;1m3u32[0m; # error
+[31;1m[Error][0m f_expr.fart:66: expected numeric type, got [31;1mbool[0m instead
+   66 |   var arith_neg_non_numeric = -[31;1mtrue[0m; # error
+[31;1m[Error][0m f_expr.fart:67: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   67 |   var arith_lneg : [32;1mi32[0m = [31;1mnot true[0m; # error
+[31;1m[Error][0m f_expr.fart:68: expected operand of logical operator to be of type bool, got type [31;1mi32[0m instead
+   68 |   var arith_lneg_non_bool : i32 = not [31;1m10[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:71: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   71 |   var cast_as_i32 : [32;1mbool[0m = [31;1m10u32 as i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:72: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   72 |   var cast_as_i32_2 : [32;1mbool[0m = [31;1m10u16 as i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:73: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   73 |   var cast_as_any : [32;1mbool[0m = [31;1m10 as any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:74: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   74 |   var cast_is_i32 : [32;1mi32[0m = [31;1m(1 as any) is i32[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:75: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+   75 |   var cast_is_u32 : [32;1mi32[0m = [31;1m(1 as any) is u32[0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:76: expected type any, got [31;1mi32[0m instead
+   76 |   var cast_is_fail : i32 = [31;1m1[0m is u32; # error
+[31;1m[Error][0m f_expr.fart:77: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   77 |   var cast_into_any : [32;1mbool[0m = [31;1m1 into any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:78: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   78 |   var cast_into_i32 : [32;1mbool[0m = [31;1m(1 as any) into i32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:79: expected expression to be of type [32;1mbool[0m, got type [31;1mMain[0m instead
+   79 |   var cast_into_Main : [32;1mbool[0m = [31;1mnull into Main[0m; # correct, type Main
+[31;1m[Error][0m f_expr.fart:80: expected expression to be of type [32;1mbool[0m, got type [31;1many[0m instead
+   80 |   var cast_into_any_2 : [32;1mbool[0m = [31;1mnull into any[0m; # correct, type any
+[31;1m[Error][0m f_expr.fart:81: expected a class type, got [31;1mbool[0m instead
+   81 |   var cast_into_bool = null into [31;1mbool[0m; # error
+[31;1m[Error][0m f_expr.fart:82: expected a class type, got [31;1mfn (i32) -> u32[0m instead
+   82 |   var cast_into_fn = null into [31;1mfn (i32) -> u32[0m; # error
+[31;1m[Error][0m f_expr.fart:83: expected expression to be of type [32;1mbool[0m, got type [31;1mi64[0m instead
+   83 |   var cast_into_i64 : [32;1mbool[0m = [31;1m1 into i64[0m; # correct, type i64
+[31;1m[Error][0m f_expr.fart:84: expected expression to be of type [32;1mbool[0m, got type [31;1mi8[0m instead
+   84 |   var cast_into_i8 : [32;1mbool[0m = [31;1m1 into i8[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:85: expected expression to be of type [32;1mbool[0m, got type [31;1mf32[0m instead
+   85 |   var cast_into_f32 : [32;1mbool[0m = [31;1m1 into f32[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:88: expected expression to be of type [32;1mbool[0m, got type [31;1mvoid[0m instead
+   88 |   var call_empty : [32;1mbool[0m = [31;1m(null as fn ())()[0m; # correct, type void
+[31;1m[Error][0m f_expr.fart:89: expected expression to be of type [32;1mbool[0m, got type [31;1mvoid[0m instead
+   89 |   var call_args : [32;1mbool[0m = [31;1m(null as fn (i32, u8[]))(10, "hello")[0m; # correct, type void
+[31;1m[Error][0m f_expr.fart:90: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   90 |   var call_ret : [32;1mbool[0m = [31;1m(null as fn (u32, f64) -> i32)(10u32, 69.f64)[0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:91: expected a function type, got [31;1mfn (u32, f64) -> i32[][0m instead
+   91 |   var call_not_fn = [31;1m(null as (fn (u32, f64) -> i32)[])[0m(10u32, 69.f64); # error
+[31;1m[Error][0m f_expr.fart:92: expected [32;1m3[0m arguments to the function, got [31;1m1[0m arguments instead
+   92 |   var call_fewer_args = [32;1m(null as fn (i32, i32, i32))[0m([31;1m1[0m); # error
+[31;1m[Error][0m f_expr.fart:93: expected [32;1m1[0m arguments to the function, got [31;1m3[0m arguments instead
+   93 |   var call_more_args = [32;1m(null as fn (i32))[0m([31;1m1, 1, 1[0m); # error
+[31;1m[Error][0m f_expr.fart:94: cannot implicitly cast type [31;1mi32[0m to type [32;1mu32[0m expected by the function
+   94 |   var call_mismatch = [32;1m(null as fn (i32, u32))[0m(1, [31;1m1[0m); # error
+[31;1m[Error][0m f_expr.fart:97: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   97 |   var index_u32 : [32;1mbool[0m = [31;1m(0 as i32[])[0u32][0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:98: expected an unsigned type, got type [31;1mi32[0m instead
+   98 |   var index_i32 = (0 as i32[])[[31;1m0[0m]; # error
+[31;1m[Error][0m f_expr.fart:99: expected an array type, got type [31;1mi32[0m instead
+   99 |   var index_not_array = [31;1m(0 as i32)[0m[0u32]; # error
+[31;1m[Error][0m f_expr.fart:100: expected an array type, got type [31;1mfn () -> i32[][0m instead
+  100 |   var index_not_array_2 = [31;1m(0 as fn () -> i32[])[0m[0u32]; # error
+[31;1m[Error][0m f_expr.fart:101: expected an unsigned type, got type [31;1mf32[0m instead
+  101 |   var index_not_unsigned = (0 as i32[])[[31;1m0.[0m]; # error
+[31;1m[Error][0m f_expr.fart:102: expected an unsigned type, got type [31;1mbool[0m instead
+  102 |   var index_not_unsigned_2 = (0 as i32[])[[31;1mtrue[0m]; # error
+[31;1m[Error][0m f_expr.fart:103: expected an unsigned type, got type [31;1mnil[0m instead
+  103 |   var index_not_unsigned_3 = (0 as i32[])[[31;1mnull[0m]; # error
+[31;1m[Error][0m f_expr.fart:104: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+  104 |   var index_u8 : [32;1mbool[0m = [31;1m(0 as i32[])['a'][0m; # correct, type i32
+[31;1m[Error][0m f_expr.fart:105: expected expression to be of type [32;1mi32[0m, got type [31;1mbool[0m instead
+  105 |   var index_3d : [32;1mi32[0m = [31;1m(0 as bool[][][])['a'][2u32][4u16][0m; # correct, type bool
+[31;1m[Error][0m f_expr.fart:106: expected expression to be of type [32;1mbool[0m, got type [31;1mbool[][][0m instead
+  106 |   var index_3d_partial : [32;1mbool[0m = [31;1m(0 as bool[][][])[9u32][0m; # correct, type bool[][]

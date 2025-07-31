@@ -1,0 +1,107 @@
+class Main {
+  # Allocation
+  var alloc_i32_signed : bool = [i32] * 5; # error
+  var alloc_i32_baseType : bool = [Hello] * 5u32; # error
+  var alloc_i32_1d : bool = [i32] * 5u32; # correct, type i32[]
+  var alloc_i32_2d : bool = [i32[]] * 5u32; # correct, type i32[][]
+  var alloc_Main_1d : bool = [Main] * 5u32; # correct, type Main[]
+  var alloc_Main_2d : bool = [Main[]] * 5u32; # correct, type Main[][]
+
+  # Ternary operator
+  var tern_i32: bool = 3 if true else 5; # correct, type i32
+  var tern_cond = 3 if 4 else 5.; # error
+  # Testing type unification using ternary operator
+  var tern_signed: bool = 3 if true else 5i64; # correct, type i64
+  var tern_unsigned: bool = 'a' if true else 5u32; # correct, type u32
+  var tern_float: bool = 3.f64 if true else 5.; # correct, type f64
+  var tern_f32: bool = 3 if true else 5.; # correct, type f32
+
+  # Bitwise operator
+  var bit_i32: bool = 3 ^ 5; # correct, type i32
+  var bit_u16: bool = 3u16 | 5u16; # correct, type u16
+  var bit_sign = 3 & 5u32; # error
+  var bit_not: bool = ~9; # correct, type i32
+  var bit_mismatch = 3u8 & 5u16; # error
+  var bit_f32 = 1. ^ 2.; # error
+  var bit_bool = true ^ false; # error
+  var bit_nested_bool = (true & true) ^ false; # error
+
+  # Logic operator
+  var logic_and: i32 = true and false; # correct, type bool
+  var logic_or: i32 = false or true; # correct, type bool
+  var logic_i32 = false or 5; # error
+  var logic_str = "hello" and true; # error
+  var logic_nested_str = false and "hello" and true; # error
+
+  # Comparison operator
+  var comp_lt_i32_0: i32 = 3 < 5i16; # correct, type bool
+  var comp_lt_i32: i32 = 3 < 5i16 <= 7i8; # correct, type bool
+  var comp_gt_fail2 = 3 > 'a' >= 7; # error
+  var comp_gt_fail3 = 3 > 5i16 >= 't'; # error
+  var comp_eq_f64: i32 = 3. == 5. != 7.f64; # correct, type bool
+  var comp_mix = 3 < 5u32 <= 7.; # error
+  var comp_wrong = 3 < true; # error
+  var comp_non_numeric : i32 = "hello" == "world"; # correct, type bool
+  var comp_non_numeric_2 = (1 as i32[]) < (2 as Main); # error
+
+  # Shift operator
+  var shift_i32 : bool = 3 << 5u32; # correct, type i32
+  var shift_u16 : bool = 3u16 << 'h'; # correct, type u16
+  var shift_not_integral = 3. << 3u32; # error
+  var shift_not_unsigned = 3 << 3; # error
+
+  # Arithmetic operator
+  var arith_i32 : bool = 3 + 5; # correct, type i32
+  var arith_3_op_i32 : bool = 3 - 5 - 7; # correct, type i32
+  var arith_unify_u32 : bool = 3u8 * 5u16 * 7u32; # correct, type u32
+  var arith_unify_f32 : bool = 3i8 / 5i16 / 7.; # correct, type f32
+  var arith_unify_f64 : bool = 3u8 + 3.f64; # correct, type f64
+  var arith_unify_signed_unsigned = 3 - 5u32; # error
+  var arith_unify_non_numeric = 3 * false; # error
+  var arith_rem : bool = 3 % 5; # correct, type i32
+  var arith_rem_integral_1 = 3. % 5; # error
+  var arith_rem_integral_2 = 3 % 3.f64; # error
+  var arith_neg : bool = -3; # correct, type i32
+  var arith_neg_unsigned = -3u32; # error
+  var arith_neg_non_numeric = -true; # error
+  var arith_lneg : i32 = not true; # error
+  var arith_lneg_non_bool : i32 = not 10; # correct, type bool
+
+  # Cast operator
+  var cast_as_i32 : bool = 10u32 as i32; # correct, type i32
+  var cast_as_i32_2 : bool = 10u16 as i32; # correct, type i32
+  var cast_as_any : bool = 10 as any; # correct, type any
+  var cast_is_i32 : i32 = (1 as any) is i32; # correct, type bool
+  var cast_is_u32 : i32 = (1 as any) is u32; # correct, type bool
+  var cast_is_fail : i32 = 1 is u32; # error
+  var cast_into_any : bool = 1 into any; # correct, type any
+  var cast_into_i32 : bool = (1 as any) into i32; # correct, type i32
+  var cast_into_Main : bool = null into Main; # correct, type Main
+  var cast_into_any_2 : bool = null into any; # correct, type any
+  var cast_into_bool = null into bool; # error
+  var cast_into_fn = null into fn (i32) -> u32; # error
+  var cast_into_i64 : bool = 1 into i64; # correct, type i64
+  var cast_into_i8 : bool = 1 into i8; # correct, type i32
+  var cast_into_f32 : bool = 1 into f32; # correct, type i32
+
+  # Call operator
+  var call_empty : bool = (null as fn ())(); # correct, type void
+  var call_args : bool = (null as fn (i32, u8[]))(10, "hello"); # correct, type void
+  var call_ret : bool = (null as fn (u32, f64) -> i32)(10u32, 69.f64); # correct, type i32
+  var call_not_fn = (null as (fn (u32, f64) -> i32)[])(10u32, 69.f64); # error
+  var call_fewer_args = (null as fn (i32, i32, i32))(1); # error
+  var call_more_args = (null as fn (i32))(1, 1, 1); # error
+  var call_mismatch = (null as fn (i32, u32))(1, 1); # error
+
+  # Index operator
+  var index_u32 : bool = (0 as i32[])[0u32]; # correct, type i32
+  var index_i32 = (0 as i32[])[0]; # error
+  var index_not_array = (0 as i32)[0u32]; # error
+  var index_not_array_2 = (0 as fn () -> i32[])[0u32]; # error
+  var index_not_unsigned = (0 as i32[])[0.]; # error
+  var index_not_unsigned_2 = (0 as i32[])[true]; # error
+  var index_not_unsigned_3 = (0 as i32[])[null]; # error
+  var index_u8 : bool = (0 as i32[])['a']; # correct, type i32
+  var index_3d : i32 = (0 as bool[][][])['a'][2u32][4u16]; # correct, type bool
+  var index_3d_partial : bool = (0 as bool[][][])[9u32]; # correct, type bool[][]
+}

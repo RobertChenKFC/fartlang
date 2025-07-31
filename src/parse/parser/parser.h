@@ -53,7 +53,9 @@ typedef void (*ParserObjectDestructor)(void *object);
 // RHS of each CFG rule in string form for printing relavent information when
 // conflict occurs during the construction of the parser, and a vector
 // "conflictResolution" of integers, where the i-th integer corresponds to the
-// action to choose for the i-th conflict
+// action to choose for the i-th conflict. An additional "htmlFilePath" can be
+// provided for the parser to write the LR(1)/LALR(1) state graph in a human
+// readable format
 struct ParserConfig {
   Lexer *lexer;
   CFG *cfg;
@@ -64,6 +66,7 @@ struct ParserConfig {
   Vector *lhsStrings;
   Vector *rhsStrings;
   Vector *conflictResolution;
+  const char *htmlFilePath;
 };
 
 // A struct containing a compressed table of a LR(1) or LALR(1) transition

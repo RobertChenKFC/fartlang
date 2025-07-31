@@ -1,0 +1,44 @@
+class Main {
+  f() {
+    return; # correct
+    return 3; # error
+    if true {
+      return; # correct
+      return true; # error
+    }
+  }
+
+  g() -> f32 {
+    return 1.; # correct
+    return; # error
+    return true; # error
+    return 2; # correct
+    return null; # error
+  }
+
+  new() {
+    return 3; # error
+    return null; # error
+    return; # correct
+  }
+
+  fn h() -> bool {
+    return true; # correct
+    return 3 == 5; # correct
+    return Main.f(null); # error
+    return Main.g(null); # error
+    return; # correct
+  }
+
+  fn empty() -> i32 {
+  } # error
+
+  empty2() -> u32 {
+    var x = 5;
+  } # error
+}
+
+class Foo {
+  new() {
+  } # correct
+}

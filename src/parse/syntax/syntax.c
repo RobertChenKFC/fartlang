@@ -74,7 +74,6 @@ enum {
   F32,
   BOOL,
   ANY,
-  VOID,
   COMMA,
   EQ,
   IF,
@@ -103,6 +102,7 @@ enum {
   FLOAT_LITERAL,
   STRING_LITERAL,
   CHAR_LITERAL,
+  NEW,
   SWITCH,
   CASE,
   DEFAULT,
@@ -144,6 +144,7 @@ enum {
   VAR_INIT,
   VAR_NAME,
   EXPR,
+  EXPR_ALLOC,
   EXPR_TERNARY,
   EXPR_LOGIC_OR,
   EXPR_LOGIC_AND,
@@ -163,7 +164,7 @@ enum {
   INT_LITERAL_TERM,
   METHOD_DECLS,
   METHOD_DECL,
-  METHOD_DECL_PREFIX,
+  CONSTRUCTOR,
   METHOD_DECL_BODY,
   BODY,
   PARAM_LIST,
@@ -295,7 +296,6 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, f32_, RegexFromString("f32"));
     ADD_REGEX_CHAIN(chain, bool_, RegexFromString("bool"));
     ADD_REGEX_CHAIN(chain, any_, RegexFromString("any"));
-    ADD_REGEX_CHAIN(chain, void_, RegexFromString("void"));
     ADD_REGEX_CHAIN(chain, comma_, RegexFromLetter(','));
     ADD_REGEX_CHAIN(chain, eq_, RegexFromLetter('='));
     ADD_REGEX_CHAIN(chain, if_, RegexFromString("if"));
@@ -395,6 +395,7 @@ Lexer *SyntaxCreateLexer(void) {
         tick_, RegexFromUnion(2, notTickBackslash_, RegexFromConcat(2,
             backslash_, REGEX_ANY)),
         tick_));
+    ADD_REGEX_CHAIN(chain, new_, RegexFromString("new"));
     ADD_REGEX_CHAIN(chain, switch_, RegexFromString("switch"));
     ADD_REGEX_CHAIN(chain, case_, RegexFromString("case"));
     ADD_REGEX_CHAIN(chain, default_, RegexFromString("default"));
@@ -484,7 +485,6 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, f32_) == F32);
     assert(LexerConfigAddRegex(lexerConfig, bool_) == BOOL);
     assert(LexerConfigAddRegex(lexerConfig, any_) == ANY);
-    assert(LexerConfigAddRegex(lexerConfig, void_) == VOID);
     assert(LexerConfigAddRegex(lexerConfig, comma_) == COMMA);
     assert(LexerConfigAddRegex(lexerConfig, eq_) == EQ);
     assert(LexerConfigAddRegex(lexerConfig, if_) == IF);
@@ -513,6 +513,7 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, float_literal_) == FLOAT_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, string_literal_) == STRING_LITERAL);
     assert(LexerConfigAddRegex(lexerConfig, char_literal_) == CHAR_LITERAL);
+    assert(LexerConfigAddRegex(lexerConfig, new_) == NEW);
     assert(LexerConfigAddRegex(lexerConfig, switch_) == SWITCH);
     assert(LexerConfigAddRegex(lexerConfig, case_) == CASE);
     assert(LexerConfigAddRegex(lexerConfig, default_) == DEFAULT);
@@ -580,6 +581,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == VAR_INIT);
       assert(CFGAddVariable(cfg) == VAR_NAME);
       assert(CFGAddVariable(cfg) == EXPR);
+      assert(CFGAddVariable(cfg) == EXPR_ALLOC);
       assert(CFGAddVariable(cfg) == EXPR_TERNARY);
       assert(CFGAddVariable(cfg) == EXPR_LOGIC_OR);
       assert(CFGAddVariable(cfg) == EXPR_LOGIC_AND);
@@ -599,7 +601,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == INT_LITERAL_TERM);
       assert(CFGAddVariable(cfg) == METHOD_DECLS);
       assert(CFGAddVariable(cfg) == METHOD_DECL);
-      assert(CFGAddVariable(cfg) == METHOD_DECL_PREFIX);
+      assert(CFGAddVariable(cfg) == CONSTRUCTOR);
       assert(CFGAddVariable(cfg) == METHOD_DECL_BODY);
       assert(CFGAddVariable(cfg) == BODY);
       assert(CFGAddVariable(cfg) == PARAM_LIST);
@@ -737,7 +739,11 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerVarName,
           VAR_NAME, 1, IDENTIFIER);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
-          EXPR, 1, EXPR_TERNARY);
+          EXPR, 1, EXPR_ALLOC);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprAlloc,
+          EXPR_ALLOC, 5, LBRACK, TYPE, RBRACK, MUL, EXPR);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          EXPR_ALLOC, 1, EXPR_TERNARY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprTernary,
           EXPR_TERNARY, 5, EXPR_LOGIC_OR, IF, EXPR_LOGIC_OR,
           ELSE, EXPR_LOGIC_OR);
@@ -821,6 +827,8 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           EXPR_ACCESS, 3, EXPR_ACCESS, LBRACK, RBRACK);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMemberAccess,
           EXPR_ACCESS, 3, EXPR_ACCESS, DOT, IDENTIFIER);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprMemberAccess,
+          EXPR_ACCESS, 3, EXPR_ACCESS, DOT, NEW);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprInc,
           EXPR_ACCESS, 2, EXPR_ACCESS, ADD_ADD);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprDec,
@@ -863,9 +871,13 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           METHOD_DECLS, 2, METHOD_DECLS, METHOD_DECL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecls,
           METHOD_DECLS, 0);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          METHOD_DECL, 1, CONSTRUCTOR);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDecl,
           METHOD_DECL, 7, METHOD_DECL_MODIFIERS,
           IDENTIFIER, LPAREN, PARAM_LIST, RPAREN, RETURN_TYPE, METHOD_DECL_BODY);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerConstructor,
+          CONSTRUCTOR, 5, NEW, LPAREN, PARAM_LIST, RPAREN, METHOD_DECL_BODY);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
           METHOD_DECL_MODIFIERS, 1, FN);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMethodDeclModifiers,
@@ -962,7 +974,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerSwitchDefault,
           SWITCH_DEFAULT, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
-          LABEL, 3, LBRACK, IDENTIFIER, RBRACK);
+          LABEL, 3, GT, IDENTIFIER, COL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerLabel,
           LABEL, 0);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerForStmt,
@@ -996,6 +1008,9 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           RETURN_STMT, 2, RETURN, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnStmt,
           RETURN_STMT, 3, RETURN, EXPR, SEMICOL);
+
+      // DEBUG
+      parserConfig->htmlFilePath = "visualize.html";
       
       // Create parser
       parser = ParserFromConfig(parserConfig);
@@ -1035,8 +1050,9 @@ SyntaxAST *SyntaxParseFile(FILE *file, const char *filename) {
 }
 
 void SyntaxASTDelete(void *p) {
-  if (!p)
+  if (!p) {
     return;
+  }
 
   SyntaxAST *node = p;
   SyntaxASTDelete(node->firstChild);

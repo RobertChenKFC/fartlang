@@ -1,0 +1,78 @@
+import dir1.file6;
+import dir1.file7;
+
+class Main {
+  var x = this; # error
+
+  new() {
+    var x0 : bool = this; # correct, type Main
+  }
+
+  hey() {
+    var x0 : bool = this; # correct, type Main
+  }
+
+  fn hello() {
+    var x0 = this; # error
+  }
+}
+
+class Foo {
+  new() {
+    var x0 : bool = this; # correct, type Foo
+  }
+
+  hey() {
+    var x0 : bool = this; # correct, type Foo
+  }
+}
+
+class Bar {
+  var x : i32;
+  static var y : u32;
+  var z : Bar;
+
+  new(p1: Main, p2: Foo) {
+    var x0 : bool = this.x; # correct, type i32
+    var x1 = Bar.x; # error
+    var y0 = this.y; # error
+    var y1 : bool = Bar.y; # correct, type u32
+    var z0 = this.foo; # error
+    var z1 = Bar.foo; # error
+  }
+
+  f1(a: f32, b: f64) -> f64
+
+  fn f2(a: u8, b: bool)
+
+  f3() {
+    var bar : bool = Bar.new(); # error
+    var bar_2 = Bar.new(null); # error
+    var bar_3 = Bar.new(null, null, null); # error
+    var bar_4 = Bar.new(1, null); # error
+    var bar_5 : bool = Bar.new(null, null); # correct, type Bar
+    var bar_new : bool = Bar.new; # correct, type fn (Main, Foo) -> Bar
+    var this_new = this.new; # error
+
+    var this_f1_call : bool = this.f1(1., 1.f64); # correct, type f64
+    var this_f1 : bool = this.f1; # correct, type fn (f32, f64) -> f64
+    var bar_f1 : bool = Bar.f1; # correct, type fn (Bar, f32, f64) -> f64
+    var this_f = this.f(); # error
+  }
+
+  f4() {
+    var x0 : Bar.x; # error
+    var x1 : Bar.f1; # error
+    var x1 : Bar.a.b; # error
+    var y0 : i32; # correct
+    var z0 : y0; # error
+  }
+
+  f5() {
+    var z10 : bool = (null as Bar).z.z.z.z.z.z.z.z.z.z; # correct, type Bar
+    var namespace = file6; # error
+    var namespace_class = file6.Foo; # error
+    var namespace_class_var = file6.Foo.x; # error
+    var namespace_class_static : Bar = file6.Foo.y; # correct, type u32
+  }
+}
