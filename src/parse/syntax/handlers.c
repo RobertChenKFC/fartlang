@@ -1809,6 +1809,7 @@ ParserDeclareHandler(SyntaxHandlerBreakStmt, rhs) {
     char c = identifier_->str[identifier_->length];
     identifier_->str[identifier_->length] = '\0';
     label->string = strdup(identifier_->str);
+    label->stringLoc = identifier_->loc;
     identifier_->str[identifier_->length] = c;
     label->loc = identifier_->loc;
     LexerTokenDelete(identifier_);

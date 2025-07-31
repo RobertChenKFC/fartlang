@@ -221,6 +221,10 @@ struct SemaFileCtx {
   // The symbol info of the current method we are semantic checking. If we are
   // not currently in any method, this will be set to NULL
   SemaSymInfo *methodSymInfo;
+  // The number of loop nests we are currently in. For instance, if we are
+  // inside a while loop that is inside a for loop, this value will be 2. If
+  // we are not inside any loop, this value will be 0
+  int numLoopNests;
 };
 
 // The context of the current semantic checking. The purpose of each field is

@@ -1,0 +1,28 @@
+[31;1m[Error][0m f_break_stmt.fart:3: [31;1mbreak[0m used outside of a loop
+    3 |     [31;1mbreak;[0m # error
+[31;1m[Error][0m f_break_stmt.fart:4: [31;1mbreak[0m used outside of a loop
+    4 |     [31;1mbreak x;[0m # error
+[31;1m[Error][0m f_break_stmt.fart:4: identifier [31;1mx[0m is not defined
+    4 |     break [31;1mx[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:35: reuse of identifier [31;1mx[0m for label declaration
+   35 |     [31;1m> x:[0m # error
+[31;1m[Error][0m f_break_stmt.fart:9: [31;1mx[0m is not a label
+    9 |       break [31;1mx[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:17: identifier [31;1mlabel3[0m is not defined
+   17 |           break [31;1mlabel3[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:22: identifier [31;1mlabel2[0m is not defined
+   22 |           break [31;1mlabel2[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:30: identifier [31;1mlabel[0m is not defined
+   30 |       break [31;1mlabel[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:31: identifier [31;1mlabel2[0m is not defined
+   31 |       break [31;1mlabel2[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:32: identifier [31;1mlabel3[0m is not defined
+   32 |       break [31;1mlabel3[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:33: [31;1mvalue[0m is not used in an access operator
+   33 |       break [31;1mMain[0m; # error
+[31;1m[Error][0m f_break_stmt.fart:37: [31;1mbreak[0m used outside of a loop
+   37 |     [31;1mbreak;[0m # error
+[31;1m[Error][0m f_break_stmt.fart:38: [31;1mbreak[0m used outside of a loop
+   38 |     [31;1mbreak label;[0m # error
+[31;1m[Error][0m f_break_stmt.fart:38: identifier [31;1mlabel[0m is not defined
+   38 |     break [31;1mlabel[0m; # error

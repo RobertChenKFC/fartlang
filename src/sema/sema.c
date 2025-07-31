@@ -434,6 +434,11 @@ bool SemaValueIsLabel(SyntaxAST *value);
 // function above
 bool SemaTypeCheckWhileStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
+// Returns true if and only if the break "stmt" is contained within a loop,
+// and the break label (if provided) is actually of label type. The remaining
+// arguments are used in the same way as the type check function above
+bool SemaTypeCheckBreakStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -484,6 +489,7 @@ SemaFileCtx *SemaFileCtxNew(
   fileCtx->scopes = VectorNew();
   fileCtx->classType = NULL;
   fileCtx->methodSymInfo = NULL;
+  fileCtx->numLoopNests = 0;
 
   SemaASTInit(node, SemaASTInitAddAllFiles, fileCtx);
   return fileCtx;
@@ -2535,6 +2541,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckForStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_WHILE_STMT:
       return SemaTypeCheckWhileStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_BREAK_STMT:
+      return SemaTypeCheckBreakStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2825,8 +2833,11 @@ bool SemaCheckErrorForUncapturableValue(
   if (SemaValueIsCapturable(value)) {
     return true;
   }
-  if (!SemaValueIsLabel(value) &&
-      parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
+  if (SemaValueIsLabel(value)) {
+    if (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_BREAK_STMT) {
+      return true;
+    }
+  } else if (parentExpr && parentExpr->kind == SYNTAX_AST_KIND_MEMBER_ACCESS) {
     // If "value" is not capturable and is not a label, then it is a class
     // or namespace. If the "parentExpr" that uses "value" is a member access,
     // then no uncapturable value is used
@@ -3397,10 +3408,12 @@ bool SemaTypeCheckForStmt(
   }
 
   // Type check body
+  ++fileCtx->numLoopNests;
   if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
     body->semaInfo.skipAnalysis = true;
     success = false;
   }
+  --fileCtx->numLoopNests;
 
   SemaPopScope(fileCtx, symbolTable);
 
@@ -3473,7 +3486,6 @@ CLEANUP:
     symbolType->semaInfo.skipAnalysis = true;
   }
   return false;
-
 }
 
 bool SemaPopulateLabel(
@@ -3533,12 +3545,52 @@ bool SemaTypeCheckWhileStmt(
   }
 
   // Type check body
+  ++fileCtx->numLoopNests;
   if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
     success = false;
     body->semaInfo.skipAnalysis = true;
   }
+  --fileCtx->numLoopNests;
 
   SemaPopScope(fileCtx, symbolTable);
+
+  return success;
+}
+
+bool SemaTypeCheckBreakStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *label = stmt->firstChild;
+  bool success = true;
+  if (fileCtx->numLoopNests == 0) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, stmt->loc.from.lineNo + 1);
+    fprintf(stderr, SOURCE_COLOR_RED"break"SOURCE_COLOR_RESET" used outside of "
+        "a loop\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &stmt->loc);
+    success = false;
+  }
+
+  if (label) {
+    assert(label->kind == SYNTAX_AST_KIND_LABEL);
+    // We modify the label kind to an identifier so that the type checking
+    // function can correctly lookup its type
+    label->kind = SYNTAX_AST_KIND_IDENTIFIER;
+    SemaType *labelType = SemaTypeFromTerm(
+        label, /*parentExpr=*/stmt, symbolTable, fileCtx);
+    if (!labelType) {
+      success = false;
+      label->semaInfo.skipAnalysis = true;
+    } else if (!SemaValueIsLabel(label)) {
+      fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+              " %s:%d: ", fileCtx->path, label->loc.from.lineNo + 1);
+      fprintf(stderr, SOURCE_COLOR_RED"%s"SOURCE_COLOR_RESET" is not a label\n",
+          label->string);
+      SourceLocationPrint(
+          fileCtx->source, 1, SOURCE_COLOR_RED, &label->loc);
+      success = false;
+    }
+  }
 
   return success;
 }
