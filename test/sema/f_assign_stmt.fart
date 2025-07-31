@@ -46,6 +46,8 @@ class Main {
     x -= "hello"; # error
     x *= 2; # correct
     x *= null; # error
+    x *= 5.; # error
+    this.t2 /= 5.; # error
     x /= 3i16; # correct
     x /= this; # error
     x %= 10; # correct

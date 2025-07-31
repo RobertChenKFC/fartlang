@@ -10,6 +10,7 @@ class Main {
     # For loops with incorrect loop condition
     for this.f(); this.f(); this.f() {} # error
     for var i = 0; i; i++ {} # error
+    for ; 3 + 5.; i++ {} # error
 
     # For loops with different initialization
     for var i = 0, j = 5, i = 3; ; {} # error

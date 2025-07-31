@@ -30,27 +30,31 @@
    46 |     [33;1mx[0m -= [34;1m"hello"[0m; # error
 [31;1m[Error][0m f_assign_stmt.fart:48: unification of [33;1mi32[0m and [34;1mnil[0m result in non-numeric type [31;1many[0m
    48 |     [33;1mx[0m *= [34;1mnull[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:50: unification of [33;1mi32[0m and [34;1mMain[0m result in non-numeric type [31;1many[0m
-   50 |     [33;1mx[0m /= [34;1mthis[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:53: expected integral type, got [31;1mf32[0m instead
-   53 |     [31;1mx2[0m %= 10; # error
-[31;1m[Error][0m f_assign_stmt.fart:55: expected unsigned type for shift operand, got [31;1mi32[0m instead
-   55 |     x <<= [31;1m3[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:57: expected unsigned type for shift operand, got [31;1mf32[0m instead
-   57 |     x >>= [31;1mx2[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:59: bitwise operand of type [31;1mi16[0m does not match first operand of type [32;1mi32[0m
-   59 |     [32;1mx[0m &= [31;1m1i16[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:61: bitwise operand of type [31;1mf32[0m does not match first operand of type [32;1mi32[0m
-   61 |     [32;1mx[0m ^= [31;1mx2[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:63: bitwise operand of type [31;1mbool[0m does not match first operand of type [32;1mi32[0m
-   63 |     [32;1mx[0m |= [31;1mtrue[0m; # error
-[31;1m[Error][0m f_assign_stmt.fart:66: expected numeric type, got [31;1mu8[][0m instead
-   66 |     [31;1mthis.t1[0m++; # error
-[31;1m[Error][0m f_assign_stmt.fart:67: [31;1moperand[0m of increment expression is not assignable
-   67 |     [31;1mMain.g().t2[0m++; # error
-[31;1m[Error][0m f_assign_stmt.fart:70: [31;1moperand[0m of increment expression is not assignable
-   70 |     [31;1mx2++[0m++; # error
-[31;1m[Error][0m f_assign_stmt.fart:71: assignment expresssion of type [31;1mi64[0m cannot be implictly cast to LHS type [32;1mf32[0m
-   71 |     [32;1mx2[0m = [31;1mx++ + y--[0m; # correct, type i64
-[31;1m[Error][0m f_assign_stmt.fart:72: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi64[0m
-   72 |     [32;1my[0m = [31;1mx++ + x2--[0m; # correct, type f32
+[31;1m[Error][0m f_assign_stmt.fart:49: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   49 |     [32;1mx[0m *= [31;1m5.[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:50: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi32[0m
+   50 |     [32;1mthis.t2[0m /= [31;1m5.[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:52: unification of [33;1mi32[0m and [34;1mMain[0m result in non-numeric type [31;1many[0m
+   52 |     [33;1mx[0m /= [34;1mthis[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:55: expected integral type, got [31;1mf32[0m instead
+   55 |     [31;1mx2[0m %= 10; # error
+[31;1m[Error][0m f_assign_stmt.fart:57: expected unsigned type for shift operand, got [31;1mi32[0m instead
+   57 |     x <<= [31;1m3[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:59: expected unsigned type for shift operand, got [31;1mf32[0m instead
+   59 |     x >>= [31;1mx2[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:61: bitwise operand of type [31;1mi16[0m does not match first operand of type [32;1mi32[0m
+   61 |     [32;1mx[0m &= [31;1m1i16[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:63: bitwise operand of type [31;1mf32[0m does not match first operand of type [32;1mi32[0m
+   63 |     [32;1mx[0m ^= [31;1mx2[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:65: bitwise operand of type [31;1mbool[0m does not match first operand of type [32;1mi32[0m
+   65 |     [32;1mx[0m |= [31;1mtrue[0m; # error
+[31;1m[Error][0m f_assign_stmt.fart:68: expected numeric type, got [31;1mu8[][0m instead
+   68 |     [31;1mthis.t1[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:69: [31;1moperand[0m of increment expression is not assignable
+   69 |     [31;1mMain.g().t2[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:72: [31;1moperand[0m of increment expression is not assignable
+   72 |     [31;1mx2++[0m++; # error
+[31;1m[Error][0m f_assign_stmt.fart:73: assignment expresssion of type [31;1mi64[0m cannot be implictly cast to LHS type [32;1mf32[0m
+   73 |     [32;1mx2[0m = [31;1mx++ + y--[0m; # correct, type i64
+[31;1m[Error][0m f_assign_stmt.fart:74: assignment expresssion of type [31;1mf32[0m cannot be implictly cast to LHS type [32;1mi64[0m
+   74 |     [32;1my[0m = [31;1mx++ + x2--[0m; # correct, type f32

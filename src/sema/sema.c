@@ -429,6 +429,11 @@ bool SemaPopulateLabel(
 // be type checked by SemaTypeFromExpr or SemaTypeFromTerm before being passed
 // to this function
 bool SemaValueIsLabel(SyntaxAST *value);
+// Returns true if and only if the condition and body of the while "stmt" type
+// checks. The remaining arguments are used in the same way as the type check
+// function above
+bool SemaTypeCheckWhileStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -2528,6 +2533,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckSwitchStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_FOR_STMT:
       return SemaTypeCheckForStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_WHILE_STMT:
+      return SemaTypeCheckWhileStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2990,7 +2997,7 @@ SemaType *SemaTypeFromAssign(
     type = SemaTypeFromBitwiseOp(assign, symbolTable, fileCtx);
   }
   if (!type) {
-    goto CLEANUP;
+    goto ASSIGN_CLEANUP;
   }
 
   // Check if the type of the expression to assign can be implicitly cast
@@ -3035,8 +3042,9 @@ CLEANUP_RHS:
   rhs->semaInfo.skipAnalysis = true;
 CLEANUP_LHS:
   lhs->semaInfo.skipAnalysis = true;
-CLEANUP:
+ASSIGN_CLEANUP:
   assign->semaInfo.skipAnalysis = true;
+CLEANUP:
   return NULL;
 }
 
@@ -3368,6 +3376,7 @@ bool SemaTypeCheckForStmt(
         cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
     if (!condType) {
       cond->semaInfo.skipAnalysis = true;
+      success = false;
     } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
       fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
               " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
@@ -3376,7 +3385,7 @@ bool SemaTypeCheckForStmt(
       fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
       SourceLocationPrint(
           fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
-      cond->semaInfo.skipAnalysis = true;
+      success = false;
     }
   }
 
@@ -3384,11 +3393,13 @@ bool SemaTypeCheckForStmt(
   if (iter->kind != SYNTAX_AST_KIND_PLACEHOLDER && !SemaTypeFromExpr(
         iter, /*parentExpr=*/NULL, symbolTable, fileCtx)) {
     iter->semaInfo.skipAnalysis = true;
+    success = false;
   }
 
   // Type check body
   if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
     body->semaInfo.skipAnalysis = true;
+    success = false;
   }
 
   SemaPopScope(fileCtx, symbolTable);
@@ -3488,4 +3499,46 @@ bool SemaPopulateLabel(
 bool SemaValueIsLabel(SyntaxAST *value) {
   return value->kind == SYNTAX_AST_KIND_IDENTIFIER &&
     value->semaInfo.typeInfo.type->kind == SEMA_TYPE_KIND_LABEL;
+}
+
+bool SemaTypeCheckWhileStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *cond = stmt->firstChild;
+  SyntaxAST *body = cond->sibling;
+  SyntaxAST *label = body->sibling;
+
+  SemaPushScope(fileCtx);
+
+  // Type check label
+  bool success = true;
+  if (label && !SemaPopulateLabel(label, symbolTable, fileCtx)) {
+    success = false;
+  }
+
+  // Type check condition
+  SemaType *condType = SemaTypeFromExpr(
+      cond, /*parentExpr=*/NULL, symbolTable, fileCtx);
+  if (!condType) {
+    cond->semaInfo.skipAnalysis = true;
+    success = false;
+  } else if (!SemaTypeIsPrimType(condType, SEMA_PRIM_TYPE_BOOL)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, cond->loc.from.lineNo + 1);
+    fprintf(stderr, "expected type bool, got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, condType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &cond->loc);
+    success = false;
+  }
+
+  // Type check body
+  if (!SemaTypeCheckBody(body, symbolTable, fileCtx)) {
+    success = false;
+    body->semaInfo.skipAnalysis = true;
+  }
+
+  SemaPopScope(fileCtx, symbolTable);
+
+  return success;
 }
