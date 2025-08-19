@@ -58,7 +58,7 @@ Lexer *LexerFromConfig(LexerConfig *config) {
 
   // Assign state numbers to each FAState
   HashTable *toStateNo = HashTableNew(
-      FAStatePtrHash, FAStatePtrEqual, NULL, NULL);
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   int numStates = 0;
   for (FAState *state = dfa->init; state; state = state->next)
     HashTableEntryAdd(toStateNo, state, (void*)(long long)numStates++);

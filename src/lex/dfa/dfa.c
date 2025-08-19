@@ -228,7 +228,7 @@ FA *DFAFromNFAImpl(FA *nfa, Vector *regexNames) {
   // Construct a hashtable to convert from NFA states to indices, and an array
   // to convert from indices back to NFA states
   HashTable *nfaStateToIdx = HashTableNew(
-      FAStatePtrHash, FAStatePtrEqual, NULL, NULL);
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   for (FAState *state = nfa->init; state; state = state->next)
     HashTableEntryAdd(nfaStateToIdx, state, (void*)nfaStateToIdx->size);
   FAState **idxToNFAState = malloc(sizeof(FAState*) * nfaStateToIdx->size);
@@ -529,7 +529,7 @@ FA *DFAMinimize(FA *dfa) {
   DFAStateSet *rejectingSet = DFAStateSetNew();
   DFAStatePartitionAddSet(partition, rejectingSet);
   HashTable *toDFAState = HashTableNew(
-      FAStatePtrHash, FAStatePtrEqual, NULL, NULL);
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   for (FAState *state = dfa->init; state; state = state->next) {
     DFAState *dfaState = DFAStateNew(state, state == dfa->init);
     HashTableEntryAdd(toDFAState, state, dfaState);

@@ -42,10 +42,6 @@ ParserObject *ParserObjectFromObject(void *object);
 // it is a custom user object type, then deletes its contents with "destructor"
 void ParserObjectDelete(
     ParserObject *object, ParserObjectDestructor destructor);
-// A hash function for a pointer "a"; used in hash tables
-uint64_t ParserPtrHash(void *a);
-// An equal function for pointers "a" and "b"; used in hash tables
-bool ParserPtrEqual(void *a, void *b);
 // A hash function for LR1State "a", where each state with the same LR(0)
 // items returns the same hash value
 uint64_t ParserLALR1StateHash(void *a);
@@ -103,14 +99,6 @@ void ParserObjectDelete(
       break;
   }
   free(object);
-}
-
-uint64_t ParserPtrHash(void *a) {
-  return (uint64_t)a;
-}
-
-bool ParserPtrEqual(void *a, void *b) {
-  return a == b;
 }
 
 uint64_t ParserLALR1StateHash(void *a) {
@@ -227,7 +215,7 @@ Parser *ParserFromConfig(ParserConfig *config) {
   // and sorts its rules, thus changing the order of the rules and thus ruining
   // its relation with the order of the handlers.
   HashTable *toRuleNo = HashTableNew(
-      ParserPtrHash, ParserPtrEqual, NULL, NULL);
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   int numRules = rules->size + 1;
   int *lhses = malloc(sizeof(int) * numRules);
   int *numRHSes = malloc(sizeof(int) * numRules);
@@ -289,7 +277,7 @@ Parser *ParserFromConfig(ParserConfig *config) {
         ParserLALR1StateHash, ParserLALR1StateEqual, NULL, NULL);
   } else {
     toStateNo = HashTableNew(
-        ParserPtrHash, ParserPtrEqual, NULL, NULL);
+        HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   }
   Vector *stateNoToStateEntry = VectorNew();
   for (HashTableEntry *entry = states->head; entry;

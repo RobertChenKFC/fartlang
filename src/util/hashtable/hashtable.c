@@ -160,3 +160,11 @@ void HashTableEntryDelete(HashTable *table, HashTableEntry *entry) {
 
   --table->size;
 }
+
+void HashTablePtrHash(void *p) {
+  return (uint64_t)p;
+}
+
+bool HashTablePtrEqual(void *p, void *q) {
+  return p == q;
+}
