@@ -110,7 +110,7 @@ void FAPrintChar(unsigned char a, FILE *file) {
 }
 
 void FAPrint(FA *fa, FILE *file) {
-  HashTable *table = HashTableNew(FAStatePtrHash, FAStatePtrEqual,
+  HashTable *table = HashTableNew(HashTablePtrHash, HashTablePtrEqual,
                                   NULL, NULL);
   int idx = 1;
   for (FAState *state = fa->init; state; state = state->next)
@@ -199,14 +199,6 @@ void FAPrint(FA *fa, FILE *file) {
   fprintf(file, "}\n");
 
   HashTableDelete(table);
-}
-
-uint64_t FAStatePtrHash(void *state) {
-  return (uint64_t)state;
-}
-
-bool FAStatePtrEqual(void *state1, void *state2) {
-  return state1 == state2;
 }
 
 int FATransitionCmp(const void *a, const void *b) {

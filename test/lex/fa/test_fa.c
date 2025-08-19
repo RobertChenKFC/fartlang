@@ -34,7 +34,8 @@ int main() {
   FAPrint(fa, file);
 
   // 4. Test FA state pointers in hash table
-  HashTable *table = HashTableNew(FAStatePtrHash, FAStatePtrEqual, NULL, NULL);
+  HashTable *table = HashTableNew(
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
   HashTableEntryAdd(table, state, NULL);
   assert(HashTableEntryRetrieve(table, state));
   assert(HashTableEntryRetrieve(table, state2) == NULL);

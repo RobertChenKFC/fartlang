@@ -59,10 +59,6 @@ void FAStateAddTransition(FAState *state1, unsigned char a, FAState *state2);
 FAState *FAStateGetTransition(FAState *state1, unsigned char a);
 // Print the content of "fa" as a graph written in the DOT language into "file"
 void FAPrint(FA *fa, FILE *file);
-// A hash function for state pointer "a"; used in hash tables
-uint64_t FAStatePtrHash(void *a);
-// A equal function for state pointers "a" and "b"; used in hash tables
-bool FAStatePtrEqual(void *a, void *b);
 // A compare function for two FA transitions "a" and "b", which first compares
 // by the state that the transitions go to, then compares by character; used for
 // sorting

@@ -62,4 +62,10 @@ HashTableEntry *HashTableEntryRetrieve(HashTable *table, void *key);
 // Delete the hash table entry "entry" from "table"
 void HashTableEntryDelete(HashTable *table, HashTableEntry *entry);
 
+// Hash and equal functions
+// Uses the pointer "p" itself as the hash value
+void HashTablePtrHash(void *p);
+// Compares the pointers addresses "p" and "q" directly for equality
+bool HashTablePtrEqual(void *p, void *q);
+
 #endif // HASHTABLE_H

@@ -84,10 +84,6 @@ bool LR1ItemEqual(
 uint64_t LR1StateHash(void *a);
 // An equal function for a LR1States "a" and "b"; used in hash tables
 bool LR1StateEqual(void *a, void *b);
-// A hash function for a pointer "a"; used in hash tables
-uint64_t LR1PtrHash(void *a);
-// An equal function for pointers "a" and "b"; used in hash tables
-bool LR1PtrEqual(void *a, void *b);
 // Add auxiliary symbols: $end for EOF token to "tokens" and $accept for start
 // variable to "variables"
 void LR1AddAuxiliarySymbols(Vector *tokens, Vector *variables);
@@ -559,14 +555,6 @@ void LR1StateGraphDelete(LR1StateGraph *graph) {
   free(graph);
 }
 
-uint64_t LR1PtrHash(void *a) {
-  return (uint64_t)a;
-}
-
-bool LR1PtrEqual(void *a, void *b) {
-  return a == b;
-}
-
 void LR1AddAuxiliarySymbols(Vector *tokens, Vector *variables) {
   // Need to add extra token and variable strings, since a new EOF token and
   // start variable were added to the CFG when constructing the LR(1) graph
@@ -676,7 +664,8 @@ void LR1StateGraphPrintXML(
   LR1AddAuxiliarySymbols(tokens, variables);
 
   Vector *rules = cfg->rules;
-  HashTable *rulesToIdx = HashTableNew(LR1PtrHash, LR1PtrEqual, NULL, NULL);
+  HashTable *rulesToIdx = HashTableNew(
+      HashTablePtrHash, HashTablePtrEqual, NULL, NULL);
 
   fprintf(file, "<?xml version=\"1.0\"?>\n");
   fprintf(file, "<lr1-state-graph>\n");
