@@ -64,7 +64,7 @@ void HashTableEntryDelete(HashTable *table, HashTableEntry *entry);
 
 // Hash and equal functions
 // Uses the pointer "p" itself as the hash value
-void HashTablePtrHash(void *p);
+uint64_t HashTablePtrHash(void *p);
 // Compares the pointers addresses "p" and "q" directly for equality
 bool HashTablePtrEqual(void *p, void *q);
 

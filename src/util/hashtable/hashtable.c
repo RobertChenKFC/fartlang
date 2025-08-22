@@ -161,7 +161,7 @@ void HashTableEntryDelete(HashTable *table, HashTableEntry *entry) {
   --table->size;
 }
 
-void HashTablePtrHash(void *p) {
+uint64_t HashTablePtrHash(void *p) {
   return (uint64_t)p;
 }
 
