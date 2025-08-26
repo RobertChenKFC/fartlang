@@ -67,5 +67,9 @@ void HashTableEntryDelete(HashTable *table, HashTableEntry *entry);
 uint64_t HashTablePtrHash(void *p);
 // Compares the pointers addresses "p" and "q" directly for equality
 bool HashTablePtrEqual(void *p, void *q);
+// Compute a rolling hash of the null-terminated ASCII string "key"
+uint64_t HashTableStringHash(void *key);
+// Compare two null-terminated ASCII strings for equality
+bool HashTableStringEqual(void *key1, void *key2);
 
 #endif // HASHTABLE_H

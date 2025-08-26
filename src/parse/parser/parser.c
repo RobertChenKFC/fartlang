@@ -727,19 +727,6 @@ void ParserDelete(Parser *parser) {
   free(parser);
 }
 
-#define PARSER_HASH_MOD 78885403583278429ULL
-uint64_t ParserStringHash(void *key) {
-  char *s = key, c;
-  uint64_t hash = 0;
-  for (int i = 0; (c = s[i]) != '\0'; ++i)
-    hash = (((hash * 129) % PARSER_HASH_MOD) + (s[i] + 1)) % PARSER_HASH_MOD;
-  return hash;
-}
-
-bool ParserStringEqual(void *key1, void *key2) {
-  return strcmp(key1, key2) == 0;
-}
-
 void ParserSyntaxError(
     Lexer *lexer, LexerToken *token, Vector *stack,
     ParserObjectDestructor destructor, Vector *currentRHS) {
