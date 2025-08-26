@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <string.h>
 
 // Helper functions
 // Initializes all fields of SemaCtx "ctx"
@@ -494,7 +495,7 @@ SemaFileCtx *SemaFileCtxNew(
   fileCtx->source = SourceFromFile(file);
   fileCtx->node = node;
   fileCtx->symbolTable = HashTableNew(
-      ParserStringHash, ParserStringEqual, NULL, NULL);
+      HashTableStringHash, HashTableStringEqual, NULL, NULL);
   fileCtx->scopes = VectorNew();
   fileCtx->classType = NULL;
   fileCtx->methodSymInfo = NULL;
@@ -530,7 +531,7 @@ bool SemaAddAllFiles(SemaCtx *ctx, const char *path) {
   // Record the set of imported file paths so that we do not import the same
   // file twice
   HashTable *importedFiles = HashTableNew(
-      ParserStringHash, ParserStringEqual, NULL, NULL);
+      HashTableStringHash, HashTableStringEqual, NULL, NULL);
   HashTableEntryAdd(importedFiles, (void*)path, fileCtx);
   // A heap-allocated buffer with expandable capacity to store the path of the
   // imported file
@@ -664,7 +665,7 @@ bool SemaPopulateClassSymbols(SemaCtx *ctx) {
         SemaType *type = malloc(sizeof(SemaType));
         type->kind = SEMA_TYPE_KIND_CLASS;
         type->memberTable = HashTableNew(
-            ParserStringHash, ParserStringEqual, NULL, NULL);
+            HashTableStringHash, HashTableStringEqual, NULL, NULL);
         type->node = classDecl;
         SemaTypeInfo *classTypeInfo = &classInfo->typeInfo;
         classTypeInfo->type = type;

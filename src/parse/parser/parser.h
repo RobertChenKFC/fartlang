@@ -136,11 +136,6 @@ void ParserToFile(Parser *parser, FILE *file);
 Parser *ParserFromFileImpl(
     FILE *file, Lexer *lexer, HashTable *handlerTable,
     ParserObjectDestructor destructor);
-// A hash function for character string "key". For use to lookup handler table
-// using handler name
-uint64_t ParserStringHash(void *key);
-// An equal function for two character strings "string1" and "string2"
-bool ParserStringEqual(void *key1, void *key2);
 // A function to create a parser from (1) "file" created with ParserToFile,
 // (2) "lexer" and (3) a custom object "destructor". Note that in order to use
 // this function, the macro PARSER_HANDLER_FILE_NAME must be defined to be
@@ -154,7 +149,7 @@ bool ParserStringEqual(void *key1, void *key2);
 Parser *ParserFromFile(
     FILE *file, Lexer *lexer, ParserObjectDestructor destructor) {
   HashTable *handlerTable = HashTableNew(
-      ParserStringHash, ParserStringEqual, NULL, NULL);
+      HashTableStringHash, HashTableStringEqual, NULL, NULL);
 
 #define PARSER_ADD_HANDLERS_TO_TABLE
 #include PARSER_HANDLER_FILE_NAME

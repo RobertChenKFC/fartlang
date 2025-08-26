@@ -1,5 +1,6 @@
 #include "util/hashtable/hashtable.h"
 #include <stdlib.h>
+#include <string.h>
 
 // Hash table capacities are always prime numbers, and every time a growth is
 // needed, the capacity grows to the next prime number greater than the current
@@ -167,4 +168,19 @@ uint64_t HashTablePtrHash(void *p) {
 
 bool HashTablePtrEqual(void *p, void *q) {
   return p == q;
+}
+
+#define HASHTABLE_STR_HASH_MOD 78885403583278429ULL
+uint64_t HashTableStringHash(void *key) {
+  char *s = key, c;
+  uint64_t hash = 0;
+  for (int i = 0; (c = s[i]) != '\0'; ++i) {
+    hash = (((hash * 129) % HASHTABLE_STR_HASH_MOD) + (s[i] + 1)) %
+        HASHTABLE_STR_HASH_MOD;
+  }
+  return hash;
+}
+
+bool HashTableStringEqual(void *key1, void *key2) {
+  return strcmp(key1, key2) == 0;
 }
