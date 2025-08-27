@@ -9,6 +9,7 @@ IrProgram *IrExamplesHello(void) {
   IrProgramSetEntryFunc(program, entryFunc);
   IrBasicBlock *entryBlock = IrBasicBlockAdd(entryFunc);
   IrFuncSetEntryBlock(entryFunc, entryBlock);
+  IrFuncSetExitBlock(entryFunc, entryBlock);
   IrVar *fd = IrFuncAddVar(entryFunc, IR_TYPE_I32);
   IrVar *hello = IrFuncAddVar(entryFunc, IR_TYPE_ADDR);
   IrVar *len = IrFuncAddVar(entryFunc, IR_TYPE_U64);

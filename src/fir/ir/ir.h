@@ -2,6 +2,7 @@
 #define IR_H
 
 #include "util/vector/vector.h"
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -152,6 +153,8 @@ struct IrOp {
   IrOp *nextOp;
   // The previous operation in the block
   IrOp *prevOp;
+  // The parent block of this operation
+  IrBasicBlock *block;
 
   // Separate members for each kind of operation
   union {
@@ -185,7 +188,7 @@ struct IrOp {
       // The destination variable
       IrVar *dst;
       union {
-        // IR_OP_KIND_CONST: the constant value
+        // IR_OP_KIND_CONST: the constant value stored in little-endian
         uint64_t val;
         // IR_OP_KIND_CONST_ADDR
         struct {
@@ -236,6 +239,8 @@ IrProgram *IrProgramNew(void);
 void IrProgramDelete(IrProgram *prog);
 // Set the entry function of "prog" to "func"
 void IrProgramSetEntryFunc(IrProgram *prog, IrFunc *func);
+// Get the entry function of "prog"
+IrFunc *IrProgramGetEntryFunc(IrProgram *prog);
 // Print the contents of "prog" to "file"
 void IrProgramPrint(FILE *file, IrProgram *prog);
 // Create a new FIR module, add it to the end of "prog" and return it
@@ -250,18 +255,42 @@ void IrFuncDelete(IrFunc *func);
 // The new basic block will have no condition variable and no true/false
 // successor blocks
 IrBasicBlock *IrBasicBlockAdd(IrFunc *func);
+// Get the first operation in "block"
+IrOp *IrBasicBlockGetFirstOp(IrBasicBlock *block);
+// Return true if and only if "block" is a conditional block
+bool IrBasicBlockIsCond(IrBasicBlock *block);
+// If "block" is a conditional basic block, return the variable that stores
+// the condition of "block", otherwise return NULL
+IrVar *IrBasicBlockGetCond(IrBasicBlock *block);
+// Return true if and only if "block" is the exit block of the parent function
+bool IrBasicBlockIsExit(IrBasicBlock *block);
+// If "block" is an exit basic block, return the variable that stores the
+// return value of the block, otherwise return NULL
+IrVar *IrBasicBlockGetRet(IrBasicBlock *block);
+// Get the next block to jump to from "block" if the condition evaluates to
+// true, or the next block to jump to unconditionally
+IrBasicBlock *IrBasicBlockGetTrueBlock(IrBasicBlock *block);
+// Get the next block to jump to from "block" if the condition evaluates to
+// false
+IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block);
 // Delete a "block" and all its operations
 void IrBasicBlockDelete(IrBasicBlock *block);
 // Set the entry basic block of "func" to "block"
 void IrFuncSetEntryBlock(IrFunc *func, IrBasicBlock *block);
 // Get the entry basic block of "func"
-void IrFuncGetEntryBlock(IrFunc *func);
+IrBasicBlock *IrFuncGetEntryBlock(IrFunc *func);
+// Set the exit basic block of "func" to "block"
+void IrFuncSetExitBlock(IrFunc *func, IrBasicBlock *block);
 // Create a new variable of type "type", add it to "func" and return it
 IrVar *IrFuncAddVar(IrFunc *func, IrType type);
 // Delete a "var"
 void IrVarDelete(IrVar *var);
 // Add "op" to the end of "block"
 void IrOpAppend(IrBasicBlock *block, IrOp *op);
+// Get the next operation of "op" in the block
+IrOp *IrOpGetNextOp(IrOp *op);
+// Get the basic block that contains "op"
+IrBasicBlock *IrOpGetParentBasicBlock(IrOp *op);
 // Create a new constant address operation with destination variable "var",
 // pointer to the constant data "addr", and length of the constant data "len"
 IrOp *IrOpNewConstAddr(IrVar *dst, uint8_t *addr, int len);
