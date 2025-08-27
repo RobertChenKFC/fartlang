@@ -184,3 +184,10 @@ uint64_t HashTableStringHash(void *key) {
 bool HashTableStringEqual(void *key1, void *key2) {
   return strcmp(key1, key2) == 0;
 }
+
+void HashTableClear(HashTable *table) {
+  for (HashTableEntry *entry = table->head, *next;
+       entry && (next = entry->nextInTable, true); entry = next) {
+    HashTableEntryDelete(table, entry);
+  }
+}

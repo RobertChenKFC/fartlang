@@ -1,6 +1,7 @@
 #include "fir/ir/ir.h"
 #include "util/hashtable/hashtable.h"
 #include <assert.h>
+#include <endian.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -115,6 +116,10 @@ void IrProgramSetEntryFunc(IrProgram *prog, IrFunc *func) {
   prog->entryFunc = func;
 }
 
+IrFunc *IrProgramGetEntryFunc(IrProgram *prog) {
+  return prog->entryFunc;
+}
+
 void IrProgramPrint(FILE *file, IrProgram *prog) {
   IrPrinter printer;
   IrPrinterInit(&printer, file);
@@ -174,6 +179,38 @@ IrBasicBlock *IrBasicBlockAdd(IrFunc *func) {
   return block;
 }
 
+IrOp *IrBasicBlockGetFirstOp(IrBasicBlock *block) {
+  return block->firstOp;
+}
+
+bool IrBasicBlockIsCond(IrBasicBlock *block) {
+  return block->falseBlock != NULL;
+}
+
+IrVar *IrBasicBlockGetCond(IrBasicBlock *block) {
+  return IrBasicBlockIsCond(block) ? block->cond : NULL;
+}
+
+bool IrBasicBlockIsExit(IrBasicBlock *block) {
+  if (!block->trueBlock) {
+    assert(block->func->exitBlock == block);
+    return true;
+  }
+  return false;
+}
+
+IrVar *IrBasicBlockGetRet(IrBasicBlock *block) {
+  return IrBasicBlockIsExit(block) ? block->ret : NULL;
+}
+
+IrBasicBlock *IrBasicBlockGetTrueBlock(IrBasicBlock *block) {
+  return block->trueBlock;
+}
+
+IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block) {
+  return block->falseBlock;
+}
+
 void IrBasicBlockDelete(IrBasicBlock *block) {
   IrForOp(block, op) {
     IrOpDelete(op);
@@ -183,6 +220,14 @@ void IrBasicBlockDelete(IrBasicBlock *block) {
 
 void IrFuncSetEntryBlock(IrFunc *func, IrBasicBlock *block) {
   func->entryBlock = block;
+}
+
+IrBasicBlock *IrFuncGetEntryBlock(IrFunc *func) {
+  return func->entryBlock;
+}
+
+void IrFuncSetExitBlock(IrFunc *func, IrBasicBlock *block) {
+  func->exitBlock = block;
 }
 
 IrVar *IrFuncAddVar(IrFunc *func, IrType type) {
@@ -197,7 +242,16 @@ void IrVarDelete(IrVar *var) {
 }
 
 void IrOpAppend(IrBasicBlock *block, IrOp *op) {
+  op->block = block;
   IrDoubleLinkedListAppend(block->firstOp, block->lastOp, op, prevOp, nextOp);
+}
+
+IrOp *IrOpGetNextOp(IrOp *op) {
+  return op->nextOp;
+}
+
+IrBasicBlock *IrOpGetParentBasicBlock(IrOp *op) {
+  return op->block;
 }
 
 IrOp *IrOpNewConstAddr(IrVar *dst, uint8_t *addr, int len) {
@@ -213,7 +267,7 @@ IrOp *IrOpNewConst(IrVar *dst, uint64_t val) {
   IrOp *op = malloc(sizeof(IrOp));
   op->kind = IR_OP_KIND_CONST;
   op->constant.dst = dst;
-  op->constant.val = val;
+  op->constant.val = htole64(val);
   return op;
 }
 

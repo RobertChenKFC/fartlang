@@ -19,5 +19,9 @@ void VectorDelete(Vector *vec);
 void VectorAdd(Vector *vec, void *elem);
 // Modify "vec" so that it at least has "capacity"
 void VectorReserve(Vector *vec, int capacity);
+// Remove all the elements from "vec", but do not free its capacity
+void VectorClear(Vector *vec);
+// Remove the last element from the "vec" and return it
+void *VectorPop(Vector *vec);
 
 #endif // VECTOR_H

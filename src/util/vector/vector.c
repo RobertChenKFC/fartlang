@@ -1,4 +1,5 @@
 #include "util/vector/vector.h"
+#include <assert.h>
 #include <stdlib.h>
 
 Vector *VectorNew() {
@@ -34,3 +35,11 @@ void VectorReserve(Vector *vec, int capacity) {
   }
 }
 
+void VectorClear(Vector *vec) {
+  vec->size = 0;
+}
+
+void *VectorPop(Vector *vec) {
+  assert(vec->size > 0);
+  return vec->arr[--vec->size];
+}
