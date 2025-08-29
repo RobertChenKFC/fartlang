@@ -108,4 +108,7 @@ class Main {
   static var x14 = Main.x14; # Error
   static var x15 = Main.x16, x16 = Main.x15; # Error
   static var x17 : bool = Main.x15; # Error
+  static var x18 = Main.x19; # Error
+  static var x19 = Main.x18; # Error
+  static var x20 = Main.x18; # Error
 }
