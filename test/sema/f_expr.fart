@@ -104,4 +104,8 @@ class Main {
   var index_u8 : bool = (0 as i32[])['a']; # correct, type i32
   var index_3d : i32 = (0 as bool[][][])['a'][2u32][4u16]; # correct, type bool
   var index_3d_partial : bool = (0 as bool[][][])[9u32]; # correct, type bool[][]
+
+  static var x14 = Main.x14; # Error
+  static var x15 = Main.x16, x16 = Main.x15; # Error
+  static var x17 : bool = Main.x15; # Error
 }
