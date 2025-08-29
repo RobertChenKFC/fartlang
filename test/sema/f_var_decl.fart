@@ -34,4 +34,7 @@ class Main {
 
   var x12 : fn () -> Foo; # Ok
   var x13 : fn (Foo); # Ok
+
+  var x14 = x14; # Error
+  var x15 = x16, x16 = x15; # Error
 }
