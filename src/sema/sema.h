@@ -241,8 +241,10 @@ void SemaInfoInit(SemaInfo *info);
 // are (recursively) imported. Assumes that "ctx" is either uninitialized or was
 // deleted by calling SemaCtxDelete, and modifies "ctx" before returning, which
 // must be deleted with SemaCtxDelete. Returns true if and only if the semantic
-// check returned no errors
-bool SemaCheck(SemaCtx *ctx, const char *path);
+// check returned no errors. If the bool flag "checkForMainFunc" is set to true,
+// the function additionally checks if the file pointed to by "path" contains
+// a Main class and a main method inside the class of type fn ()
+bool SemaCheck(SemaCtx *ctx, const char *path, bool checkForMainFunc);
 // Deletes all resources allocated in "ctx" when running SemaCheck
 void SemaCtxDelete(SemaCtx *ctx);
 // Deletes all resources allocated in the SemaInfo of AST "node"

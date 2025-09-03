@@ -17,10 +17,12 @@ int main(int argc, char **argv) {
   } else {
     assert(argc == 2);
     const char *path = argv[1];
-    bool success = path[GetFilenamePosition(path)] == 's';
+    int pos = GetFilenamePosition(path);
+    bool success = path[pos] == 's';
+    bool checkMain = path[pos + 1] == 'm';
 
     SemaCtx ctx;
-    assert(SemaCheck(&ctx, path) == success);
+    assert(SemaCheck(&ctx, path, checkMain) == success);
     SemaCtxDelete(&ctx);
   }
 }

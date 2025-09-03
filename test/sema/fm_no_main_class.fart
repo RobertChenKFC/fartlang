@@ -1,0 +1,10 @@
+import dir2.file4;
+
+class Foo {
+}
+
+class MainButNotMain {
+}
+
+class Bar {
+}

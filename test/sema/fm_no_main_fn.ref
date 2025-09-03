@@ -1,0 +1,2 @@
+[31;1m[Error][0m fm_no_main_fn.fart:1: missing main function in [31;1mMain[0m class
+    1 | class [31;1mMain[0m {
