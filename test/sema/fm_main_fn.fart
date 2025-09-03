@@ -1,0 +1,5 @@
+class Main {
+  main(x: f64) -> f32 {
+    return (x + 3) as f32;
+  }
+}

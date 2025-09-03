@@ -449,6 +449,10 @@ bool SemaTypeCheckReturnStmt(
 // Returns true if the method we are currently in expects a return expression,
 // ie. it is a method or function that does not return void
 bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx);
+// Return true if and only if the main SemaFileCtx (the first SemaFileCtx in
+// "ctx") contains a Main class, and the class contains a method main of type
+// fn ()
+bool SemaCheckForMainFunc(SemaCtx *ctx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -603,7 +607,7 @@ CLEANUP:
   return success;
 }
 
-bool SemaCheck(SemaCtx *ctx, const char *path) {
+bool SemaCheck(SemaCtx *ctx, const char *path, bool checkForMainFunc) {
   if (!SemaAddAllFiles(ctx, path)) {
     return false;
   }
@@ -617,6 +621,9 @@ bool SemaCheck(SemaCtx *ctx, const char *path) {
     return false;
   }
   if (!SemaTypeCheck(ctx)) {
+    return false;
+  }
+  if (checkForMainFunc && !SemaCheckForMainFunc(ctx)) {
     return false;
   }
   return true;
@@ -877,6 +884,7 @@ bool SemaPopulateMembers(SemaCtx *ctx) {
 
         SemaSymInfo *methodInfo = malloc(sizeof(SemaSymInfo));
         methodInfo->attr = methodAttr;
+        methodInfo->decl = methodDecl;
         methodDecl->semaInfo.symInfo = methodInfo;
         SemaTypeInfo *methodTypeInfo = &methodInfo->typeInfo;
         methodTypeInfo->type = methodType;
@@ -1512,8 +1520,11 @@ void SemaTypePrint(FILE *file, SemaType *type) {
         }
         SemaTypePrint(file, paramTypes->arr[i]);
       }
-      fprintf(file, ") -> ");
-      SemaTypePrint(file, type->retType);
+      fprintf(file, ")");
+      if (!SemaTypeIsPrimType(type->retType, SEMA_PRIM_TYPE_VOID)) {
+        fprintf(file, " -> ");
+        SemaTypePrint(file, type->retType);
+      }
       break;
     } case SEMA_TYPE_KIND_PRIM_TYPE: {
       switch (type->primType) {
@@ -3682,4 +3693,68 @@ bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx) {
   SemaType *retType = methodType->retType;
   bool isConstructor = methodSymInfo->attr == SEMA_ATTR_CTOR;
   return !isConstructor && !SemaTypeIsPrimType(retType, SEMA_PRIM_TYPE_VOID);
+}
+
+bool SemaCheckForMainFunc(SemaCtx *ctx) {
+  assert(ctx->fileCtxs->size > 0);
+  SemaFileCtx *fileCtx = ctx->fileCtxs->arr[0];
+  assert(fileCtx);
+  HashTable *symbolTable = fileCtx->symbolTable;
+  assert(symbolTable);
+  HashTableEntry *entry = HashTableEntryRetrieve(symbolTable, "Main");
+  if (!entry) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s: ", fileCtx->path);
+    fprintf(stderr, "missing Main class\n");
+    return false;
+  }
+
+  SemaSymInfo *symInfo = entry->value;
+  assert(symInfo);
+  SemaTypeInfo *typeInfo = &symInfo->typeInfo;
+  SemaType *type = typeInfo->type;
+  assert(SemaTypeIsClass(type));
+  SyntaxAST *mainClass = symInfo->decl;
+
+  HashTable *memberTable = type->memberTable;
+  entry = HashTableEntryRetrieve(memberTable, "main");
+  if (!entry) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, mainClass->stringLoc.from.lineNo + 1);
+    fprintf(stderr, "missing main function in "SOURCE_COLOR_RED"Main"
+        SOURCE_COLOR_RESET" class\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &mainClass->stringLoc);
+    return false;
+  }
+
+  symInfo = entry->value;
+  assert(symInfo);
+  SyntaxAST *mainFn = symInfo->decl;
+  typeInfo = &symInfo->typeInfo;
+  SemaType voidType;
+  voidType.kind = SEMA_TYPE_KIND_PRIM_TYPE;
+  voidType.primType = SEMA_PRIM_TYPE_VOID;
+  type = typeInfo->type;
+  SemaType expectedType;
+  expectedType.kind = SEMA_TYPE_KIND_FN;
+  expectedType.retType = &voidType;
+  Vector *paramTypes = VectorNew();
+  expectedType.paramTypes = paramTypes;
+  if (!SemaTypeEqual(type, &expectedType)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, mainFn->method.nameLoc.from.lineNo + 1);
+    fprintf(stderr, "expected main function to be of type "SOURCE_COLOR_GREEN);
+    SemaTypePrint(stderr, &expectedType);
+    fprintf(stderr, SOURCE_COLOR_RESET", got type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, type);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &mainFn->method.nameLoc);
+    VectorDelete(paramTypes);
+    return false;
+  }
+
+  VectorDelete(paramTypes);
+  return true;
 }

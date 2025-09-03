@@ -1,0 +1,2 @@
+[31;1m[Error][0m fm_wrong_main_fn.fart:2: expected main function to be of type [32;1mfn ()[0m, got type [31;1mfn (Main)[0m instead
+    2 |   [31;1mmain[0m() {
