@@ -532,3 +532,11 @@ void IrOpDeleteCall(IrOp *op) {
   }
   free(op);
 }
+
+IrOp *IrOpNewCopy(IrVar *dst, IrVar *src) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = IR_OP_KIND_COPY;
+  op->unary.dst = dst;
+  op->unary.src = src;
+  return op;
+}

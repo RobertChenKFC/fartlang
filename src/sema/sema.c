@@ -3696,6 +3696,10 @@ bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx) {
 }
 
 bool SemaCheckForMainFunc(SemaCtx *ctx) {
+  return SemaCtxGetMainFn(ctx) != NULL;
+}
+
+SyntaxAST *SemaCtxGetMainFn(SemaCtx *ctx) {
   assert(ctx->fileCtxs->size > 0);
   SemaFileCtx *fileCtx = ctx->fileCtxs->arr[0];
   assert(fileCtx);
@@ -3706,7 +3710,7 @@ bool SemaCheckForMainFunc(SemaCtx *ctx) {
     fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
             " %s: ", fileCtx->path);
     fprintf(stderr, "missing Main class\n");
-    return false;
+    return NULL;
   }
 
   SemaSymInfo *symInfo = entry->value;
@@ -3725,7 +3729,7 @@ bool SemaCheckForMainFunc(SemaCtx *ctx) {
         SOURCE_COLOR_RESET" class\n");
     SourceLocationPrint(
         fileCtx->source, 1, SOURCE_COLOR_RED, &mainClass->stringLoc);
-    return false;
+    return NULL;
   }
 
   symInfo = entry->value;
@@ -3752,9 +3756,9 @@ bool SemaCheckForMainFunc(SemaCtx *ctx) {
     SourceLocationPrint(
         fileCtx->source, 1, SOURCE_COLOR_RED, &mainFn->method.nameLoc);
     VectorDelete(paramTypes);
-    return false;
+    return NULL;
   }
 
   VectorDelete(paramTypes);
-  return true;
+  return mainFn;
 }

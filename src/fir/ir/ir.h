@@ -86,7 +86,7 @@ struct IrModule {
 };
 
 struct IrFunc {
-  // The parameters of the function. Each entry of the vector is a IrParam*
+  // The parameters of the function. Each entry of the vector is a IrVar*
   Vector *params;
   // An owning pointer to the first basic block of the function. The basic
   // blocks in a function follow insertion order but does not have any semantic
@@ -303,6 +303,8 @@ IrOp *IrOpNewConst(IrVar *dst, uint64_t val);
 IrOp *IrOpNewCcall(IrVar *dst, char *name, int numArgs, IrVar **args);
 // Delete a "op"
 void IrOpDelete(IrOp *op);
+// Create a new copy operation from variable "src" to variable "dst"
+IrOp *IrOpNewCopy(IrVar *dst, IrVar *src);
 
 // Macros
 // General macro for iterating through linked lists

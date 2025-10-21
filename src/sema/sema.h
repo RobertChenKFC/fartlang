@@ -249,5 +249,8 @@ bool SemaCheck(SemaCtx *ctx, const char *path, bool checkForMainFunc);
 void SemaCtxDelete(SemaCtx *ctx);
 // Deletes all resources allocated in the SemaInfo of AST "node"
 void SemaDeleteASTSemaInfo(SyntaxAST *node);
+// Retrieve the AST node that declares the main function from the "ctx". If the
+// main function does not exist, returns NULL, and error messages are printed
+SyntaxAST *SemaCtxGetMainFn(SemaCtx *ctx);
 
 #endif // SEMA_H
