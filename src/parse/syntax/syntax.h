@@ -9,7 +9,6 @@
 typedef struct SyntaxAST SyntaxAST;
 
 #include "sema/sema.h"
-#include "fir/irgen/irgen.h"
 
 // Macros for convenient definition of enums and their strings
 #define SYNTAX_GEN_ENUM(ENUM) ENUM,
@@ -206,8 +205,6 @@ struct SyntaxAST {
 
   // Information for semantic analysis
   SemaInfo semaInfo;
-  // Information for generating IR
-  IrgenInfo irgenInfo;
 };
 
 // Create the lexer and parser and save them to files so that later parsing

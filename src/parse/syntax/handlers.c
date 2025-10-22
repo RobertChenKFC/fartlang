@@ -1506,7 +1506,6 @@ SyntaxAST *SyntaxASTNew(int kind) {
   node->loc.from.lineNo = node->loc.from.charNo = INT_MAX;
   node->loc.to.lineNo = node->loc.to.charNo = INT_MIN;
   SemaInfoInit(&node->semaInfo);
-  IrgenInfoInit(&node->irgenInfo);
   return node;
 }
 

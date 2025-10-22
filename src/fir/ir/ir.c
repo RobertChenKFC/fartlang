@@ -57,9 +57,10 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op);
 void IrOpConstPrintImpl(IrPrinter *printer, IrOp *op);
 // Implementation of IrOpCallPrint, which uses an internal "printer"
 void IrOpCallPrintImpl(IrPrinter *printer, IrOp *op);
-// Delete an operation "op" created with IrOpNewConst or IrOpNewConstAddr
+// Delete an operation "op" created with IrOpNewConst, IrOpNewConstAddr,
+// IrOpNewConstFn or IrOpNewConstCfn
 void IrOpDeleteConst(IrOp *op);
-// Delete an operation "op" created with IrOpNewCall or IrOpNewCcall
+// Delete an operation "op" created with IrOpNewCall
 void IrOpDeleteCall(IrOp *op);
 
 // Macros
@@ -271,11 +272,27 @@ IrOp *IrOpNewConst(IrVar *dst, uint64_t val) {
   return op;
 }
 
-IrOp *IrOpNewCcall(IrVar *dst, char *name, int numArgs, IrVar **args) {
+IrOp *IrOpNewConstFn(IrVar *dst, IrFunc *func) {
   IrOp *op = malloc(sizeof(IrOp));
-  op->kind = IR_OP_KIND_CCALL;
+  op->kind = IR_OP_KIND_CONST_FN;
+  op->constant.dst = dst;
+  op->constant.func = func;
+  return op;
+}
+
+IrOp *IrOpNewConstCfn(IrVar *dst, char *symbol) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = IR_OP_KIND_CONST_CFN;
+  op->constant.dst = dst;
+  op->constant.symbol = symbol;
+  return op;
+}
+
+IrOp *IrOpNewCall(IrVar *dst, IrVar *func, int numArgs, IrVar **args) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = IR_OP_KIND_CALL;
   op->call.dst = dst;
-  op->call.symbol = name;
+  op->call.func = func;
   op->call.args = args;
   op->call.numArgs = numArgs;
   return op;
@@ -285,10 +302,11 @@ void IrOpDelete(IrOp *op) {
   switch (op->kind) {
     case IR_OP_KIND_CONST:
     case IR_OP_KIND_CONST_ADDR:
+    case IR_OP_KIND_CONST_FN:
+    case IR_OP_KIND_CONST_CFN:
       IrOpDeleteConst(op);
       break;
     case IR_OP_KIND_CALL:
-    case IR_OP_KIND_CCALL:
       IrOpDeleteCall(op);
       break;
     default:
@@ -431,6 +449,12 @@ void IrTypePrintImpl(IrPrinter *printer, IrType type) {
     case IR_TYPE_U64:
       fprintf(printer->file, "u64");
       break;
+    case IR_TYPE_FN:
+      fprintf(printer->file, "fn");
+      break;
+    case IR_TYPE_CFN:
+      fprintf(printer->file, "cfn");
+      break;
     default:
       printf("IR type: %d\n", type);
       assert(false);
@@ -441,9 +465,11 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
   switch (op->kind) {
     case IR_OP_KIND_CONST:
     case IR_OP_KIND_CONST_ADDR:
+    case IR_OP_KIND_CONST_FN:
+    case IR_OP_KIND_CONST_CFN:
       IrOpConstPrintImpl(printer, op);
       break;
-    case IR_OP_KIND_CCALL:
+    case IR_OP_KIND_CALL:
       IrOpCallPrintImpl(printer, op);
       break;
     default:
@@ -457,22 +483,36 @@ void IrOpConstPrintImpl(IrPrinter *printer, IrOp *op) {
   fprintf(printer->file, " = ");
   uint8_t *addr;
   int len;
+  bool printVal = false;
   switch (op->kind) {
     case IR_OP_KIND_CONST:
       addr = (uint8_t*)&op->constant.val;
       len = sizeof(op->constant.val);
+      printVal = true;
       break;
     case IR_OP_KIND_CONST_ADDR:
       fprintf(printer->file, "&");
       addr = op->constant.addr;
       len = op->constant.len;
+      printVal = true;
+      break;
+    case IR_OP_KIND_CONST_FN:
+      fprintf(
+          printer->file, "m%d.f%d",
+          IrPrinterModuleId(printer, op->constant.func->module),
+          IrPrinterFuncId(printer, op->constant.func));
+      break;
+    case IR_OP_KIND_CONST_CFN:
+      fprintf(printer->file, "\"%s\"", op->constant.symbol);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
   }
-  for (int i = 0; i < len; ++i) {
-    fprintf(printer->file, "%02x", addr[i]);
+  if (printVal) {
+    for (int i = 0; i < len; ++i) {
+      fprintf(printer->file, "%02x", addr[i]);
+    }
   }
   fprintf(printer->file, "\n");
 }
@@ -482,19 +522,7 @@ void IrOpCallPrintImpl(IrPrinter *printer, IrOp *op) {
     IrVarPrintImpl(printer, op->call.dst, /*printType=*/false);
     fprintf(printer->file, " = ");
   }
-  switch (op->kind) {
-    case IR_OP_KIND_CALL:
-      fprintf(printer->file, "call f%d",
-              IrPrinterFuncId(printer, op->call.func));
-      break;
-    case IR_OP_KIND_CCALL:
-      fprintf(printer->file, "ccall %s", op->call.symbol);
-      break;
-    default:
-      printf("Op kind: %d\n", op->kind);
-      assert(false);
-  }
-  fprintf(printer->file, "(");
+  fprintf(printer->file, "call v%d(", IrPrinterVarId(printer, op->call.func));
   for (int i = 0; i < op->call.numArgs; ++i) {
     if (i != 0) {
       fprintf(printer->file, ", ");
@@ -510,6 +538,10 @@ void IrOpDeleteConst(IrOp *op) {
       free(op->constant.addr);
       break;
     case IR_OP_KIND_CONST:
+    case IR_OP_KIND_CONST_FN:
+      break;
+    case IR_OP_KIND_CONST_CFN:
+      free(op->constant.symbol);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
@@ -522,9 +554,6 @@ void IrOpDeleteCall(IrOp *op) {
   free(op->call.args);
   switch (op->kind) {
     case IR_OP_KIND_CALL:
-      break;
-    case IR_OP_KIND_CCALL:
-      free(op->call.symbol);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
