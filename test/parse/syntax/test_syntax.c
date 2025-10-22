@@ -70,7 +70,7 @@ void PrintLiteral(FILE *file, SyntaxAST *node) {
       break;
     case SYNTAX_TYPE_F64:
     case SYNTAX_TYPE_F32:
-      fprintf(file, "%.*e", LDBL_DECIMAL_DIG - 1, node->literal.floatVal);
+      fprintf(file, "%.*e", DBL_DECIMAL_DIG - 1, node->literal.floatVal);
       break;
     case SYNTAX_TYPE_BOOL:
       if (node->literal.boolVal)

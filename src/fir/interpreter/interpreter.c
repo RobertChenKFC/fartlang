@@ -114,10 +114,11 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
   switch (op->kind) {
     case IR_OP_KIND_CONST:
     case IR_OP_KIND_CONST_ADDR:
+    case IR_OP_KIND_CONST_FN:
+    case IR_OP_KIND_CONST_CFN:
       InterpreterRunOpConst(interpreter, op);
       break;
     case IR_OP_KIND_CALL:
-    case IR_OP_KIND_CCALL:
       InterpreterRunOpCall(interpreter, op);
       break;
     default:
@@ -135,6 +136,12 @@ void InterpreterRunOpConst(Interpreter *interpreter, IrOp *op) {
     case IR_OP_KIND_CONST_ADDR:
       val = (uint64_t)op->constant.addr;
       break;
+    case IR_OP_KIND_CONST_FN:
+      val = (uint64_t)op->constant.func;
+      break;
+    case IR_OP_KIND_CONST_CFN:
+      val = (uint64_t)op->constant.symbol;
+      break;
     default:
       assert(false);
   }
@@ -145,10 +152,11 @@ void InterpreterRunOpCall(Interpreter *interpreter, IrOp *op) {
   IrVar **argVars = op->call.args;
   int numArgs = op->call.numArgs;
   uint64_t retVal;
-  switch (op->kind) {
-    case IR_OP_KIND_CALL: {
+  IrVar *func = op->call.func;
+  switch (func->type) {
+    case IR_TYPE_FN: {
       assert(false);
-    } case IR_OP_KIND_CCALL: {
+    } case IR_TYPE_CFN: {
       Vector *args = interpreter->args;
       VectorClear(args);
       for (int i = 0; i < numArgs; ++i) {
@@ -156,10 +164,12 @@ void InterpreterRunOpCall(Interpreter *interpreter, IrOp *op) {
         val = le64toh(val);
         VectorAdd(args, (void*)val);
       }
-      InterpreterCFunc func = InterpreterGetCFunc(interpreter, op->call.symbol);
+      char *symbol = (char*)InterpreterGetVarVal(interpreter, func);
+      InterpreterCFunc func = InterpreterGetCFunc(interpreter, symbol);
       retVal = func(args);
       break;
     } default: {
+      printf("Var type: %d\n", func->type);
       assert(false);
     }
   }

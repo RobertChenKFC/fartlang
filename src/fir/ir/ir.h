@@ -18,6 +18,8 @@ enum IrType {
   IR_TYPE_U8,
   IR_TYPE_BOOL = IR_TYPE_U8,
   IR_TYPE_I8,
+  IR_TYPE_FN,
+  IR_TYPE_CFN,
 };
 
 enum IrOpKind {
@@ -43,13 +45,14 @@ enum IrOpKind {
   IR_OP_KIND_INTO,
   IR_OP_KIND_CONST,
   IR_OP_KIND_CONST_ADDR,
+  IR_OP_KIND_CONST_FN,
+  IR_OP_KIND_CONST_CFN,
   IR_OP_KIND_COPY,
   IR_OP_KIND_LOAD,
   IR_OP_KIND_STORE,
   IR_OP_KIND_ALLOC,
   IR_OP_KIND_FREE,
   IR_OP_KIND_CALL,
-  IR_OP_KIND_CCALL,
 };
 
 // Forward declarations
@@ -86,7 +89,7 @@ struct IrModule {
 };
 
 struct IrFunc {
-  // The parameters of the function. Each entry of the vector is a IrParam*
+  // The parameters of the function. Each entry of the vector is a IrVar*
   Vector *params;
   // An owning pointer to the first basic block of the function. The basic
   // blocks in a function follow insertion order but does not have any semantic
@@ -197,6 +200,11 @@ struct IrOp {
           // The length in bytes of the constant value
           int len;
         };
+        // IR_OP_KIND_CONST_FN: a pointer to the IR function
+        IrFunc *func;
+        // IR_OP_KIND_CONST_CFN: an owning pointer to the symbol of an external
+        // C function
+        char *symbol;
       };
     } constant;
 
@@ -214,16 +222,12 @@ struct IrOp {
       IrVar *dst;
     } nullary;
 
-    // Function call operation: IR_OP_KIND_CALL, IR_OP_KIND_CCALL
+    // Function call operation: IR_OP_KIND_CALL
     struct {
       // The destination variable
       IrVar *dst;
-      union {
-        // The function to call
-        IrFunc *func;
-        // An owning pointer to the symbol of the C function to call
-        char *symbol;
-      };
+      // The variable that stores the function
+      IrVar *func;
       // An owning array of arguments to the function call
       IrVar **args;
       // The number of arguments to the function call
@@ -297,12 +301,19 @@ IrOp *IrOpNewConstAddr(IrVar *dst, uint8_t *addr, int len);
 // Create a new constant operation with destination variable "var" and constant
 // value "val"
 IrOp *IrOpNewConst(IrVar *dst, uint64_t val);
-// Create a new ccall operation to the C function with symbol "name" (owning
-// pointer) and "numArgs" arguments presented as an owning pointer to an array
-// of arguments "args"
-IrOp *IrOpNewCcall(IrVar *dst, char *name, int numArgs, IrVar **args);
+// Create a new constant operation with the fartlang function "func"
+IrOp *IrOpNewConstFn(IrVar *dst, IrFunc *func);
+// Create a new constant operation with an owning pointer "func" to the symbol
+// of an external C function
+IrOp *IrOpNewConstCfn(IrVar *dst, char *symbol);
+// Create a new call operation to the function "func" with destination variable
+// "dst" and "numArgs" arguments presented as an owning pointer to an array of
+// arguments "args"
+IrOp *IrOpNewCall(IrVar *dst, IrVar *func, int numArgs, IrVar **args);
 // Delete a "op"
 void IrOpDelete(IrOp *op);
+// Create a new copy operation from variable "src" to variable "dst"
+IrOp *IrOpNewCopy(IrVar *dst, IrVar *src);
 
 // Macros
 // General macro for iterating through linked lists

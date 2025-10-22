@@ -67,52 +67,52 @@ SYNTAX_AST_KIND_MODULE: 1:1~77:1:
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 20:7~20:18: 
                         SYNTAX_AST_KIND_VAR_INIT: 20:7~20:18: variable: fvar1: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 20:15~20:18: type SYNTAX_TYPE_F32, value 1.23000000000000000000e+02
+                            SYNTAX_AST_KIND_LITERAL: 20:15~20:18: type SYNTAX_TYPE_F32, value 1.2300000000000000e+02
                 SYNTAX_AST_KIND_VAR_DECL: 21:3~21:19: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 21:7~21:18: 
                         SYNTAX_AST_KIND_VAR_INIT: 21:7~21:18: variable: fvar2: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 21:15~21:18: type SYNTAX_TYPE_F32, value 4.56000000000000016431e-01
+                            SYNTAX_AST_KIND_LITERAL: 21:15~21:18: type SYNTAX_TYPE_F32, value 4.5600000000000002e-01
                 SYNTAX_AST_KIND_VAR_DECL: 22:3~22:22: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 22:7~22:21: 
                         SYNTAX_AST_KIND_VAR_INIT: 22:7~22:21: variable: fvar3: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 22:15~22:21: type SYNTAX_TYPE_F32, value 7.89011999999999943611e+02
+                            SYNTAX_AST_KIND_LITERAL: 22:15~22:21: type SYNTAX_TYPE_F32, value 7.8901199999999994e+02
                 SYNTAX_AST_KIND_VAR_DECL: 23:3~23:24: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 23:7~23:23: 
                         SYNTAX_AST_KIND_VAR_INIT: 23:7~23:23: variable: fvar4: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 23:15~23:23: type SYNTAX_TYPE_F32, value 6.02299999999999975883e+23
+                            SYNTAX_AST_KIND_LITERAL: 23:15~23:23: type SYNTAX_TYPE_F32, value 6.0229999999999998e+23
                 SYNTAX_AST_KIND_VAR_DECL: 24:3~24:29: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 24:7~24:28: 
                         SYNTAX_AST_KIND_VAR_INIT: 24:7~24:28: variable: fvar5: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 24:15~24:28: type SYNTAX_TYPE_F32, value 6.62607014999999982972e-34
+                            SYNTAX_AST_KIND_LITERAL: 24:15~24:28: type SYNTAX_TYPE_F32, value 6.6260701499999998e-34
                 SYNTAX_AST_KIND_VAR_DECL: 25:3~25:23: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 25:7~25:22: 
                         SYNTAX_AST_KIND_VAR_INIT: 25:7~25:22: variable: fvar6: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 25:15~25:22: type SYNTAX_TYPE_F64, value 1.23450000000000000000e+04
+                            SYNTAX_AST_KIND_LITERAL: 25:15~25:22: type SYNTAX_TYPE_F64, value 1.2345000000000000e+04
                 SYNTAX_AST_KIND_VAR_DECL: 26:3~26:28: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 26:7~26:27: 
                         SYNTAX_AST_KIND_VAR_INIT: 26:7~26:27: variable: fvar7: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 26:15~26:27: type SYNTAX_TYPE_F32, value 1.23456789000000003725e+07
+                            SYNTAX_AST_KIND_LITERAL: 26:15~26:27: type SYNTAX_TYPE_F32, value 1.2345678900000000e+07
                 SYNTAX_AST_KIND_VAR_DECL: 27:3~27:28: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 27:7~27:27: 
                         SYNTAX_AST_KIND_VAR_INIT: 27:7~27:27: variable: fvar8: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 27:15~27:27: type SYNTAX_TYPE_F32, value 1.23456788999999993450e+01
+                            SYNTAX_AST_KIND_LITERAL: 27:15~27:27: type SYNTAX_TYPE_F32, value 1.2345678899999999e+01
                 SYNTAX_AST_KIND_VAR_DECL: 29:3~29:23: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 29:7~29:22: 
                         SYNTAX_AST_KIND_VAR_INIT: 29:7~29:22: variable: fvar: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 29:14~29:22: type SYNTAX_TYPE_F64, value 8.99000000000000000000e+09
+                            SYNTAX_AST_KIND_LITERAL: 29:14~29:22: type SYNTAX_TYPE_F64, value 8.9900000000000000e+09
                 SYNTAX_AST_KIND_VAR_DECL: 30:3~30:23: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 30:7~30:22: 
                         SYNTAX_AST_KIND_VAR_INIT: 30:7~30:22: variable: fvar: 
                             SYNTAX_AST_KIND_TYPE: -2147483648:-2147483648~-2147483647:-2147483647: base type: SYNTAX_TYPE_VAR, array levels: 0, child types: 
-                            SYNTAX_AST_KIND_LITERAL: 30:14~30:22: type SYNTAX_TYPE_F32, value 8.99000000000000000000e+09
+                            SYNTAX_AST_KIND_LITERAL: 30:14~30:22: type SYNTAX_TYPE_F32, value 8.9900000000000000e+09
                 SYNTAX_AST_KIND_VAR_DECL: 33:3~33:18: 
                     SYNTAX_AST_KIND_VAR_INIT_LIST: 33:7~33:17: 
                         SYNTAX_AST_KIND_VAR_INIT: 33:7~33:17: variable: flag: 
