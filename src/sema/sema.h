@@ -168,7 +168,15 @@ struct SemaInfo {
 
     // A pointer to SemaTypeInfo is stored for the following kinds of AST nodes:
     // SYNTAX_AST_KIND_LITERAL, SYNTAX_AST_KIND_OP, SYNTAX_AST_KIND_ASSIGN
-    SemaTypeInfo typeInfo;
+    struct {
+      SemaTypeInfo typeInfo;
+
+      union {
+        // For SYNTAX_AST_KIND_MEMBER_ACCESS: the AST node that declared this
+        // member
+        SyntaxAST *member;
+      };
+    };
   };
 
   // The stage of the analysis that the current SyntaxAST has gone through.
@@ -252,5 +260,12 @@ void SemaDeleteASTSemaInfo(SyntaxAST *node);
 // Retrieve the AST node that declares the main function from the "ctx". If the
 // main function does not exist, returns NULL, and error messages are printed
 SyntaxAST *SemaCtxGetMainFn(SemaCtx *ctx);
+// Checks if "type" is a primitive type of kind "primType"
+bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
+// Returns true if and only if an expression or term stored in the AST node
+// "value" can be captured in a variable, ie. is not a class, namespace or
+// label. Note that "value" must be type checked by the appropriate function
+// (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
+bool SemaValueIsCapturable(SyntaxAST *value);
 
 #endif // SEMA_H

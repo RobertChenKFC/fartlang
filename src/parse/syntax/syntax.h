@@ -8,6 +8,7 @@
 // Forward declarations
 typedef struct SyntaxAST SyntaxAST;
 
+#include "fir/irgen/irgen.h"
 #include "sema/sema.h"
 
 // Macros for convenient definition of enums and their strings
@@ -205,6 +206,8 @@ struct SyntaxAST {
 
   // Information for semantic analysis
   SemaInfo semaInfo;
+  // Information for IR generation
+  IrgenInfo irgenInfo;
 };
 
 // Create the lexer and parser and save them to files so that later parsing

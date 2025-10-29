@@ -97,8 +97,8 @@ struct IrFunc {
   IrBasicBlock *firstBlock;
   // The last basic block of the function
   IrBasicBlock *lastBlock;
-  // The entry and exit basic blocks of a function
-  IrBasicBlock *entryBlock, *exitBlock;
+  // The entry basic block of a function
+  IrBasicBlock *entryBlock;
   // An owning pointer to the first variable in a function. The variables follow
   // reverse insertion order but does not have any semantic meaning
   IrVar *firstVar;
@@ -277,16 +277,18 @@ IrBasicBlock *IrBasicBlockGetTrueBlock(IrBasicBlock *block);
 // Get the next block to jump to from "block" if the condition evaluates to
 // false
 IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block);
+// Get the parent function of the basic block
+IrFunc *IrBasicBlockGetParentFunc(IrBasicBlock *block);
 // Delete a "block" and all its operations
 void IrBasicBlockDelete(IrBasicBlock *block);
 // Set the entry basic block of "func" to "block"
 void IrFuncSetEntryBlock(IrFunc *func, IrBasicBlock *block);
 // Get the entry basic block of "func"
 IrBasicBlock *IrFuncGetEntryBlock(IrFunc *func);
-// Set the exit basic block of "func" to "block"
-void IrFuncSetExitBlock(IrFunc *func, IrBasicBlock *block);
 // Create a new variable of type "type", add it to "func" and return it
 IrVar *IrFuncAddVar(IrFunc *func, IrType type);
+// Get the parameters of "func"
+Vector* IrFuncGetParams(IrFunc *func);
 // Delete a "var"
 void IrVarDelete(IrVar *var);
 // Add "op" to the end of "block"
