@@ -1,10 +1,12 @@
-NAME := syntax
+NAME := irgen
 include $(MK)/push.mk
 
+DEPS := $(DEPS) fir/ir
 DEPS := $(DEPS) fir/irgen
-DEPS := $(DEPS) lex/dfa
+DEPS := $(DEPS) fir/interpreter
 DEPS := $(DEPS) lex/fa
 DEPS := $(DEPS) lex/nfa
+DEPS := $(DEPS) lex/dfa
 DEPS := $(DEPS) lex/lexer
 DEPS := $(DEPS) lex/regex
 DEPS := $(DEPS) parse/cfg
@@ -17,19 +19,18 @@ DEPS := $(DEPS) util/bitset
 DEPS := $(DEPS) util/hashtable
 DEPS := $(DEPS) util/source
 DEPS := $(DEPS) util/vector
-# Special dependency: syntax.c includes handlers.c
-$(BIN_DIR)/syntax.o: $(SRC_DIR)/handlers.c
-
 include $(MK)/c_cmp_test.mk
-BIN_DIR := $(dir $(BIN))
+
 COMPILER_FILES := $(BIN_DIR)/lexer.txt
 COMPILER_FILES := $(COMPILER_FILES) $(BIN_DIR)/parser.txt
-DEL_COMPILER_FILES := $(addsuffix .del,$(COMPILER_FILES))
-$(OUT_FILES)&: $(BIN) $(DEL_COMPILER_FILES) | $(DIR)
-	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(abspath $<)
-$(DEL_COMPILER_FILES): %.del:
-	rm -f $*
+$(COMPILER_FILES)&: $(BIN)
+	$(VALGRIND) $(VALGRIND_FLAGS) $<
 
-CLEAN_FILES := $(CLEAN_FILES) $(COMPILER_FILES)
+$(OUT_FILES): %.out: $(BIN) %.fart $(COMPILER_FILES) | $(DIR)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(VALGRIND_REDIRECT) $(abspath $<) $(notdir $*.fart) --debug 2>$(abspath $@)
+
+BIN_DIR := $(dir $(BIN))
+CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/lexer.txt
+CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/parser.txt
 
 include $(MK)/pop.mk

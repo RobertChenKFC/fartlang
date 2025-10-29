@@ -1,0 +1,8 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    Main.write(1, "Hello world from fartlang!\n", 27u64);
+    Main.write(1, "Here is another line ~\n", 23u64);
+  }
+}

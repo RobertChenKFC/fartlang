@@ -146,7 +146,7 @@ IrFunc *IrFuncAdd(IrModule *module) {
   IrFunc *func = malloc(sizeof(IrFunc));
   func->params = VectorNew();
   func->firstBlock = func->lastBlock = NULL;
-  func->entryBlock = func->exitBlock = NULL;
+  func->entryBlock = NULL;
   func->firstVar = NULL;
   func->freeVars = VectorNew();
   IrLinkedListAppend(module->firstFunc, module->lastFunc, func, nextFunc);
@@ -194,7 +194,7 @@ IrVar *IrBasicBlockGetCond(IrBasicBlock *block) {
 
 bool IrBasicBlockIsExit(IrBasicBlock *block) {
   if (!block->trueBlock) {
-    assert(block->func->exitBlock == block);
+    assert(!block->falseBlock);
     return true;
   }
   return false;
@@ -212,6 +212,10 @@ IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block) {
   return block->falseBlock;
 }
 
+IrFunc *IrBasicBlockGetParentFunc(IrBasicBlock *block) {
+  return block->func;
+}
+
 void IrBasicBlockDelete(IrBasicBlock *block) {
   IrForOp(block, op) {
     IrOpDelete(op);
@@ -227,15 +231,15 @@ IrBasicBlock *IrFuncGetEntryBlock(IrFunc *func) {
   return func->entryBlock;
 }
 
-void IrFuncSetExitBlock(IrFunc *func, IrBasicBlock *block) {
-  func->exitBlock = block;
-}
-
 IrVar *IrFuncAddVar(IrFunc *func, IrType type) {
   IrVar *var = malloc(sizeof(IrVar));
   var->type = type;
   IrLinkedListPrepend(func->firstVar, var, nextVar);
   return var;
+}
+
+Vector* IrFuncGetParams(IrFunc *func) {
+  return func->params;
 }
 
 void IrVarDelete(IrVar *var) {
@@ -385,7 +389,7 @@ void IrModulePrintImpl(IrPrinter *printer, IrModule *module) {
 }
 
 void IrFuncPrintImpl(IrPrinter *printer, IrFunc *func) {
-  fprintf(printer->file, "f%d(", IrPrinterFuncId(printer, func));
+  fprintf(printer->file, "\nf%d(", IrPrinterFuncId(printer, func));
   bool isFirstParam = true;
   IrForParam(func, param) {
     if (isFirstParam) {
@@ -462,6 +466,7 @@ void IrTypePrintImpl(IrPrinter *printer, IrType type) {
 }
 
 void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
+  fprintf(printer->file, "  ");
   switch (op->kind) {
     case IR_OP_KIND_CONST:
     case IR_OP_KIND_CONST_ADDR:

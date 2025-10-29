@@ -146,8 +146,6 @@ SemaType *SemaTypeFromLogicOp(
 // return NULL. Remaining arguments are used in the same way as above
 SemaType *SemaTypeFromComparisonOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
-// Checks if "type" is a primitive type of kind "primType"
-bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
 // Checks if "expr" is a comparison expression
 bool SemaIsComparisonExpr(SyntaxAST *expr);
 // Performs the type unification procedure for "type1" and "type2". Returns
@@ -315,11 +313,6 @@ bool SemaPopulateVarDecl(
 SemaType *SemaTypeFromMemberAccess(
     SyntaxAST *memberAccess, SyntaxAST *parentExpr, HashTable *symbolTable,
     SemaFileCtx *fileCtx);
-// Returns true if and only if an expression or term stored in the AST node
-// "value" can be captured in a variable, ie. is not a class, namespace or
-// label. Note that "value" must be type checked by the appropriate function
-// (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
-bool SemaValueIsCapturable(SyntaxAST *value);
 // Returns true if and only if the AST "node" is a namespace. Note that "node"
 // must be type checked by the appropriate function (SemaTypeFromExpr or
 // SemaTypeFromTerm) before being passed to this function
@@ -2794,6 +2787,7 @@ SemaType *SemaTypeFromMemberAccess(
     assert(operandType->kind == SEMA_TYPE_KIND_NAMESPACE);
   }
 
+  memberAccess->semaInfo.member = memberSymInfo->decl;
   SemaTypeInfo *typeInfo = &memberAccess->semaInfo.typeInfo;
   if (operandIsCapturable && memberAttr == SEMA_ATTR_METHOD) {
     // If we are refering to a method via an instance of the class, the type
