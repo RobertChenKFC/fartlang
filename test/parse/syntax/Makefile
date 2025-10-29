@@ -1,6 +1,7 @@
 NAME := syntax
 include $(MK)/push.mk
 
+DEPS := $(DEPS) fir/ir
 DEPS := $(DEPS) fir/irgen
 DEPS := $(DEPS) lex/dfa
 DEPS := $(DEPS) lex/fa

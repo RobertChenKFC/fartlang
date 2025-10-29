@@ -1,6 +1,8 @@
 NAME := sema
 include $(MK)/push.mk
 
+DEPS := $(DEPS) fir/ir
+DEPS := $(DEPS) fir/irgen
 DEPS := $(DEPS) lex/fa
 DEPS := $(DEPS) lex/nfa
 DEPS := $(DEPS) lex/dfa
