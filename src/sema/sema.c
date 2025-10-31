@@ -3264,7 +3264,7 @@ CLEANUP:
 
 bool SemaTypeCheckIfStmt(
     SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
-  bool success = false;
+  bool success = true;
   // The children of an if statement are:
   // ifCond ifBody (elseIfCond elseIfBody)* (elseBody)?
   // Therefore, the following loop iterates over each (cond, body) pair until

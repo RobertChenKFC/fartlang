@@ -1,0 +1,9 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    if true {
+      Main.write(1, "1. This line should be printed\n", 31u64);
+    }
+  }
+}
