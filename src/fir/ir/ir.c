@@ -62,8 +62,12 @@ void IrOpCallPrintImpl(IrPrinter *printer, IrOp *op);
 void IrOpDeleteConst(IrOp *op);
 // Delete an operation "op" created with IrOpNewCall
 void IrOpDeleteCall(IrOp *op);
+// Delete an operation "op" created with IrOpNewCopy
+void IrOpDeleteCopy(IrOp *op);
 // Get the byte size of the IR "type"
 int IrTypeGetSize(IrType type);
+// Implementation of IrOpCopyPrint, which uses an internal "printer"
+void IrOpCopyPrintImpl(IrPrinter *printer, IrOp *op);
 
 // Macros
 // Given the pointer variables to the "firstNode" and "lastNode" of the list,
@@ -332,6 +336,9 @@ void IrOpDelete(IrOp *op) {
     case IR_OP_KIND_CALL:
       IrOpDeleteCall(op);
       break;
+    case IR_OP_KIND_COPY:
+      IrOpDeleteCopy(op);
+      break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
@@ -498,6 +505,9 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
     case IR_OP_KIND_CALL:
       IrOpCallPrintImpl(printer, op);
       break;
+    case IR_OP_KIND_COPY:
+      IrOpCopyPrintImpl(printer, op);
+      break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
@@ -637,4 +647,16 @@ int IrTypeGetSize(IrType type) {
 
 IrOpKind IrOpGetKind(IrOp *op) {
   return op->kind;
+}
+
+void IrOpCopyPrintImpl(IrPrinter *printer, IrOp *op) {
+  assert(op->unary.dst);
+  assert(op->unary.src);
+  int dstId = IrPrinterVarId(printer, op->unary.dst);
+  int srcId = IrPrinterVarId(printer, op->unary.src);
+  fprintf(printer->file, "v%d = v%d\n", dstId, srcId);
+}
+
+void IrOpDeleteCopy(IrOp *op) {
+  free(op);
 }

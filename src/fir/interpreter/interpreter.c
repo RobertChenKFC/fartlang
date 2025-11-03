@@ -34,6 +34,8 @@ void InterpreterPopFuncVars(Interpreter *interpreter, IrFunc *func);
 // a function to ensure that when calling "InterpreterPushFuncVars" for this
 // function, all the function variables have values to be stored
 void InterpreterSetupFuncVars(Interpreter *interpreter, IrFunc *func);
+// Run the copy operation "op"
+void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op);
 
 void InterpreterInit(Interpreter *interpreter) {
   interpreter->pc = NULL;
@@ -161,6 +163,9 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
       break;
     case IR_OP_KIND_CALL:
       InterpreterRunOpCall(interpreter, op);
+      break;
+    case IR_OP_KIND_COPY:
+      InterpreterRunOpCopy(interpreter, op);
       break;
     default:
       printf("Op kind: %d\n", IrOpGetKind(op));
@@ -293,4 +298,10 @@ void InterpreterSetupFuncVars(Interpreter *interpreter, IrFunc *func) {
   IrForVar(func, var) {
     InterpreterSetVarVal(interpreter, var, 0);
   }
+}
+
+void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op) {
+  uint64_t val = InterpreterGetVarVal(interpreter, op->unary.src);
+  InterpreterSetVarVal(interpreter, op->unary.dst, val);
+  InterpreterStep(interpreter);
 }

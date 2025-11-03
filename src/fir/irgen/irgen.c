@@ -35,6 +35,8 @@ IrBasicBlock* IrgenFromMemberAccess(
     IrBasicBlock* lastBlock, SyntaxAST *memberAccess);
 // Same as IrgenFromBody, but for if statement
 IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt);
+// Same as IrgenFromBody, but for return statement
+IrBasicBlock* IrgenFromRetStmt(IrBasicBlock* lastBlock, SyntaxAST *retStmt);
 
 IrProgram *IrgenFromFile(const char *path) {
   IrProgram *program = NULL;
@@ -154,6 +156,8 @@ IrBasicBlock* IrgenFromStmt(IrBasicBlock *lastBlock, SyntaxAST *stmt) {
       return IrgenFromExpr(lastBlock, stmt->firstChild);
     case SYNTAX_AST_KIND_IF_STMT:
       return IrgenFromIfStmt(lastBlock, stmt);
+    case SYNTAX_AST_KIND_RETURN_STMT:
+      return IrgenFromRetStmt(lastBlock, stmt);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -335,18 +339,11 @@ IrBasicBlock* IrgenFromMemberAccess(
 }
 
 IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt) {
-  IrFunc *func = lastBlock->func;
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
   IrBasicBlock *endBlock = IrBasicBlockAdd(func);
   SyntaxAST *cond, *body;
-
-  // DEBUG
-  printf("If statement!\n");
-
   for (cond = ifStmt->firstChild; cond && (body = cond->sibling);
        cond = body->sibling) {
-    // DEBUG
-    printf("Cond: %d, Bool literal: %d\n", cond->kind, cond->literal.boolVal);
-
     lastBlock = IrgenFromExpr(lastBlock, cond);
     IrBasicBlock *trueBlock = IrBasicBlockAdd(func);
     IrBasicBlock *falseBlock = IrBasicBlockAdd(func);
@@ -358,12 +355,23 @@ IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt) {
     lastBlock = falseBlock;
   }
   if (cond) {
-    // DEBUG
-    printf("Has else body!\n");
-
     SyntaxAST *elseBody = cond;
     lastBlock = IrgenFromBody(lastBlock, elseBody);
   }
   IrBasicBlockSetTrueBlock(lastBlock, endBlock);
   return endBlock;
+}
+
+IrBasicBlock* IrgenFromRetStmt(IrBasicBlock* lastBlock, SyntaxAST *retStmt) {
+  SyntaxAST *retExpr = retStmt->firstChild;
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
+  if (retExpr) {
+    lastBlock = IrgenFromExpr(lastBlock, retExpr);
+    IrType retType = IrgenIrTypeFromSemaType(retExpr->semaInfo.typeInfo.type);
+    IrVar *retVar = IrFuncAddVar(func, retType);
+    IrBasicBlockSetRet(lastBlock, retVar);
+    IrOpAppend(lastBlock, IrOpNewCopy(retVar, retExpr->irgenInfo.var));
+  }
+  lastBlock = IrBasicBlockAdd(func);
+  return lastBlock;
 }
