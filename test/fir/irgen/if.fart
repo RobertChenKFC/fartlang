@@ -1,0 +1,31 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    if true {
+      Main.write(1, "1. This line should be printed\n", 31u64);
+    }
+    if false {
+      Main.write(1, "1. This line should NOT be printed\n", 35u64);
+    }
+    if true {
+      Main.write(1, "2. This line should be printed\n", 31u64);
+    } else {
+      Main.write(1, "2. This line should NOT be printed\n", 35u64);
+    }
+    if false {
+      Main.write(1, "3. This line should NOT be printed\n", 35u64);
+    } else {
+      Main.write(1, "3. This line should be printed\n", 31u64);
+    }
+    if false {
+      Main.write(1, "4. This line should NOT be printed\n", 35u64);
+    } else if false {
+      Main.write(1, "4. This line should NOT be printed\n", 35u64);
+    } else if true {
+      Main.write(1, "4. This line should be printed\n", 31u64);
+    } else {
+      Main.write(1, "4. This line should NOT be printed\n", 35u64);
+    }
+  }
+}

@@ -3,8 +3,13 @@
 #include <assert.h>
 #include <endian.h>
 
-// Update "interpreter->pc" to the next operation
+// Advance "interpreter->pc" to the next operation
 void InterpreterStep(Interpreter *interpeter);
+// Update pc to the actual correct position, given the current position is "op"
+// inside "block". The position is updated by jumping to the correct next basic
+// block or returning from the func when necessary
+void InterpreterUpdatePc(
+    Interpreter *interpeter, IrBasicBlock *block, IrOp *op);
 // Set the current value of variable "var" in "interpreter" to "val"
 void InterpreterSetVarVal(Interpreter *interpeter, IrVar *var, uint64_t val);
 // Get the current value of variable "var" in "interpreter"
@@ -67,8 +72,7 @@ void InterpreterRun(Interpreter *interpreter, IrProgram *program) {
   IrBasicBlock *entryBlock = IrFuncGetEntryBlock(entryFunc);
   assert(entryBlock);
   IrOp *op = IrBasicBlockGetFirstOp(entryBlock);
-  assert(op);
-  interpreter->pc = op;
+  InterpreterUpdatePc(interpreter, entryBlock, op);
 
   while (interpreter->pc) {
     InterpreterRunOp(interpreter, interpreter->pc);
@@ -78,54 +82,63 @@ void InterpreterRun(Interpreter *interpreter, IrProgram *program) {
 void InterpreterStep(Interpreter *interpreter) {
   IrOp *op = interpreter->pc;
   IrBasicBlock *block = IrOpGetParentBasicBlock(op);
-  IrOp *nextOp;
-  while (!(nextOp = IrOpGetNextOp(op)) && IrBasicBlockIsExit(block)) {
-    // This operation is the last in its basic block, and the block is the exit
-    // block, so return to the caller
-    op = VectorPop(interpreter->opStack);
-    if (!op) {
-      // Initially in "InterpreterRun", a NULL is pushed to the bottom of the
-      // stack to indicate the caller of the entry function. If we get this
-      // NULL op, this means we have returned from the entry function, so we
-      // have finished interpreting this program
-      interpreter->pc = op;
-      return;
-    }
-    block = IrOpGetParentBasicBlock(op);
-    InterpreterPopFuncVars(interpreter, IrBasicBlockGetParentFunc(block));
-    IrVar *retVar = IrBasicBlockGetRet(block);
-    if (retVar) {
-      uint64_t retVal = InterpreterGetVarVal(interpreter, retVar);
+  op = IrOpGetNextOp(op);
+  InterpreterUpdatePc(interpreter, block, op);
+}
+
+void InterpreterUpdatePc(
+    Interpreter *interpreter, IrBasicBlock *block, IrOp *op) {
+  // Keep continuing until we get an operation
+  while (!op) {
+    if (IrBasicBlockIsExit(block)) {
+      // The basic block is an exit block, so return from the function
+      op = VectorPop(interpreter->opStack);
+      if (!op) {
+        // This wasn't actually a function call: at the start of InterpreterRun,
+        // a NULL is pushed onto the stack to signify jumping to the entry
+        // function's entry block. Therefore, if we popped a NULL from the
+        // stack, this means we have completed execution of the program and
+        // can thus exit the program
+        break;
+      }
+      // Otherwise, the caller operation must have been pushed to the stack
+      assert(IrOpGetKind(op) == IR_OP_KIND_CALL);
+      IrBasicBlock *nextBlock = IrOpGetParentBasicBlock(op);
+      uint64_t retVal;
+      if (interpreter->retVar) {
+        // If the return variable was set, this meant that the caller expects
+        // a return value. Therefore, the exit block must have a return value
+        IrVar *retVar = IrBasicBlockGetRet(block);
+        assert(retVar);
+        retVal = InterpreterGetVarVal(interpreter, retVar);
+      }
+      // Now that we have retrived the return value, we can pop all the callee's
+      // variables from the variable table
+      InterpreterPopFuncVars(interpreter, IrBasicBlockGetParentFunc(block));
       if (interpreter->retVar) {
         InterpreterSetVarVal(interpreter, interpreter->retVar, retVal);
       }
+      op = IrOpGetNextOp(op);
+      block = nextBlock;
+    } else {
+      // We reached the end of the basic block, but the basic block is not an
+      // exit block, which means we can proceed to the next block depending on
+      // whether it's a conditional block or not
+      if (IrBasicBlockIsCond(block)) {
+        IrVar *cond = IrBasicBlockGetCond(block);
+        uint64_t condVal = InterpreterGetVarVal(interpreter, cond);
+        if (InterpreterValIsTrue(condVal)) {
+          block = IrBasicBlockGetTrueBlock(block);
+        } else {
+          block = IrBasicBlockGetFalseBlock(block);
+        }
+      } else {
+        block = IrBasicBlockGetTrueBlock(block);
+      }
+      op = IrBasicBlockGetFirstOp(block);
     }
   }
-
-  // This operation is not the last in its basic block, so jump to the next
-  if (nextOp) {
-    interpreter->pc = nextOp;
-    return;
-  }
-
-  // The operation is the last in its basic block, and the basic block is not
-  // an exit block, so go to the next basic block
-  IrBasicBlock *nextBlock;
-  IrVar *condVar = IrBasicBlockGetCond(block);
-  if (condVar) {
-    // This block is a conditional block, so retrieve the condition value and
-    // jump to the true/false block based on the condition
-    assert(condVar);
-    uint64_t condVal = InterpreterGetVarVal(interpreter, condVar);
-    nextBlock =
-        InterpreterValIsTrue(condVal) ? IrBasicBlockGetTrueBlock(block)
-                                      : IrBasicBlockGetFalseBlock(block);
-  } else {
-    // This block is an unconditional block, so retrieve the block to jump to
-    nextBlock = IrBasicBlockGetTrueBlock(block);
-  }
-  assert(nextBlock);
-  interpreter->pc = IrBasicBlockGetFirstOp(nextBlock);
+  interpreter->pc = op;
 }
 
 void InterpreterSetVarVal(Interpreter *interpreter, IrVar *var, uint64_t val) {
@@ -139,7 +152,7 @@ uint64_t InterpreterGetVarVal(Interpreter *interpreter, IrVar *var) {
 }
 
 void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
-  switch (op->kind) {
+  switch (IrOpGetKind(op)) {
     case IR_OP_KIND_CONST:
     case IR_OP_KIND_CONST_ADDR:
     case IR_OP_KIND_CONST_FN:
@@ -150,7 +163,7 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
       InterpreterRunOpCall(interpreter, op);
       break;
     default:
-      printf("Op kind: %d\n", op->kind);
+      printf("Op kind: %d\n", IrOpGetKind(op));
       assert(false);
   }
 }
@@ -162,7 +175,7 @@ void InterpreterRunOpConst(Interpreter *interpreter, IrOp *op) {
   // the pointer values are converted to little endian before being stored
   // in the variable
   uint64_t val;
-  switch (op->kind) {
+  switch (IrOpGetKind(op)) {
     case IR_OP_KIND_CONST:
       val = op->constant.val;
       break;

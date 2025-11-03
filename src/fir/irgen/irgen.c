@@ -33,6 +33,8 @@ IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term);
 // Same as IrgenFromBody, but for member access
 IrBasicBlock* IrgenFromMemberAccess(
     IrBasicBlock* lastBlock, SyntaxAST *memberAccess);
+// Same as IrgenFromBody, but for if statement
+IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt);
 
 IrProgram *IrgenFromFile(const char *path) {
   IrProgram *program = NULL;
@@ -125,6 +127,8 @@ IrType IrgenIrTypeFromSemaType(SemaType *type) {
           return IR_TYPE_U32;
         case SEMA_PRIM_TYPE_I32:
           return IR_TYPE_I32;
+        case SEMA_PRIM_TYPE_BOOL:
+          return IR_TYPE_U8;
         default:
           printf("Sema prim type: %d\n", type->primType);
           assert(false);
@@ -148,6 +152,8 @@ IrBasicBlock* IrgenFromStmt(IrBasicBlock *lastBlock, SyntaxAST *stmt) {
       return IrgenFromVarDecl(lastBlock, stmt);
     case SYNTAX_AST_KIND_EXPR_STMT:
       return IrgenFromExpr(lastBlock, stmt->firstChild);
+    case SYNTAX_AST_KIND_IF_STMT:
+      return IrgenFromIfStmt(lastBlock, stmt);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -278,6 +284,9 @@ IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term) {
         case SYNTAX_TYPE_I32: {
           op = IrOpNewConst(var, term->literal.intVal);
           break;
+        } case SYNTAX_TYPE_BOOL: {
+          op = IrOpNewConst(var, term->literal.boolVal);
+          break;
         } case SYNTAX_TYPE_STR: {
           char *str = term->literal.strVal;
           op = IrOpNewConstAddr(var, (uint8_t*)strdup(str), strlen(str) + 1);
@@ -323,4 +332,38 @@ IrBasicBlock* IrgenFromMemberAccess(
     }
   }
   return lastBlock;
+}
+
+IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt) {
+  IrFunc *func = lastBlock->func;
+  IrBasicBlock *endBlock = IrBasicBlockAdd(func);
+  SyntaxAST *cond, *body;
+
+  // DEBUG
+  printf("If statement!\n");
+
+  for (cond = ifStmt->firstChild; cond && (body = cond->sibling);
+       cond = body->sibling) {
+    // DEBUG
+    printf("Cond: %d, Bool literal: %d\n", cond->kind, cond->literal.boolVal);
+
+    lastBlock = IrgenFromExpr(lastBlock, cond);
+    IrBasicBlock *trueBlock = IrBasicBlockAdd(func);
+    IrBasicBlock *falseBlock = IrBasicBlockAdd(func);
+    IrBasicBlockSetCond(lastBlock, cond->irgenInfo.var);
+    IrBasicBlockSetTrueBlock(lastBlock, trueBlock);
+    IrBasicBlockSetFalseBlock(lastBlock, falseBlock);
+    trueBlock = IrgenFromBody(trueBlock, body);
+    IrBasicBlockSetTrueBlock(trueBlock, endBlock);
+    lastBlock = falseBlock;
+  }
+  if (cond) {
+    // DEBUG
+    printf("Has else body!\n");
+
+    SyntaxAST *elseBody = cond;
+    lastBlock = IrgenFromBody(lastBlock, elseBody);
+  }
+  IrBasicBlockSetTrueBlock(lastBlock, endBlock);
+  return endBlock;
 }
