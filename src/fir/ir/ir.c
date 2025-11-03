@@ -437,10 +437,9 @@ void IrBasicBlockPrintImpl(IrPrinter *printer, IrBasicBlock *block) {
     if (block->cond) {
       assert(block->falseBlock);
       IrVarPrintImpl(printer, block->cond, /*printType=*/false);
-      fprintf(
-          printer->file, " ? b%d : b%d",
-          IrPrinterBasicBlockId(printer, block->trueBlock),
-          IrPrinterBasicBlockId(printer, block->falseBlock));
+      int trueBlockId = IrPrinterBasicBlockId(printer, block->trueBlock);
+      int falseBlockId = IrPrinterBasicBlockId(printer, block->falseBlock);
+      fprintf(printer->file, " ? b%d : b%d", trueBlockId, falseBlockId);
     } else {
       assert(!block->falseBlock);
       fprintf(printer->file, "b%d",
