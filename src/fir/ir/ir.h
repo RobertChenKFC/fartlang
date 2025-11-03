@@ -263,19 +263,28 @@ IrBasicBlock *IrBasicBlockAdd(IrFunc *func);
 IrOp *IrBasicBlockGetFirstOp(IrBasicBlock *block);
 // Return true if and only if "block" is a conditional block
 bool IrBasicBlockIsCond(IrBasicBlock *block);
+// Set the condition of the basic block
+void IrBasicBlockSetCond(IrBasicBlock *block, IrVar *cond);
 // If "block" is a conditional basic block, return the variable that stores
 // the condition of "block", otherwise return NULL
 IrVar *IrBasicBlockGetCond(IrBasicBlock *block);
 // Return true if and only if "block" is the exit block of the parent function
 bool IrBasicBlockIsExit(IrBasicBlock *block);
+// Set the return variable of "block" to "ret". Requires that "block" is an exit
+// block
+void IrBasicBlockSetRet(IrBasicBlock *block, IrVar *ret);
 // If "block" is an exit basic block, return the variable that stores the
 // return value of the block, otherwise return NULL
 IrVar *IrBasicBlockGetRet(IrBasicBlock *block);
-// Get the next block to jump to from "block" if the condition evaluates to
+// Set the next block to jump to from "block" if the condition evaluates to
 // true, or the next block to jump to unconditionally
+void IrBasicBlockSetTrueBlock(IrBasicBlock *block, IrBasicBlock *trueBlock);
+// Same as IrBasicBlockSetTrueBlock, but the getter version of it
 IrBasicBlock *IrBasicBlockGetTrueBlock(IrBasicBlock *block);
-// Get the next block to jump to from "block" if the condition evaluates to
+// Set the next block to jump to from "block" if the condition evaluates to
 // false
+void IrBasicBlockSetFalseBlock(IrBasicBlock *block, IrBasicBlock *falseBlock);
+// Same as IrBasicBlockSetFalseBlock, but the getter version of it
 IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block);
 // Get the parent function of the basic block
 IrFunc *IrBasicBlockGetParentFunc(IrBasicBlock *block);
@@ -316,6 +325,8 @@ IrOp *IrOpNewCall(IrVar *dst, IrVar *func, int numArgs, IrVar **args);
 void IrOpDelete(IrOp *op);
 // Create a new copy operation from variable "src" to variable "dst"
 IrOp *IrOpNewCopy(IrVar *dst, IrVar *src);
+// Get the kind of the "op"
+IrOpKind IrOpGetKind(IrOp *op);
 
 // Macros
 // General macro for iterating through linked lists

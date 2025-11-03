@@ -62,6 +62,8 @@ void IrOpCallPrintImpl(IrPrinter *printer, IrOp *op);
 void IrOpDeleteConst(IrOp *op);
 // Delete an operation "op" created with IrOpNewCall
 void IrOpDeleteCall(IrOp *op);
+// Get the byte size of the IR "type"
+int IrTypeGetSize(IrType type);
 
 // Macros
 // Given the pointer variables to the "firstNode" and "lastNode" of the list,
@@ -188,6 +190,10 @@ bool IrBasicBlockIsCond(IrBasicBlock *block) {
   return block->falseBlock != NULL;
 }
 
+void IrBasicBlockSetCond(IrBasicBlock *block, IrVar *cond) {
+  block->cond = cond;
+}
+
 IrVar *IrBasicBlockGetCond(IrBasicBlock *block) {
   return IrBasicBlockIsCond(block) ? block->cond : NULL;
 }
@@ -200,12 +206,25 @@ bool IrBasicBlockIsExit(IrBasicBlock *block) {
   return false;
 }
 
+void IrBasicBlockSetRet(IrBasicBlock *block, IrVar *ret) {
+  assert(IrBasicBlockIsExit(block));
+  block->ret = ret;
+}
+
 IrVar *IrBasicBlockGetRet(IrBasicBlock *block) {
   return IrBasicBlockIsExit(block) ? block->ret : NULL;
 }
 
+void IrBasicBlockSetTrueBlock(IrBasicBlock *block, IrBasicBlock *trueBlock) {
+  block->trueBlock = trueBlock;
+}
+
 IrBasicBlock *IrBasicBlockGetTrueBlock(IrBasicBlock *block) {
   return block->trueBlock;
+}
+
+void IrBasicBlockSetFalseBlock(IrBasicBlock *block, IrBasicBlock *falseBlock) {
+  block->falseBlock = falseBlock;
 }
 
 IrBasicBlock *IrBasicBlockGetFalseBlock(IrBasicBlock *block) {
@@ -418,10 +437,9 @@ void IrBasicBlockPrintImpl(IrPrinter *printer, IrBasicBlock *block) {
     if (block->cond) {
       assert(block->falseBlock);
       IrVarPrintImpl(printer, block->cond, /*printType=*/false);
-      fprintf(
-          printer->file, " ? b%d : b%d",
-          IrPrinterBasicBlockId(printer, block->trueBlock),
-          IrPrinterBasicBlockId(printer, block->falseBlock));
+      int trueBlockId = IrPrinterBasicBlockId(printer, block->trueBlock);
+      int falseBlockId = IrPrinterBasicBlockId(printer, block->falseBlock);
+      fprintf(printer->file, " ? b%d : b%d", trueBlockId, falseBlockId);
     } else {
       assert(!block->falseBlock);
       fprintf(printer->file, "b%d",
@@ -447,11 +465,14 @@ void IrVarPrintImpl(IrPrinter *printer, IrVar *var, bool printType) {
 
 void IrTypePrintImpl(IrPrinter *printer, IrType type) {
   switch (type) {
+    case IR_TYPE_U64:
+      fprintf(printer->file, "u64");
+      break;
     case IR_TYPE_I32:
       fprintf(printer->file, "i32");
       break;
-    case IR_TYPE_U64:
-      fprintf(printer->file, "u64");
+    case IR_TYPE_U8:
+      fprintf(printer->file, "u8");
       break;
     case IR_TYPE_FN:
       fprintf(printer->file, "fn");
@@ -492,7 +513,7 @@ void IrOpConstPrintImpl(IrPrinter *printer, IrOp *op) {
   switch (op->kind) {
     case IR_OP_KIND_CONST:
       addr = (uint8_t*)&op->constant.val;
-      len = sizeof(op->constant.val);
+      len = IrTypeGetSize(op->constant.dst->type);
       printVal = true;
       break;
     case IR_OP_KIND_CONST_ADDR:
@@ -515,8 +536,27 @@ void IrOpConstPrintImpl(IrPrinter *printer, IrOp *op) {
       assert(false);
   }
   if (printVal) {
+    bool isAscii = true;
     for (int i = 0; i < len; ++i) {
       fprintf(printer->file, "%02x", addr[i]);
+      if (i == len - 1) {
+        isAscii &= addr[i] == (uint8_t)'\0';
+      } else {
+        isAscii &= 0 < addr[i] && addr[i] <= 127;
+      }
+    }
+    if (op->kind == IR_OP_KIND_CONST_ADDR && isAscii) {
+      fprintf(printer->file, " (\"");
+      for (int i = 0; i < len; ++i) {
+        char c = (char)addr[i];
+        switch (c) {
+          case '\n': fprintf(printer->file, "\\n"); break;
+          case '\r': fprintf(printer->file, "\\r"); break;
+          case '\t': fprintf(printer->file, "\\t"); break;
+          default: fputc(c, printer->file);
+        }
+      }
+      fprintf(printer->file, "\")");
     }
   }
   fprintf(printer->file, "\n");
@@ -573,4 +613,28 @@ IrOp *IrOpNewCopy(IrVar *dst, IrVar *src) {
   op->unary.dst = dst;
   op->unary.src = src;
   return op;
+}
+
+int IrTypeGetSize(IrType type) {
+  switch (type) {
+    case IR_TYPE_U64:
+    case IR_TYPE_I64:
+      return 8;
+    case IR_TYPE_U32:
+    case IR_TYPE_I32:
+      return 4;
+    case IR_TYPE_U16:
+    case IR_TYPE_I16:
+      return 2;
+    case IR_TYPE_U8:
+    case IR_TYPE_I8:
+      return 1;
+    default:
+      printf("IR type: %d\n", type);
+      assert(false);
+  }
+}
+
+IrOpKind IrOpGetKind(IrOp *op) {
+  return op->kind;
 }
