@@ -1,0 +1,24 @@
+class Main {
+  fn foo() -> bool {
+    return true;
+  }
+
+  fn bar() -> bool {
+    return false;
+  }
+
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    if (Main.foo()) {
+      Main.write(1, "Foo returns correctly!\n", 23u64);
+    } else {
+      Main.write(1, "Foo returns INCORRECTLY!\n", 25u64);
+    }
+    if (Main.bar()) {
+      Main.write(1, "Bar returns INCORRECTLY!\n", 25u64);
+    } else {
+      Main.write(1, "Bar returns correctly!\n", 23u64);
+    }
+  }
+}
