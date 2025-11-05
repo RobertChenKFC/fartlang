@@ -37,6 +37,8 @@ IrBasicBlock* IrgenFromMemberAccess(
 IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt);
 // Same as IrgenFromBody, but for return statement
 IrBasicBlock* IrgenFromRetStmt(IrBasicBlock* lastBlock, SyntaxAST *retStmt);
+// Same as IrgenFromBody, but for binary op
+IrBasicBlock* IrgenFromBinaryOp(IrBasicBlock* lastBlock, SyntaxAST *binaryOp);
 
 IrProgram *IrgenFromFile(const char *path) {
   IrProgram *program = NULL;
@@ -203,6 +205,23 @@ IrBasicBlock* IrgenFromExpr(IrBasicBlock *lastBlock, SyntaxAST *expr) {
   switch (expr->op) {
     case SYNTAX_OP_CALL:
       return IrgenFromCall(lastBlock, expr);
+    case SYNTAX_OP_ADD:
+    case SYNTAX_OP_SUB:
+    case SYNTAX_OP_MUL:
+    case SYNTAX_OP_DIV:
+    case SYNTAX_OP_MOD:
+    case SYNTAX_OP_BIT_AND:
+    case SYNTAX_OP_BIT_OR:
+    case SYNTAX_OP_BIT_XOR:
+    case SYNTAX_OP_LT:
+    case SYNTAX_OP_LE:
+    case SYNTAX_OP_EQEQ:
+    case SYNTAX_OP_NEQ:
+    case SYNTAX_OP_GE:
+    case SYNTAX_OP_GT:
+    case SYNTAX_OP_LSHIFT:
+    case SYNTAX_OP_RSHIFT:
+      return IrgenFromBinaryOp(lastBlock, expr);
     default:
       printf("Op: %d\n", expr->op);
       assert(false);
@@ -285,6 +304,7 @@ IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term) {
     case SYNTAX_AST_KIND_LITERAL: {
       switch (term->literal.type) {
         case SYNTAX_TYPE_U64:
+        case SYNTAX_TYPE_U32:
         case SYNTAX_TYPE_I32: {
           op = IrOpNewConst(var, term->literal.intVal);
           break;
@@ -373,5 +393,101 @@ IrBasicBlock* IrgenFromRetStmt(IrBasicBlock* lastBlock, SyntaxAST *retStmt) {
     IrOpAppend(lastBlock, IrOpNewCopy(retVar, retExpr->irgenInfo.var));
   }
   lastBlock = IrBasicBlockAdd(func);
+  return lastBlock;
+}
+
+IrBasicBlock* IrgenFromBinaryOp(IrBasicBlock* lastBlock, SyntaxAST *binaryOp) {
+  SyntaxAST *lhs = binaryOp->firstChild;
+  SyntaxAST *rhs = lhs->sibling;
+  lastBlock = IrgenFromExpr(lastBlock, lhs);
+  lastBlock = IrgenFromExpr(lastBlock, rhs);
+  IrVar *lhsVar = lhs->irgenInfo.var;
+  IrVar *rhsVar = rhs->irgenInfo.var;
+  IrOpKind kind;
+  switch (binaryOp->op) {
+    case SYNTAX_OP_ADD:
+      kind = IR_OP_KIND_ADD;
+      break;
+    case SYNTAX_OP_SUB:
+      kind = IR_OP_KIND_SUB;
+      break;
+    case SYNTAX_OP_MUL:
+      kind = IR_OP_KIND_MUL;
+      break;
+    case SYNTAX_OP_DIV:
+      kind = IR_OP_KIND_DIV;
+      break;
+    case SYNTAX_OP_MOD:
+      kind = IR_OP_KIND_MOD;
+      break;
+    case SYNTAX_OP_BIT_AND:
+      kind = IR_OP_KIND_AND;
+      break;
+    case SYNTAX_OP_BIT_XOR:
+      kind = IR_OP_KIND_XOR;
+      break;
+    case SYNTAX_OP_BIT_OR:
+      kind = IR_OP_KIND_OR;
+      break;
+    case SYNTAX_OP_LT:
+      kind = IR_OP_KIND_LT;
+      break;
+    case SYNTAX_OP_LE:
+      kind = IR_OP_KIND_LE;
+      break;
+    case SYNTAX_OP_EQEQ:
+      kind = IR_OP_KIND_EQ;
+      break;
+    case SYNTAX_OP_NEQ:
+      kind = IR_OP_KIND_NE;
+      break;
+    case SYNTAX_OP_GE:
+      kind = IR_OP_KIND_GE;
+      break;
+    case SYNTAX_OP_GT:
+      kind = IR_OP_KIND_GT;
+      break;
+    case SYNTAX_OP_LSHIFT:
+      kind = IR_OP_KIND_LSHIFT;
+      break;
+    case SYNTAX_OP_RSHIFT:
+      kind = IR_OP_KIND_RSHIFT;
+      break;
+    default:
+      printf("Op: %d\n", binaryOp->op);
+      assert(false);
+  }
+  IrType resType;
+  switch (binaryOp->op) {
+    case SYNTAX_OP_ADD:
+    case SYNTAX_OP_SUB:
+    case SYNTAX_OP_MUL:
+    case SYNTAX_OP_DIV:
+    case SYNTAX_OP_MOD:
+      // TODO: handling implicit casting
+      assert(lhsVar->type == rhsVar->type);
+    case SYNTAX_OP_BIT_AND:
+    case SYNTAX_OP_BIT_XOR:
+    case SYNTAX_OP_BIT_OR:
+    case SYNTAX_OP_LSHIFT:
+    case SYNTAX_OP_RSHIFT:
+      resType = lhsVar->type;
+      break;
+    case SYNTAX_OP_LT:
+    case SYNTAX_OP_LE:
+    case SYNTAX_OP_EQEQ:
+    case SYNTAX_OP_NEQ:
+    case SYNTAX_OP_GE:
+    case SYNTAX_OP_GT:
+      resType = IR_TYPE_U8;
+      break;
+    default:
+      printf("Op: %d\n", binaryOp->op);
+      assert(false);
+  }
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
+  IrVar *resVar = IrFuncAddVar(func, resType);
+  binaryOp->irgenInfo.var = resVar;
+  IrOpAppend(lastBlock, IrOpNewBinaryOp(kind, resVar, lhsVar, rhsVar));
   return lastBlock;
 }
