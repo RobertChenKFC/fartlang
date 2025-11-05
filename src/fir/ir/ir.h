@@ -327,6 +327,9 @@ void IrOpDelete(IrOp *op);
 IrOp *IrOpNewCopy(IrVar *dst, IrVar *src);
 // Get the kind of the "op"
 IrOpKind IrOpGetKind(IrOp *op);
+// Create a new binary operation with destination variable "dst" and source
+// variables "src1" and "src2"
+IrOp *IrOpNewBinaryOp(IrOpKind kind, IrVar *dst, IrVar *src1, IrVar *src2);
 
 // Macros
 // General macro for iterating through linked lists

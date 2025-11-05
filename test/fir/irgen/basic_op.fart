@@ -1,0 +1,93 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    # Comparison
+    if (3 == 3) {
+      Main.write(1, "Eq correct!\n", 12u64);
+    } else {
+      Main.write(1, "Eq incorrect!\n", 14u64);
+    }
+    if (3 != 3) {
+      Main.write(1, "Neq incorrect!\n", 15u64);
+    } else {
+      Main.write(1, "Neq correct!\n", 13u64);
+    }
+    if (3 < 5) {
+      Main.write(1, "Lt correct!\n", 12u64);
+    } else {
+      Main.write(1, "Lt incorrect!\n", 14u64);
+    }
+    if (5 <= 5) {
+      Main.write(1, "Le correct!\n", 12u64);
+    } else {
+      Main.write(1, "Le incorrect!\n", 14u64);
+    }
+    if (3 > 5) {
+      Main.write(1, "Gt incorrect!\n", 14u64);
+    } else {
+      Main.write(1, "Gt correct!\n", 12u64);
+    }
+    if (3 >= 5) {
+      Main.write(1, "Ge incorrect!\n", 14u64);
+    } else {
+      Main.write(1, "Ge correct!\n", 12u64);
+    }
+
+    # Arithmetic
+    if (1 + 2 == 3) {
+      Main.write(1, "Add correct!\n", 13u64);
+    } else {
+      Main.write(1, "Add incorrect!\n", 15u64);
+    }
+    if (3 - 2 == 1) {
+      Main.write(1, "Sub correct!\n", 13u64);
+    } else {
+      Main.write(1, "Sub incorrect!\n", 15u64);
+    }
+    if (3 * 2 == 6) {
+      Main.write(1, "Mul correct!\n", 13u64);
+    } else {
+      Main.write(1, "Mul incorrect!\n", 15u64);
+    }
+    if (355 / 113 == 3) {
+      Main.write(1, "Div correct!\n", 13u64);
+    } else {
+      Main.write(1, "Div incorrect!\n", 15u64);
+    }
+    if (355 % 113 == 16) {
+      Main.write(1, "Mod correct!\n", 13u64);
+    } else {
+      Main.write(1, "Mod incorrect!\n", 15u64);
+    }
+
+    # Bitwise
+    if ((8902 & 1243) == 194) {
+      Main.write(1, "And correct!\n", 13u64);
+    } else {
+      Main.write(1, "And incorrect!\n", 15u64);
+    }
+    if ((8902 ^ 1243) == 9757) {
+      Main.write(1, "Xor correct!\n", 13u64);
+    } else {
+      Main.write(1, "Xor incorrect!\n", 15u64);
+    }
+    if ((8902 | 1243) == 9951) {
+      Main.write(1, "Or correct!\n", 12u64);
+    } else {
+      Main.write(1, "Or incorrect!\n", 14u64);
+    }
+
+    # Shift
+    if (12 << 3u32 == 96) {
+      Main.write(1, "Lshift correct!\n", 16u64);
+    } else {
+      Main.write(1, "Lshift incorrect!\n", 18u64);
+    }
+    if (243 >> 4u32 == 15) {
+      Main.write(1, "Rshift correct!\n", 16u64);
+    } else {
+      Main.write(1, "Rshift incorrect!\n", 18u64);
+    }
+  }
+}

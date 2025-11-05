@@ -68,6 +68,10 @@ void IrOpDeleteCopy(IrOp *op);
 int IrTypeGetSize(IrType type);
 // Implementation of IrOpCopyPrint, which uses an internal "printer"
 void IrOpCopyPrintImpl(IrPrinter *printer, IrOp *op);
+// Implementation of IrOpBinaryPrint, which uses an internal "printer"
+void IrOpBinaryPrintImpl(IrPrinter *printer, IrOp *op);
+// Delete an operation "op" created with IrOpNewBinary
+void IrOpDeleteBinary(IrOp *op);
 
 // Macros
 // Given the pointer variables to the "firstNode" and "lastNode" of the list,
@@ -339,6 +343,24 @@ void IrOpDelete(IrOp *op) {
     case IR_OP_KIND_COPY:
       IrOpDeleteCopy(op);
       break;
+    case IR_OP_KIND_ADD:
+    case IR_OP_KIND_SUB:
+    case IR_OP_KIND_MUL:
+    case IR_OP_KIND_DIV:
+    case IR_OP_KIND_MOD:
+    case IR_OP_KIND_AND:
+    case IR_OP_KIND_XOR:
+    case IR_OP_KIND_OR:
+    case IR_OP_KIND_LSHIFT:
+    case IR_OP_KIND_RSHIFT:
+    case IR_OP_KIND_LT:
+    case IR_OP_KIND_LE:
+    case IR_OP_KIND_EQ:
+    case IR_OP_KIND_NE:
+    case IR_OP_KIND_GE:
+    case IR_OP_KIND_GT:
+      IrOpDeleteBinary(op);
+      break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
@@ -475,6 +497,9 @@ void IrTypePrintImpl(IrPrinter *printer, IrType type) {
     case IR_TYPE_U64:
       fprintf(printer->file, "u64");
       break;
+    case IR_TYPE_U32:
+      fprintf(printer->file, "u32");
+      break;
     case IR_TYPE_I32:
       fprintf(printer->file, "i32");
       break;
@@ -507,6 +532,24 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
       break;
     case IR_OP_KIND_COPY:
       IrOpCopyPrintImpl(printer, op);
+      break;
+    case IR_OP_KIND_ADD:
+    case IR_OP_KIND_SUB:
+    case IR_OP_KIND_MUL:
+    case IR_OP_KIND_DIV:
+    case IR_OP_KIND_MOD:
+    case IR_OP_KIND_AND:
+    case IR_OP_KIND_XOR:
+    case IR_OP_KIND_OR:
+    case IR_OP_KIND_LSHIFT:
+    case IR_OP_KIND_RSHIFT:
+    case IR_OP_KIND_LT:
+    case IR_OP_KIND_LE:
+    case IR_OP_KIND_EQ:
+    case IR_OP_KIND_NE:
+    case IR_OP_KIND_GE:
+    case IR_OP_KIND_GT:
+      IrOpBinaryPrintImpl(printer, op);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
@@ -654,9 +697,88 @@ void IrOpCopyPrintImpl(IrPrinter *printer, IrOp *op) {
   assert(op->unary.src);
   int dstId = IrPrinterVarId(printer, op->unary.dst);
   int srcId = IrPrinterVarId(printer, op->unary.src);
-  fprintf(printer->file, "v%d = v%d\n", dstId, srcId);
+  fprintf(printer->file, "v%d : ", dstId);
+  IrTypePrintImpl(printer, op->unary.dst->type);
+  fprintf(printer->file, " = v%d\n", srcId);
 }
 
 void IrOpDeleteCopy(IrOp *op) {
+  free(op);
+}
+
+IrOp *IrOpNewBinaryOp(IrOpKind kind, IrVar *dst, IrVar *src1, IrVar *src2) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = kind;
+  op->binary.dst = dst;
+  op->binary.src1 = src1;
+  op->binary.src2 = src2;
+  return op;
+}
+
+void IrOpBinaryPrintImpl(IrPrinter *printer, IrOp *op) {
+  int dstId = IrPrinterVarId(printer, op->binary.dst);
+  int src1Id = IrPrinterVarId(printer, op->binary.src1);
+  int src2Id = IrPrinterVarId(printer, op->binary.src2);
+  fprintf(printer->file, "v%d : ", dstId);
+  IrTypePrintImpl(printer, op->binary.dst->type);
+  fprintf(printer->file, " = v%d ", src1Id);
+  const char *opStr;
+  switch (op->kind) {
+    case IR_OP_KIND_ADD:
+      opStr = "+";
+      break;
+    case IR_OP_KIND_SUB:
+      opStr = "-";
+      break;
+    case IR_OP_KIND_MUL:
+      opStr = "*";
+      break;
+    case IR_OP_KIND_DIV:
+      opStr = "/";
+      break;
+    case IR_OP_KIND_MOD:
+      opStr = "%";
+      break;
+    case IR_OP_KIND_AND:
+      opStr = "&";
+      break;
+    case IR_OP_KIND_XOR:
+      opStr = "^";
+      break;
+    case IR_OP_KIND_OR:
+      opStr = "|";
+      break;
+    case IR_OP_KIND_LSHIFT:
+      opStr = "<<";
+      break;
+    case IR_OP_KIND_RSHIFT:
+      opStr = ">>";
+      break;
+    case IR_OP_KIND_LT:
+      opStr = "<";
+      break;
+    case IR_OP_KIND_LE:
+      opStr = "<=";
+      break;
+    case IR_OP_KIND_EQ:
+      opStr = "==";
+      break;
+    case IR_OP_KIND_NE:
+      opStr = "!=";
+      break;
+    case IR_OP_KIND_GE:
+      opStr = ">=";
+      break;
+    case IR_OP_KIND_GT:
+      opStr = ">";
+      break;
+    default:
+      printf("Op kind: %d\n", op->kind);
+      assert(false);
+  }
+  fprintf(printer->file, "%s v%d\n", opStr, src2Id);
+}
+
+void IrOpDeleteBinary(IrOp *op) {
   free(op);
 }

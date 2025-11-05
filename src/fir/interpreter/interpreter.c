@@ -36,6 +36,8 @@ void InterpreterPopFuncVars(Interpreter *interpreter, IrFunc *func);
 void InterpreterSetupFuncVars(Interpreter *interpreter, IrFunc *func);
 // Run the copy operation "op"
 void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op);
+// Run the binary operation "op"
+void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op);
 
 void InterpreterInit(Interpreter *interpreter) {
   interpreter->pc = NULL;
@@ -166,6 +168,24 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
       break;
     case IR_OP_KIND_COPY:
       InterpreterRunOpCopy(interpreter, op);
+      break;
+    case IR_OP_KIND_ADD:
+    case IR_OP_KIND_SUB:
+    case IR_OP_KIND_MUL:
+    case IR_OP_KIND_DIV:
+    case IR_OP_KIND_MOD:
+    case IR_OP_KIND_AND:
+    case IR_OP_KIND_XOR:
+    case IR_OP_KIND_OR:
+    case IR_OP_KIND_LSHIFT:
+    case IR_OP_KIND_RSHIFT:
+    case IR_OP_KIND_LT:
+    case IR_OP_KIND_LE:
+    case IR_OP_KIND_EQ:
+    case IR_OP_KIND_NE:
+    case IR_OP_KIND_GE:
+    case IR_OP_KIND_GT:
+      InterpreterRunOpBinary(interpreter, op);
       break;
     default:
       printf("Op kind: %d\n", IrOpGetKind(op));
@@ -303,5 +323,69 @@ void InterpreterSetupFuncVars(Interpreter *interpreter, IrFunc *func) {
 void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op) {
   uint64_t val = InterpreterGetVarVal(interpreter, op->unary.src);
   InterpreterSetVarVal(interpreter, op->unary.dst, val);
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->binary.dst;
+  IrVar *src1Var = op->binary.src1;
+  IrVar *src2Var = op->binary.src2;
+  uint64_t src1Val = le64toh(InterpreterGetVarVal(interpreter, src1Var));
+  uint64_t src2Val = le64toh(InterpreterGetVarVal(interpreter, src2Var));
+  uint64_t dstVal;
+  switch (op->kind) {
+    case IR_OP_KIND_ADD:
+      dstVal = src1Val + src2Val;
+      break;
+    case IR_OP_KIND_SUB:
+      dstVal = src1Val - src2Val;
+      break;
+    case IR_OP_KIND_MUL:
+      dstVal = src1Val * src2Val;
+      break;
+    case IR_OP_KIND_DIV:
+      dstVal = src1Val / src2Val;
+      break;
+    case IR_OP_KIND_MOD:
+      dstVal = src1Val % src2Val;
+      break;
+    case IR_OP_KIND_AND:
+      dstVal = src1Val & src2Val;
+      break;
+    case IR_OP_KIND_XOR:
+      dstVal = src1Val ^ src2Val;
+      break;
+    case IR_OP_KIND_OR:
+      dstVal = src1Val | src2Val;
+      break;
+    case IR_OP_KIND_LSHIFT:
+      dstVal = src1Val << src2Val;
+      break;
+    case IR_OP_KIND_RSHIFT:
+      dstVal = src1Val >> src2Val;
+      break;
+    case IR_OP_KIND_LT:
+      dstVal = src1Val < src2Val ? 1 : 0;
+      break;
+    case IR_OP_KIND_LE:
+      dstVal = src1Val <= src2Val ? 1 : 0;
+      break;
+    case IR_OP_KIND_EQ:
+      dstVal = src1Val == src2Val ? 1 : 0;
+      break;
+    case IR_OP_KIND_NE:
+      dstVal = src1Val != src2Val ? 1 : 0;
+      break;
+    case IR_OP_KIND_GE:
+      dstVal = src1Val >= src2Val ? 1 : 0;
+      break;
+    case IR_OP_KIND_GT:
+      dstVal = src1Val > src2Val ? 1 : 0;
+      break;
+    default:
+      printf("Op kind: %d\n", op->kind);
+      assert(false);
+  }
+  InterpreterSetVarVal(interpreter, dstVar, dstVal);
   InterpreterStep(interpreter);
 }
