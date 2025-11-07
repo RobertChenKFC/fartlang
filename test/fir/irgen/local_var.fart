@@ -1,0 +1,19 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn main() {
+    var x = 5;
+    var y = 10;
+    if (y - x == x) {
+      Main.write(1, "Correct!\n", 9u64);
+    } else {
+      Main.write(1, "Incorrect!\n", 11u64);
+    }
+    var z = 2;
+    if (y / z != x) {
+      Main.write(1, "Incorrect!\n", 11u64);
+    } else {
+      Main.write(1, "Correct!\n", 9u64);
+    }
+  }
+}

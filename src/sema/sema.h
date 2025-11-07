@@ -160,7 +160,7 @@ struct SemaInfo {
     // A pointer to SemaSymInfo is stored for the following kinds of AST nodes:
     // SYNTAX_AST_KIND_CLASS_DECL, SYNTAX_AST_KIND_IMPORT_DECL,
     // SYNTAX_AST_KIND_VAR_INIT, SYNTAX_AST_KIND_METHOD_DECL,
-    // SYNTAX_AST_KIND_IDENTIFIER, SYNTAX_AST_KIND_LABEL
+    // SYNTAX_AST_KIND_LABEL
     // Note that the AST node that declares the symbol will be the owner of
     // "symInfo", so in the case of variable initialization and uses, the
     // initialization will be the owner of "symInfo".
@@ -175,6 +175,9 @@ struct SemaInfo {
         // For SYNTAX_AST_KIND_MEMBER_ACCESS: the AST node that declared this
         // member
         SyntaxAST *member;
+        // For SYNTAX_AST_KIND_IDENTIFIER: the AST node that declared this
+        // variable/class/label
+        SyntaxAST *decl;
       };
     };
   };

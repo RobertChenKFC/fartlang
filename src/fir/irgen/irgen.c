@@ -179,6 +179,7 @@ IrBasicBlock* IrgenFromVarDecl(IrBasicBlock *lastBlock, SyntaxAST *varDecl) {
     SemaTypeInfo *typeInfo = &symInfo->typeInfo;
     IrType varType = IrgenIrTypeFromSemaType(typeInfo->type);
     IrVar *var = IrFuncAddVar(func, varType);
+    varInit->irgenInfo.var = var;
 
     assert(varInit && varInit->kind == SYNTAX_AST_KIND_VAR_INIT);
     SyntaxAST *varInitExpr = varInit->lastChild;
@@ -290,9 +291,11 @@ IrBasicBlock* IrgenFromCFunc(IrBasicBlock *lastBlock, SyntaxAST *methodDecl) {
 }
 
 IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term) {
-  if (term->kind == SYNTAX_AST_KIND_IDENTIFIER &&
-      !SemaValueIsCapturable(term)) {
-    // This term is a class or namespace, don't generate any code for it
+  if (term->kind == SYNTAX_AST_KIND_IDENTIFIER) {
+    if (SemaValueIsCapturable(term)) {
+      SyntaxAST *decl = term->semaInfo.decl;
+      term->irgenInfo.var = decl->irgenInfo.var;
+    }
     return lastBlock;
   }
 
@@ -322,9 +325,6 @@ IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term) {
         }
       }
       break;
-    } case SYNTAX_AST_KIND_IDENTIFIER: {
-      // TODO: handle variables
-      assert(false);
     } default: {
       printf("Term kind: %d\n", term->kind);
       assert(false);

@@ -1358,7 +1358,7 @@ SemaType *SemaTypeFromTerm(
       typeInfo->isTypeOwner = false;
       free(type);
       type = typeInfo->type;
-
+      term->semaInfo.decl = varInfo->decl;
       if (!SemaCheckErrorForUncapturableValue(term, parentExpr, fileCtx)) {
         type = NULL;
         term->semaInfo.skipAnalysis = true;
@@ -3504,6 +3504,7 @@ bool SemaPopulateSymbol(
   assert(entry);
   symInfo->entry = entry;
   symInfo->attr = attr;
+  symInfo->decl = symbol;
   if (addToScope) {
     Vector *scopes = fileCtx->scopes;
     symInfo->nextInScope = scopes->arr[scopes->size - 1];
