@@ -39,6 +39,19 @@ IrBasicBlock* IrgenFromIfStmt(IrBasicBlock* lastBlock, SyntaxAST *ifStmt);
 IrBasicBlock* IrgenFromRetStmt(IrBasicBlock* lastBlock, SyntaxAST *retStmt);
 // Same as IrgenFromBody, but for binary op
 IrBasicBlock* IrgenFromBinaryOp(IrBasicBlock* lastBlock, SyntaxAST *binaryOp);
+// Same as IrgenFromBody, but for for statement
+IrBasicBlock* IrgenFromForStmt(IrBasicBlock* lastBlock, SyntaxAST *forStmt);
+// Same as IrgenFromBody, but for array access op
+IrBasicBlock* IrgenFromArrayAccess(
+    IrBasicBlock* lastBlock, SyntaxAST *arrayAccess);
+// Same as IrgenFromBody, but for increment op
+IrBasicBlock* IrgenFromIncOp(IrBasicBlock *lastBlock, SyntaxAST *incOp);
+// Given an expression "lhs" that is the LHS of an assignment/increment op,
+// generate the IR get the variable or address of this LHS. The variable or
+// address will be stored in "lhsVar", and whether it's an address or not
+// will be stored in "isAddr". Returns the basic block after generating all IR
+IrBasicBlock* IrgenGetLhs(
+    IrBasicBlock *lastBlock, SyntaxAST *lhs, IrVar **lhsVar, bool *isAddr);
 
 IrProgram *IrgenFromFile(const char *path) {
   IrProgram *program = NULL;
@@ -97,11 +110,19 @@ void IrgenFromMethodDecl(IrModule *module, SyntaxAST *methodDecl) {
   assert(methodType->kind == SEMA_TYPE_KIND_FN);
   Vector *paramTypes = methodType->paramTypes;
   Vector *params = IrFuncGetParams(func);
+  SyntaxAST *syntaxRetType = methodDecl->firstChild;
+  assert(syntaxRetType);
+  SyntaxAST *syntaxParamList = syntaxRetType->sibling;
+  assert(syntaxParamList);
+  SyntaxAST *syntaxParam = syntaxParamList->firstChild;
   for (int i = 0; i < paramTypes->size; ++i) {
     SemaType *paramSemaType = paramTypes->arr[i];
     IrType paramType = IrgenIrTypeFromSemaType(paramSemaType);
     IrVar *param = IrFuncAddVar(func, paramType);
     VectorAdd(params, param);
+    assert(syntaxParam);
+    syntaxParam->irgenInfo.var = param;
+    syntaxParam = syntaxParam->sibling;
   }
 
   SyntaxAST *methodBody = methodDecl->lastChild;
@@ -132,6 +153,7 @@ IrType IrgenIrTypeFromSemaType(SemaType *type) {
         case SEMA_PRIM_TYPE_I32:
           return IR_TYPE_I32;
         case SEMA_PRIM_TYPE_BOOL:
+        case SEMA_PRIM_TYPE_U8:
           return IR_TYPE_U8;
         default:
           printf("Sema prim type: %d\n", type->primType);
@@ -160,6 +182,8 @@ IrBasicBlock* IrgenFromStmt(IrBasicBlock *lastBlock, SyntaxAST *stmt) {
       return IrgenFromIfStmt(lastBlock, stmt);
     case SYNTAX_AST_KIND_RETURN_STMT:
       return IrgenFromRetStmt(lastBlock, stmt);
+    case SYNTAX_AST_KIND_FOR_STMT:
+      return IrgenFromForStmt(lastBlock, stmt);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -223,6 +247,10 @@ IrBasicBlock* IrgenFromExpr(IrBasicBlock *lastBlock, SyntaxAST *expr) {
     case SYNTAX_OP_LSHIFT:
     case SYNTAX_OP_RSHIFT:
       return IrgenFromBinaryOp(lastBlock, expr);
+    case SYNTAX_OP_ARRAY_ACCESS:
+      return IrgenFromArrayAccess(lastBlock, expr);
+    case SYNTAX_OP_INC:
+      return IrgenFromIncOp(lastBlock, expr);
     default:
       printf("Op: %d\n", expr->op);
       assert(false);
@@ -308,7 +336,8 @@ IrBasicBlock* IrgenFromTerm(IrBasicBlock *lastBlock, SyntaxAST *term) {
       switch (term->literal.type) {
         case SYNTAX_TYPE_U64:
         case SYNTAX_TYPE_U32:
-        case SYNTAX_TYPE_I32: {
+        case SYNTAX_TYPE_I32:
+        case SYNTAX_TYPE_U8: {
           op = IrOpNewConst(var, term->literal.intVal);
           break;
         } case SYNTAX_TYPE_BOOL: {
@@ -489,5 +518,116 @@ IrBasicBlock* IrgenFromBinaryOp(IrBasicBlock* lastBlock, SyntaxAST *binaryOp) {
   IrVar *resVar = IrFuncAddVar(func, resType);
   binaryOp->irgenInfo.var = resVar;
   IrOpAppend(lastBlock, IrOpNewBinaryOp(kind, resVar, lhsVar, rhsVar));
+  return lastBlock;
+}
+
+IrBasicBlock* IrgenFromForStmt(IrBasicBlock* lastBlock, SyntaxAST *forStmt) {
+  SyntaxAST *init = forStmt->firstChild;
+  SyntaxAST *cond = init->sibling;
+  SyntaxAST *iter = cond->sibling;
+  SyntaxAST *body = iter->sibling;
+  SyntaxAST *label = body->sibling;
+
+  // TODO: support labels
+  assert(!label);
+
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
+  IrBasicBlock *condBlock = IrBasicBlockAdd(func);
+  IrBasicBlock *bodyBlock = IrBasicBlockAdd(func);
+  IrBasicBlock *nextBlock = IrBasicBlockAdd(func);
+
+  switch (init->kind) {
+    case SYNTAX_AST_KIND_VAR_DECL:
+      lastBlock = IrgenFromVarDecl(lastBlock, init);
+      break;
+    case SYNTAX_AST_KIND_PLACEHOLDER:
+      break;
+    default:
+      lastBlock = IrgenFromExpr(lastBlock, init);
+      break;
+  }
+  IrBasicBlockSetTrueBlock(lastBlock, condBlock);
+
+  IrVar *condVar;
+  if (cond->kind == SYNTAX_AST_KIND_PLACEHOLDER) {
+    // TODO: generate an unconditional jump instead
+    condVar = IrFuncAddVar(func, IR_TYPE_U8);
+    IrOpAppend(condBlock, IrOpNewConst(condVar, true));
+  } else {
+    condBlock = IrgenFromExpr(condBlock, cond);
+    condVar = cond->irgenInfo.var;
+  }
+  IrBasicBlockSetCond(condBlock, condVar);
+  IrBasicBlockSetTrueBlock(condBlock, bodyBlock);
+  IrBasicBlockSetFalseBlock(condBlock, nextBlock);
+
+  bodyBlock = IrgenFromBody(bodyBlock, body);
+  if (iter->kind != SYNTAX_AST_KIND_PLACEHOLDER) {
+    bodyBlock = IrgenFromExpr(bodyBlock, iter);
+  }
+  IrBasicBlockSetTrueBlock(bodyBlock, condBlock);
+
+  return nextBlock;
+}
+
+IrBasicBlock* IrgenFromArrayAccess(
+    IrBasicBlock* lastBlock, SyntaxAST *arrayAccess) {
+  SyntaxAST *operand = arrayAccess->firstChild;
+  SyntaxAST *index = operand->sibling;
+  lastBlock = IrgenFromExpr(lastBlock, operand);
+  lastBlock = IrgenFromExpr(lastBlock, index);
+
+  IrVar *operandVar = operand->irgenInfo.var;
+  IrVar *indexVar = index->irgenInfo.var;
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
+  IrVar *addrVar = IrFuncAddVar(func, IR_TYPE_ADDR);
+  if (indexVar->type == IR_TYPE_ADDR) {
+    IrOpAppend(lastBlock, IrOpNewCopy(addrVar, indexVar));
+  } else {
+    IrOpAppend(lastBlock, IrOpNewUnaryOp(IR_OP_KIND_AS, addrVar, indexVar));
+  }
+  assert(operandVar->type == IR_TYPE_ADDR);
+  SemaType *elemSemaType = arrayAccess->semaInfo.typeInfo.type;
+  IrType elemType = IrgenIrTypeFromSemaType(elemSemaType);
+  int elemSize = IrTypeGetSize(elemType);
+  if (elemSize > 1) {
+    IrVar *elemSizeVar = IrFuncAddVar(func, IR_TYPE_ADDR);
+    IrOpAppend(lastBlock, IrOpNewConst(elemSizeVar, elemSize));
+    IrOpAppend(
+        lastBlock,
+        IrOpNewBinaryOp(IR_OP_KIND_MUL, addrVar, addrVar, elemSizeVar));
+  }
+  IrOpAppend(
+      lastBlock,
+      IrOpNewBinaryOp(IR_OP_KIND_ADD, addrVar, addrVar, operandVar));
+
+  IrVar *elemVar = IrFuncAddVar(func, elemType);
+  IrOpAppend(lastBlock, IrOpNewUnaryOp(IR_OP_KIND_LOAD, elemVar, addrVar));
+  arrayAccess->irgenInfo.var = elemVar;
+  return lastBlock;
+}
+
+IrBasicBlock* IrgenFromIncOp(IrBasicBlock* lastBlock, SyntaxAST *incOp) {
+  SyntaxAST *lhs = incOp->firstChild;
+  IrVar *lhsVar;
+  bool isAddr;
+  lastBlock = IrgenGetLhs(lastBlock, lhs, &lhsVar, &isAddr);
+  // TODO: support addresses
+  assert(!isAddr);
+  IrFunc *func = IrBasicBlockGetParentFunc(lastBlock);
+  IrVar *oneVar = IrFuncAddVar(func, lhsVar->type);
+  IrOpAppend(lastBlock, IrOpNewConst(oneVar, 1));
+  IrOpAppend(
+      lastBlock, IrOpNewBinaryOp(IR_OP_KIND_ADD, lhsVar, lhsVar, oneVar));
+  return lastBlock;
+}
+
+IrBasicBlock* IrgenGetLhs(
+    IrBasicBlock *lastBlock, SyntaxAST *lhs, IrVar **lhsVar, bool *isAddr) {
+  // TODO: support other types of LHS
+  assert(lhs->kind == SYNTAX_AST_KIND_IDENTIFIER);
+  lastBlock = IrgenFromExpr(lastBlock, lhs);
+  *lhsVar = lhs->irgenInfo.var;
+  *isAddr = false;
   return lastBlock;
 }

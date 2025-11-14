@@ -64,14 +64,16 @@ void IrOpDeleteConst(IrOp *op);
 void IrOpDeleteCall(IrOp *op);
 // Delete an operation "op" created with IrOpNewCopy
 void IrOpDeleteCopy(IrOp *op);
-// Get the byte size of the IR "type"
-int IrTypeGetSize(IrType type);
 // Implementation of IrOpCopyPrint, which uses an internal "printer"
 void IrOpCopyPrintImpl(IrPrinter *printer, IrOp *op);
 // Implementation of IrOpBinaryPrint, which uses an internal "printer"
 void IrOpBinaryPrintImpl(IrPrinter *printer, IrOp *op);
 // Delete an operation "op" created with IrOpNewBinary
 void IrOpDeleteBinary(IrOp *op);
+// Implementation of IrOpLoadPrint, which uses an internal "printer"
+void IrOpLoadPrintImpl(IrPrinter *printer, IrOp *op);
+// Delete an operation "op" created with IrOpNewUnary
+void IrOpDeleteUnary(IrOp *op);
 
 // Macros
 // Given the pointer variables to the "firstNode" and "lastNode" of the list,
@@ -361,6 +363,9 @@ void IrOpDelete(IrOp *op) {
     case IR_OP_KIND_GT:
       IrOpDeleteBinary(op);
       break;
+    case IR_OP_KIND_LOAD:
+      IrOpDeleteUnary(op);
+      break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
@@ -550,6 +555,9 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
     case IR_OP_KIND_GE:
     case IR_OP_KIND_GT:
       IrOpBinaryPrintImpl(printer, op);
+      break;
+    case IR_OP_KIND_LOAD:
+      IrOpLoadPrintImpl(printer, op);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
@@ -780,5 +788,25 @@ void IrOpBinaryPrintImpl(IrPrinter *printer, IrOp *op) {
 }
 
 void IrOpDeleteBinary(IrOp *op) {
+  free(op);
+}
+
+IrOp *IrOpNewUnaryOp(IrOpKind kind, IrVar *dst, IrVar *src) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = kind;
+  op->unary.dst = dst;
+  op->unary.src = src;
+  return op;
+}
+
+void IrOpLoadPrintImpl(IrPrinter *printer, IrOp *op) {
+  int dstId = IrPrinterVarId(printer, op->unary.dst);
+  int srcId = IrPrinterVarId(printer, op->unary.src);
+  fprintf(printer->file, "v%d : ", dstId);
+  IrTypePrintImpl(printer, op->unary.dst->type);
+  fprintf(printer->file, " = load v%d\n", srcId);
+}
+
+void IrOpDeleteUnary(IrOp *op) {
   free(op);
 }

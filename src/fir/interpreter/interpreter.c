@@ -2,6 +2,7 @@
 #include <alloca.h>
 #include <assert.h>
 #include <endian.h>
+#include <string.h>
 
 // Advance "interpreter->pc" to the next operation
 void InterpreterStep(Interpreter *interpeter);
@@ -38,6 +39,8 @@ void InterpreterSetupFuncVars(Interpreter *interpreter, IrFunc *func);
 void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op);
 // Run the binary operation "op"
 void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op);
+// Run the load operation "op"
+void InterpreterRunOpLoad(Interpreter *interpreter, IrOp *op);
 
 void InterpreterInit(Interpreter *interpreter) {
   interpreter->pc = NULL;
@@ -186,6 +189,9 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
     case IR_OP_KIND_GE:
     case IR_OP_KIND_GT:
       InterpreterRunOpBinary(interpreter, op);
+      break;
+    case IR_OP_KIND_LOAD:
+      InterpreterRunOpLoad(interpreter, op);
       break;
     default:
       printf("Op kind: %d\n", IrOpGetKind(op));
@@ -386,6 +392,17 @@ void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op) {
       printf("Op kind: %d\n", op->kind);
       assert(false);
   }
+  InterpreterSetVarVal(interpreter, dstVar, htole64(dstVal));
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpLoad(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->unary.dst;
+  IrVar *srcVar = op->unary.src;
+  void *srcAddr = (void*)le64toh(InterpreterGetVarVal(interpreter, srcVar));
+  uint64_t dstVal = 0;
+  int size = IrTypeGetSize(dstVar->type);
+  memcpy(&dstVal, srcAddr, size);
   InterpreterSetVarVal(interpreter, dstVar, dstVal);
   InterpreterStep(interpreter);
 }

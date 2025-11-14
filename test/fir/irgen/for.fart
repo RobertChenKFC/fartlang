@@ -1,0 +1,16 @@
+class Main {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn print(buf: u8[]) {
+    var len = 0u64;
+    for ; buf[len] != '\0'; len++ {}
+    Main.write(1, buf, len);
+  }
+
+  fn main() {
+    for var i = 0; i < 3; i++ {
+      Main.print("Hello world for fartlang with loops!\n");
+      # Main.write(1, "Hello world for fartlang with loops!\n", 37u64);
+    }
+  }
+}
