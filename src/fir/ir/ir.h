@@ -330,6 +330,11 @@ IrOpKind IrOpGetKind(IrOp *op);
 // Create a new binary operation with destination variable "dst" and source
 // variables "src1" and "src2"
 IrOp *IrOpNewBinaryOp(IrOpKind kind, IrVar *dst, IrVar *src1, IrVar *src2);
+// Create a new unary operation with destination variable "dst" and source
+// variable "src"
+IrOp *IrOpNewUnaryOp(IrOpKind kind, IrVar *dst, IrVar *src);
+// Get the byte size of the IR "type"
+int IrTypeGetSize(IrType type);
 
 // Macros
 // General macro for iterating through linked lists
