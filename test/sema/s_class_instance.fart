@@ -1,0 +1,10 @@
+class Foo {
+  new() {}
+}
+
+class Main {
+  fn main() {
+    var x = Foo.new();
+    var y = x;
+  }
+}

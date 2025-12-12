@@ -75,4 +75,10 @@ class Bar {
     var namespace_class_var = file6.Foo.x; # error
     var namespace_class_static : Bar = file6.Foo.y; # correct, type u32
   }
+
+  f6() {
+    var x: Bar = null;
+    var y1: bool = x.x; # correct, type i32
+    var y2: bool = Bar.x; # error
+  }
 }

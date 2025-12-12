@@ -8,6 +8,8 @@
 
 // Enums
 enum IrType {
+  IR_TYPE_F64,
+  IR_TYPE_F32,
   IR_TYPE_U64,
   IR_TYPE_ADDR = IR_TYPE_U64,
   IR_TYPE_I64,
@@ -51,7 +53,7 @@ enum IrOpKind {
   IR_OP_KIND_LOAD,
   IR_OP_KIND_STORE,
   IR_OP_KIND_ALLOC,
-  IR_OP_KIND_FREE,
+  IR_OP_KIND_DEALLOC,
   IR_OP_KIND_CALL,
 };
 
@@ -216,7 +218,7 @@ struct IrOp {
       IrVar *val;
     } memAcc;
 
-    // Memory allocation operation: IR_OP_KIND_FREE
+    // Memory allocation operation: IR_OP_KIND_DEALLOC
     struct {
       // The destination variable
       IrVar *dst;
@@ -335,6 +337,12 @@ IrOp *IrOpNewBinaryOp(IrOpKind kind, IrVar *dst, IrVar *src1, IrVar *src2);
 IrOp *IrOpNewUnaryOp(IrOpKind kind, IrVar *dst, IrVar *src);
 // Get the byte size of the IR "type"
 int IrTypeGetSize(IrType type);
+// Create a new nullary operation with destination variable "dst"
+IrOp *IrOpNewNullaryOp(IrOpKind kind, IrVar *dst);
+// Return true if "type" is a float type
+bool IrTypeIsFloat(IrType type);
+// Return true if "type" is a signed integer type
+bool IrTypeIsSigned(IrType type);
 
 // Macros
 // General macro for iterating through linked lists

@@ -87,3 +87,4 @@ ParserDeclareHandler(SyntaxHandlerForStmt, rhs);
 ParserDeclareHandler(SyntaxHandlerWhileStmt, rhs);
 ParserDeclareHandler(SyntaxHandlerBreakStmt, rhs);
 ParserDeclareHandler(SyntaxHandlerReturnStmt, rhs);
+ParserDeclareHandler(SyntaxHandlerDeallocStmt, rhs);

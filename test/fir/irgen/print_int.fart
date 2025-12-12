@@ -1,0 +1,59 @@
+class Print {
+  fn write(fd: i32, buf: u8[], count: u64)
+
+  fn strlen(str: u8[]) -> u64 {
+    var len = 0u64;
+    for ; str[len] != '\0'; len++ {}
+    return len;
+  }
+
+  fn print(str: u8[]) {
+    var len = Print.strlen(str);
+    Print.write(1, str, len);
+  }
+
+  fn print_int(x: i32) {
+    if x == 0 {
+      Print.print("0\n");
+      return;
+    }
+    if x == -x {
+      Print.print("-2147483648\n");
+      return;
+    }
+    var buf = [u8] * 12u32;
+    var len = 0u64;
+    var start = 0u64;
+    if x < 0 {
+      buf[0u64] = '-';
+      start = len = 1u64;
+      x = -x;
+    }
+    for ; x > 0; len++ {
+      buf[len] = ((x % 10) as u8) + '0';
+      x /= 10;
+    }
+    # Reverse [start:len)
+    for var i = start, j = len - 1u64; i < j; {
+      var t = buf[i];
+      buf[i] = buf[j];
+      buf[j] = t;
+      i++;
+      j--;
+    }
+    buf[len] = '\n';
+    len++;
+    Print.write(1, buf, len);
+    dealloc buf;
+  }
+}
+
+class Main {
+  fn main() {
+    Print.print_int(12345);
+    Print.print_int(-67890);
+    Print.print_int(0);
+    Print.print_int(2147483647);
+    Print.print_int(-2147483647 - 1);
+  }
+}

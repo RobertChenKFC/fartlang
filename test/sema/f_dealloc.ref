@@ -1,0 +1,8 @@
+[31;1m[Error][0m f_dealloc.fart:4: expected dealloc to apply to array type or class instance, got identifier of type [31;1mi32[0m instead
+    4 |     dealloc [31;1mx[0m;
+[31;1m[Error][0m f_dealloc.fart:5: [31;1mvalue[0m is not used in an access operator
+    5 |     dealloc [31;1mMain[0m;
+[31;1m[Error][0m f_dealloc.fart:6: identifier [31;1mmain[0m is not defined
+    6 |     dealloc [31;1mmain[0m;
+[31;1m[Error][0m f_dealloc.fart:10: identifier [31;1mlabel[0m is not defined
+   10 |     dealloc [31;1mlabel[0m;

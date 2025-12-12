@@ -79,5 +79,8 @@ class Stmt {
     # Return
     return 123+456*789%101112;
     return;
+
+    # Dealloc
+    dealloc xyz123;
   }
 }

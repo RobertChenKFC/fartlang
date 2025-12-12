@@ -27,7 +27,7 @@ $(COMPILER_FILES)&: $(BIN)
 	$(VALGRIND) $(VALGRIND_FLAGS) $<
 
 $(OUT_FILES): %.out: $(BIN) %.fart $(COMPILER_FILES) | $(DIR)
-	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(VALGRIND_REDIRECT) $(abspath $<) $(notdir $*.fart) --debug 2>$(abspath $@)
+	cd $| && $(VALGRIND) $(VALGRIND_FLAGS) $(VALGRIND_REDIRECT) $(abspath $<) $(notdir $*.fart) --debug
 
 BIN_DIR := $(dir $(BIN))
 CLEAN_FILES := $(CLEAN_FILES) $(BIN_DIR)/lexer.txt
