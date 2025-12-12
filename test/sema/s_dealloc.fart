@@ -1,0 +1,12 @@
+class Foo {
+  new() {}
+}
+
+class Main {
+  fn main() {
+    var foo: Foo = Foo.new();
+    dealloc foo;
+    var bar = [i32] * 10u32;
+    dealloc bar;
+  }
+}

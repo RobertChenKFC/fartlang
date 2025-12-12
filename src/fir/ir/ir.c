@@ -74,6 +74,14 @@ void IrOpDeleteBinary(IrOp *op);
 void IrOpLoadPrintImpl(IrPrinter *printer, IrOp *op);
 // Delete an operation "op" created with IrOpNewUnary
 void IrOpDeleteUnary(IrOp *op);
+// Implementation of IrOpUnaryPrint, which uses an internal "printer"
+void IrOpUnaryPrintImpl(IrPrinter *printer, IrOp *op);
+// Implementation of IrOpStorePrint, which uses an internal "printer"
+void IrOpStorePrintImpl(IrPrinter *printer, IrOp *op);
+// Implementation of IrOpNullaryPrint, which uses an internal "printer"
+void IrOpNullaryPrintImpl(IrPrinter *printer, IrOp *op);
+// Delete an operation "op" created with IrOpNewNullary
+void IrOpDeleteNullary(IrOp *op);
 
 // Macros
 // Given the pointer variables to the "firstNode" and "lastNode" of the list,
@@ -364,10 +372,18 @@ void IrOpDelete(IrOp *op) {
       IrOpDeleteBinary(op);
       break;
     case IR_OP_KIND_LOAD:
+    case IR_OP_KIND_STORE:
+    case IR_OP_KIND_NEG:
+    case IR_OP_KIND_ALLOC:
+    case IR_OP_KIND_AS:
       IrOpDeleteUnary(op);
+      break;
+    case IR_OP_KIND_DEALLOC:
+      IrOpDeleteNullary(op);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
+      fflush(stdout);
       assert(false);
   }
 }
@@ -499,8 +515,17 @@ void IrVarPrintImpl(IrPrinter *printer, IrVar *var, bool printType) {
 
 void IrTypePrintImpl(IrPrinter *printer, IrType type) {
   switch (type) {
+    case IR_TYPE_F64:
+      fprintf(printer->file, "f64");
+      break;
+    case IR_TYPE_F32:
+      fprintf(printer->file, "f32");
+      break;
     case IR_TYPE_U64:
       fprintf(printer->file, "u64");
+      break;
+    case IR_TYPE_I64:
+      fprintf(printer->file, "i64");
       break;
     case IR_TYPE_U32:
       fprintf(printer->file, "u32");
@@ -510,6 +535,9 @@ void IrTypePrintImpl(IrPrinter *printer, IrType type) {
       break;
     case IR_TYPE_U8:
       fprintf(printer->file, "u8");
+      break;
+    case IR_TYPE_I8:
+      fprintf(printer->file, "i8");
       break;
     case IR_TYPE_FN:
       fprintf(printer->file, "fn");
@@ -556,8 +584,19 @@ void IrOpPrintImpl(IrPrinter *printer, IrOp *op) {
     case IR_OP_KIND_GT:
       IrOpBinaryPrintImpl(printer, op);
       break;
+    case IR_OP_KIND_ALLOC:
+    case IR_OP_KIND_NEG:
+    case IR_OP_KIND_AS:
+      IrOpUnaryPrintImpl(printer, op);
+      break;
+    case IR_OP_KIND_DEALLOC:
+      IrOpNullaryPrintImpl(printer, op);
+      break;
     case IR_OP_KIND_LOAD:
       IrOpLoadPrintImpl(printer, op);
+      break;
+    case IR_OP_KIND_STORE:
+      IrOpStorePrintImpl(printer, op);
       break;
     default:
       printf("Op kind: %d\n", op->kind);
@@ -809,4 +848,102 @@ void IrOpLoadPrintImpl(IrPrinter *printer, IrOp *op) {
 
 void IrOpDeleteUnary(IrOp *op) {
   free(op);
+}
+
+IrOp *IrOpNewNullaryOp(IrOpKind kind, IrVar *dst) {
+  IrOp *op = malloc(sizeof(IrOp));
+  op->kind = kind;
+  op->nullary.dst = dst;
+  return op;
+}
+
+void IrOpUnaryPrintImpl(IrPrinter *printer, IrOp *op) {
+  int dstId = IrPrinterVarId(printer, op->unary.dst);
+  int srcId = IrPrinterVarId(printer, op->unary.src);
+  fprintf(printer->file, "v%d : ", dstId);
+  IrTypePrintImpl(printer, op->unary.dst->type);
+  fprintf(printer->file, " = ");
+  switch (op->kind) {
+    case IR_OP_KIND_ALLOC:
+      fprintf(printer->file, "alloc ");
+      break;
+    case IR_OP_KIND_NEG:
+      fprintf(printer->file, "-");
+      break;
+    case IR_OP_KIND_AS:
+      break;
+    default:
+      printf("Op kind: %d\n", op->kind);
+      assert(false);
+  }
+  fprintf(printer->file, "v%d", srcId);
+  switch (op->kind) {
+    case IR_OP_KIND_ALLOC:
+    case IR_OP_KIND_NEG:
+      break;
+    case IR_OP_KIND_AS:
+      fprintf(printer->file, " as ");
+      IrTypePrintImpl(printer, op->unary.dst->type);
+      break;
+    default:
+      printf("Op kind: %d\n", op->kind);
+      assert(false);
+  }
+  fprintf(printer->file, "\n");
+}
+
+void IrOpStorePrintImpl(IrPrinter *printer, IrOp *op) {
+  int dstId = IrPrinterVarId(printer, op->unary.dst);
+  int srcId = IrPrinterVarId(printer, op->unary.src);
+  fprintf(printer->file, "store v%d v%d\n", srcId, dstId);
+}
+
+void IrOpNullaryPrintImpl(IrPrinter *printer, IrOp *op) {
+  int dstId = IrPrinterVarId(printer, op->nullary.dst);
+  fprintf(printer->file, "dealloc v%d\n", dstId);
+}
+
+void IrOpDeleteNullary(IrOp *op) {
+  free(op);
+}
+
+bool IrTypeIsFloat(IrType type) {
+  switch (type) {
+    case IR_TYPE_F64:
+    case IR_TYPE_F32:
+      return true;
+    case IR_TYPE_U64:
+    case IR_TYPE_I64:
+    case IR_TYPE_U32:
+    case IR_TYPE_I32:
+    case IR_TYPE_U16:
+    case IR_TYPE_I16:
+    case IR_TYPE_U8:
+    case IR_TYPE_I8:
+    case IR_TYPE_FN:
+    case IR_TYPE_CFN:
+      return false;
+    default:
+      assert(false);
+  }
+}
+bool IrTypeIsSigned(IrType type) {
+  switch (type) {
+    case IR_TYPE_I64:
+    case IR_TYPE_I32:
+    case IR_TYPE_I16:
+    case IR_TYPE_I8:
+      return true;
+    case IR_TYPE_F64:
+    case IR_TYPE_F32:
+    case IR_TYPE_U64:
+    case IR_TYPE_U32:
+    case IR_TYPE_U16:
+    case IR_TYPE_U8:
+    case IR_TYPE_FN:
+    case IR_TYPE_CFN:
+      return false;
+    default:
+      assert(false);
+  }
 }

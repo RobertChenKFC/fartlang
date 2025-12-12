@@ -270,5 +270,10 @@ bool SemaTypeIsPrimType(SemaType *type, SemaPrimType primType);
 // label. Note that "value" must be type checked by the appropriate function
 // (SemaTypeFromExpr or SemaTypeFromTerm) before being passed to this function
 bool SemaValueIsCapturable(SyntaxAST *value);
+// Returns a type with one fewer array level than "arrayType". A new type is
+// allocated if and only if "isTypeOwner" is set to true
+SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
+// Destructor for SemaType "type"
+void SemaTypeDelete(SemaType *type);
 
 #endif // SEMA_H

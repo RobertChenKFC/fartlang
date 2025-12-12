@@ -33,8 +33,6 @@ bool SemaPopulateClassSymbols(SemaCtx *ctx);
 // Destructor for SemaSymInfo "p". Can be used as hash table destructors
 // TODO: this may not be needed. Remove it if possible
 void SemaSymInfoDelete(void *p);
-// Destructor for SemaType "type"
-void SemaTypeDelete(SemaType *type);
 // Initializes all the SemaInfo stored in the AST "node" and recursively
 // initializes all descendants using the "init" function. The remaining
 // arguments to the function are passed into the "init" function as a va_list
@@ -334,9 +332,6 @@ void SemaPrintErrorForUncapturableValue(SyntaxAST *value, SemaFileCtx *fileCtx);
 // same way as above
 SemaType *SemaTypeFromIndexOp(
     SyntaxAST *expr, HashTable *symbolTable, SemaFileCtx *fileCtx);
-// Returns a type with one fewer array level than "arrayType". A new type is
-// allocated if and only if "isTypeOwner" is set to true
-SemaType *SemaTypeDecreaseArrayLevel(SemaType *arrayType, bool *isTypeOwner);
 // Returns true if and only if type checking the expression statement
 // stored in "stmt" succeeds. The remaining arguments are used in the same way
 // as the type check functions above
@@ -446,6 +441,10 @@ bool SemaCurMethodExpectsReturnExpr(SemaFileCtx *fileCtx);
 // "ctx") contains a Main class, and the class contains a method main of type
 // fn ()
 bool SemaCheckForMainFunc(SemaCtx *ctx);
+// Returns true if and only if the dealloc "stmt" is used to deallocate a
+// variable of an array type or class instance
+bool SemaTypeCheckDeallocStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx);
 
 void SemaInfoInit(SemaInfo *info) {
   info->stage = SEMA_STAGE_SYNTAX;
@@ -2573,6 +2572,8 @@ bool SemaTypeCheckStmt(
       return SemaTypeCheckBreakStmt(stmt, symbolTable, fileCtx);
     case SYNTAX_AST_KIND_RETURN_STMT:
       return SemaTypeCheckReturnStmt(stmt, symbolTable, fileCtx);
+    case SYNTAX_AST_KIND_DEALLOC_STMT:
+      return SemaTypeCheckDeallocStmt(stmt, symbolTable, fileCtx);
     default:
       printf("Stmt kind: %d\n", stmt->kind);
       assert(false);
@@ -2832,17 +2833,27 @@ bool SemaValueIsCapturable(SyntaxAST *value) {
     case SYNTAX_AST_KIND_IDENTIFIER: {
       SemaType *type = value->semaInfo.typeInfo.type;
       switch (type->kind) {
-        case SEMA_TYPE_KIND_CLASS:
+        case SEMA_TYPE_KIND_CLASS: {
+          // An identifier of class type kind can either be a class (not
+          // capturable) or an instance of a class (capturable). Therefore,
+          // we have to look at the declaration of this identifier to know
+          // whether it's capturable or not.
+          SyntaxAST *decl = value->semaInfo.decl;
+          return decl->kind == SYNTAX_AST_KIND_VAR_INIT;
+        }
         case SEMA_TYPE_KIND_NAMESPACE:
-        case SEMA_TYPE_KIND_LABEL:
+        case SEMA_TYPE_KIND_LABEL: {
           return false;
+        }
         case SEMA_TYPE_KIND_ARRAY:
         case SEMA_TYPE_KIND_FN:
-        case SEMA_TYPE_KIND_PRIM_TYPE:
+        case SEMA_TYPE_KIND_PRIM_TYPE: {
           return true;
-        default:
+        }
+        default: {
           printf("Type kind: %d\n", type->kind);
           assert(false);
+        }
       }
     } case SYNTAX_AST_KIND_MEMBER_ACCESS: {
       SyntaxAST *operand = value->firstChild;
@@ -3756,4 +3767,29 @@ SyntaxAST *SemaCtxGetMainFn(SemaCtx *ctx) {
 
   VectorDelete(paramTypes);
   return mainFn;
+}
+
+bool SemaTypeCheckDeallocStmt(
+    SyntaxAST *stmt, HashTable *symbolTable, SemaFileCtx *fileCtx) {
+  SyntaxAST *var = stmt->firstChild;
+  assert(var && var->kind == SYNTAX_AST_KIND_IDENTIFIER);
+  SemaType *varType = SemaTypeFromTerm(
+      var, /*parentExpr=*/NULL, symbolTable, fileCtx);
+  if (!varType) {
+    return false;
+  }
+  if (!SemaValueIsCapturable(var) ||
+      (varType->kind != SEMA_TYPE_KIND_ARRAY &&
+       varType->kind != SEMA_TYPE_KIND_CLASS)) {
+    fprintf(stderr, SOURCE_COLOR_RED"[Error]"SOURCE_COLOR_RESET
+            " %s:%d: ", fileCtx->path, var->stringLoc.from.lineNo + 1);
+    fprintf(stderr, "expected dealloc to apply to array type or class instance, "
+        "got identifier of type "SOURCE_COLOR_RED);
+    SemaTypePrint(stderr, varType);
+    fprintf(stderr, SOURCE_COLOR_RESET" instead\n");
+    SourceLocationPrint(
+        fileCtx->source, 1, SOURCE_COLOR_RED, &var->stringLoc);
+    return false;
+  }
+  return true;
 }

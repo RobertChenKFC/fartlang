@@ -1862,6 +1862,25 @@ ParserDeclareHandler(SyntaxHandlerReturnStmt, rhs) {
   return stmt;
 }
 
+ParserDeclareHandler(SyntaxHandlerDeallocStmt, rhs) {
+  assert(rhs->size == 3);
+  LexerToken *dealloc_ = rhs->arr[0];
+  LexerToken *identifier_ = rhs->arr[1];
+  LexerToken *semicol_ = rhs->arr[2];
+  assert(dealloc_ && dealloc_->tokenID == DEALLOC);
+  assert(identifier_ && identifier_->tokenID == IDENTIFIER);
+  assert(semicol_ && semicol_->tokenID == SEMICOL);
+
+  SyntaxAST *stmt = SyntaxASTNew(SYNTAX_AST_KIND_DEALLOC_STMT);
+  SyntaxAST *var = SyntaxTokenToAST(identifier_, SYNTAX_AST_KIND_IDENTIFIER);
+  SyntaxASTAppend(stmt, var);
+  stmt->loc.from = dealloc_->loc.from;
+  stmt->loc.to = semicol_->loc.to;
+  LexerTokenDelete(dealloc_);
+  LexerTokenDelete(semicol_);
+  return stmt;
+}
+
 void SyntaxASTPrepend(SyntaxAST *node, SyntaxAST *child) {
   child->sibling = node->firstChild;
   if (!node->firstChild) {

@@ -2,7 +2,74 @@
 #include <alloca.h>
 #include <assert.h>
 #include <endian.h>
+#include <stdlib.h>
 #include <string.h>
+
+// Given values "srcVal1" and "srcVal2" as uint64_t and the IrOpKind "opKind",
+// compute the output of the binary op using the according to the semantics of
+// "ValType", and store the result in "dstVal"
+#define InterpreterComputeBinaryOp(ValType, dstVal, opKind, srcVal1, srcVal2) \
+  do { \
+    ValType _dst; \
+    ValType _src1, _src2; \
+    memcpy(&_src1, &srcVal1, sizeof(ValType)); \
+    memcpy(&_src2, &srcVal2, sizeof(ValType)); \
+    switch (op->kind) { \
+      case IR_OP_KIND_ADD: \
+        _dst = _src1 + _src2; \
+        break; \
+      case IR_OP_KIND_SUB: \
+        _dst = _src1 - _src2; \
+        break; \
+      case IR_OP_KIND_MUL: \
+        _dst = _src1 * _src2; \
+        break; \
+      case IR_OP_KIND_DIV: \
+        _dst = _src1 / _src2; \
+        break; \
+      case IR_OP_KIND_MOD: \
+        _dst = _src1 % _src2; \
+        break; \
+      case IR_OP_KIND_AND: \
+        _dst = _src1 & _src2; \
+        break; \
+      case IR_OP_KIND_XOR: \
+        _dst = _src1 ^ _src2; \
+        break; \
+      case IR_OP_KIND_OR: \
+        _dst = _src1 | _src2; \
+        break; \
+      case IR_OP_KIND_LSHIFT: \
+        _dst = _src1 << _src2; \
+        break; \
+      case IR_OP_KIND_RSHIFT: \
+        _dst = _src1 >> _src2; \
+        break; \
+      case IR_OP_KIND_LT: \
+        _dst = _src1 < _src2 ? 1 : 0; \
+        break; \
+      case IR_OP_KIND_LE: \
+        _dst = _src1 <= _src2 ? 1 : 0; \
+        break; \
+      case IR_OP_KIND_EQ: \
+        _dst = _src1 == _src2 ? 1 : 0; \
+        break; \
+      case IR_OP_KIND_NE: \
+        _dst = _src1 != _src2 ? 1 : 0; \
+        break; \
+      case IR_OP_KIND_GE: \
+        _dst = _src1 >= _src2 ? 1 : 0; \
+        break; \
+      case IR_OP_KIND_GT: \
+        _dst = _src1 > _src2 ? 1 : 0; \
+        break; \
+      default: \
+        printf("Op kind: %d\n", op->kind); \
+        assert(false); \
+    } \
+    memcpy(&dstVal, &_dst, sizeof(dstVal)); \
+  } while (0)
+
 
 // Advance "interpreter->pc" to the next operation
 void InterpreterStep(Interpreter *interpeter);
@@ -41,6 +108,16 @@ void InterpreterRunOpCopy(Interpreter *interpreter, IrOp *op);
 void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op);
 // Run the load operation "op"
 void InterpreterRunOpLoad(Interpreter *interpreter, IrOp *op);
+// Run the unary operation "op"
+void InterpreterRunOpUnary(Interpreter *interpreter, IrOp *op);
+// Run the alloc operation "op"
+void InterpreterRunOpAlloc(Interpreter *interpreter, IrOp *op);
+// Run the cast as operation "op"
+void InterpreterRunOpAs(Interpreter *interpreter, IrOp *op);
+// Run the store operation "op"
+void InterpreterRunOpStore(Interpreter *interpreter, IrOp *op);
+// Run the dealloc operation "op"
+void InterpreterRunOpDealloc(Interpreter *interpreter, IrOp *op);
 
 void InterpreterInit(Interpreter *interpreter) {
   interpreter->pc = NULL;
@@ -190,11 +267,27 @@ void InterpreterRunOp(Interpreter *interpreter, IrOp *op) {
     case IR_OP_KIND_GT:
       InterpreterRunOpBinary(interpreter, op);
       break;
+    case IR_OP_KIND_NEG:
+      InterpreterRunOpUnary(interpreter, op);
+      break;
     case IR_OP_KIND_LOAD:
       InterpreterRunOpLoad(interpreter, op);
       break;
+    case IR_OP_KIND_STORE:
+      InterpreterRunOpStore(interpreter, op);
+      break;
+    case IR_OP_KIND_ALLOC:
+      InterpreterRunOpAlloc(interpreter, op);
+      break;
+    case IR_OP_KIND_DEALLOC:
+      InterpreterRunOpDealloc(interpreter, op);
+      break;
+    case IR_OP_KIND_AS:
+      InterpreterRunOpAs(interpreter, op);
+      break;
     default:
       printf("Op kind: %d\n", IrOpGetKind(op));
+      fflush(stdout);
       assert(false);
   }
 }
@@ -339,59 +432,98 @@ void InterpreterRunOpBinary(Interpreter *interpreter, IrOp *op) {
   uint64_t src1Val = le64toh(InterpreterGetVarVal(interpreter, src1Var));
   uint64_t src2Val = le64toh(InterpreterGetVarVal(interpreter, src2Var));
   uint64_t dstVal;
+  if (IrTypeIsFloat(src1Var->type)) {
+    double dst;
+    switch (op->kind) {
+      case IR_OP_KIND_ADD:
+        dst = src1Val + src2Val;
+        break;
+      case IR_OP_KIND_SUB:
+        dst = src1Val - src2Val;
+        break;
+      case IR_OP_KIND_MUL:
+        dst = src1Val * src2Val;
+        break;
+      case IR_OP_KIND_DIV:
+        dst = src1Val / src2Val;
+        break;
+      case IR_OP_KIND_LT:
+        dst = src1Val < src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_LE:
+        dst = src1Val <= src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_EQ:
+        dst = src1Val == src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_NE:
+        dst = src1Val != src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_GE:
+        dst = src1Val >= src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_GT:
+        dst = src1Val > src2Val ? 1 : 0;
+        break;
+      case IR_OP_KIND_MOD:
+      case IR_OP_KIND_AND:
+      case IR_OP_KIND_XOR:
+      case IR_OP_KIND_OR:
+      case IR_OP_KIND_LSHIFT:
+        printf("Unsupported float op: %d\n", op->kind);
+        break;
+      default:
+        printf("Op kind: %d\n", op->kind);
+        assert(false);
+    }
+    switch (src1Var->type) {
+      case IR_TYPE_F64: {
+        memcpy(&dstVal, &dst, sizeof(dstVal));
+        break;
+      } case IR_TYPE_F32: {
+        float roundedDst = dst;
+        dstVal = 0;
+        memcpy(&dstVal, &dst, sizeof(roundedDst));
+        break;
+      } default: {
+        assert(false);
+      }
+    }
+  } else if (IrTypeIsSigned(src1Var->type)) {
+    InterpreterComputeBinaryOp(int64_t, dstVal, op->kind, src1Val, src2Val);
+  } else {
+    InterpreterComputeBinaryOp(uint64_t, dstVal, op->kind, src1Val, src2Val);
+  }
+  IrType dstType;
   switch (op->kind) {
     case IR_OP_KIND_ADD:
-      dstVal = src1Val + src2Val;
-      break;
     case IR_OP_KIND_SUB:
-      dstVal = src1Val - src2Val;
-      break;
     case IR_OP_KIND_MUL:
-      dstVal = src1Val * src2Val;
-      break;
     case IR_OP_KIND_DIV:
-      dstVal = src1Val / src2Val;
-      break;
     case IR_OP_KIND_MOD:
-      dstVal = src1Val % src2Val;
-      break;
     case IR_OP_KIND_AND:
-      dstVal = src1Val & src2Val;
-      break;
     case IR_OP_KIND_XOR:
-      dstVal = src1Val ^ src2Val;
-      break;
     case IR_OP_KIND_OR:
-      dstVal = src1Val | src2Val;
+      assert(src1Var->type == src2Var->type);
+      dstType = src1Var->type;
       break;
     case IR_OP_KIND_LSHIFT:
-      dstVal = src1Val << src2Val;
-      break;
     case IR_OP_KIND_RSHIFT:
-      dstVal = src1Val >> src2Val;
+      dstType = src1Var->type;
       break;
     case IR_OP_KIND_LT:
-      dstVal = src1Val < src2Val ? 1 : 0;
-      break;
     case IR_OP_KIND_LE:
-      dstVal = src1Val <= src2Val ? 1 : 0;
-      break;
     case IR_OP_KIND_EQ:
-      dstVal = src1Val == src2Val ? 1 : 0;
-      break;
     case IR_OP_KIND_NE:
-      dstVal = src1Val != src2Val ? 1 : 0;
-      break;
     case IR_OP_KIND_GE:
-      dstVal = src1Val >= src2Val ? 1 : 0;
-      break;
     case IR_OP_KIND_GT:
-      dstVal = src1Val > src2Val ? 1 : 0;
+      dstType = IR_TYPE_U8;
       break;
     default:
       printf("Op kind: %d\n", op->kind);
       assert(false);
   }
+  assert(dstVar->type == dstType);
   InterpreterSetVarVal(interpreter, dstVar, htole64(dstVal));
   InterpreterStep(interpreter);
 }
@@ -404,5 +536,65 @@ void InterpreterRunOpLoad(Interpreter *interpreter, IrOp *op) {
   int size = IrTypeGetSize(dstVar->type);
   memcpy(&dstVal, srcAddr, size);
   InterpreterSetVarVal(interpreter, dstVar, dstVal);
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpUnary(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->unary.dst;
+  IrVar *srcVar = op->unary.src;
+  uint64_t srcVal = le64toh(InterpreterGetVarVal(interpreter, srcVar));
+  uint64_t dstVal;
+  switch (op->kind) {
+    case IR_OP_KIND_NEG:
+      dstVal = -srcVal;
+      break;
+    default:
+      printf("Op kind: %d\n", op->kind);
+      assert(false);
+  }
+  InterpreterSetVarVal(interpreter, dstVar, htole64(dstVal));
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpAlloc(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->unary.dst;
+  IrVar *srcVar = op->unary.src;
+  uint64_t srcVal = le64toh(InterpreterGetVarVal(interpreter, srcVar));
+  uint64_t dstVal = (uint64_t)malloc(srcVal);
+  InterpreterSetVarVal(interpreter, dstVar, htole64(dstVal));
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpAs(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->unary.dst;
+  IrVar *srcVar = op->unary.src;
+  uint64_t srcVal = InterpreterGetVarVal(interpreter, srcVar);
+  uint64_t dstVal = 0;
+  int dstSize = IrTypeGetSize(dstVar->type);
+  int srcSize = IrTypeGetSize(srcVar->type);
+  // If dstSize is bigger, the cast op fills the more significant bits with 0;
+  // if dstSize is smaller, the cast op only copies the less significant bits.
+  // Therefore, it is equivalent to clearing dst to 0 and copying only the
+  // smaller of dstSize and srcSize.
+  int size = dstSize < srcSize ? dstSize : srcSize;
+  memcpy(&dstVal, &srcVal, size);
+  InterpreterSetVarVal(interpreter, dstVar, dstVal);
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpStore(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->unary.dst;
+  IrVar *srcVar = op->unary.src;
+  void *dstAddr = (void*)le64toh(InterpreterGetVarVal(interpreter, dstVar));
+  uint64_t srcVal = InterpreterGetVarVal(interpreter, srcVar);
+  int size = IrTypeGetSize(srcVar->type);
+  memcpy(dstAddr, &srcVal, size);
+  InterpreterStep(interpreter);
+}
+
+void InterpreterRunOpDealloc(Interpreter *interpreter, IrOp *op) {
+  IrVar *dstVar = op->nullary.dst;
+  void *dstAddr = (void*)le64toh(InterpreterGetVarVal(interpreter, dstVar));
+  free(dstAddr);
   InterpreterStep(interpreter);
 }

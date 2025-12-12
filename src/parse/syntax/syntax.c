@@ -114,6 +114,7 @@ enum {
   BREAK,
   RETURN,
   NULL_LITERAL,
+  DEALLOC,
   IDENTIFIER,
   NUM_TOKENS,
   TOKEN_EOF = NUM_TOKENS
@@ -191,6 +192,7 @@ enum {
   WHILE_STMT,
   BREAK_STMT,
   RETURN_STMT,
+  DEALLOC_STMT,
   METHOD_DECL_MODIFIERS
 };
 // Create a new regex named "chain" for use in ADD_REGEX_CHAIN
@@ -407,6 +409,7 @@ Lexer *SyntaxCreateLexer(void) {
     ADD_REGEX_CHAIN(chain, break_, RegexFromString("break"));
     ADD_REGEX_CHAIN(chain, return_, RegexFromString("return"));
     ADD_REGEX_CHAIN(chain, null_literal_, RegexFromString("null"));
+    ADD_REGEX_CHAIN(chain, dealloc_, RegexFromString("dealloc"));
     RegexRange *newlineRange = RegexRangeFromLetter('\n');
     RegexCharacterClass *newlineClass = RegexCharacterClassFromRanges(1,
         newlineRange);
@@ -525,6 +528,7 @@ Lexer *SyntaxCreateLexer(void) {
     assert(LexerConfigAddRegex(lexerConfig, break_) == BREAK);
     assert(LexerConfigAddRegex(lexerConfig, return_) == RETURN);
     assert(LexerConfigAddRegex(lexerConfig, null_literal_) == NULL_LITERAL);
+    assert(LexerConfigAddRegex(lexerConfig, dealloc_) == DEALLOC);
     assert(LexerConfigAddRegex(lexerConfig, identifier_) == IDENTIFIER);
     LexerConfigSetIgnoreRegex(lexerConfig, ignore_);
 
@@ -628,6 +632,7 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
       assert(CFGAddVariable(cfg) == WHILE_STMT);
       assert(CFGAddVariable(cfg) == BREAK_STMT);
       assert(CFGAddVariable(cfg) == RETURN_STMT);
+      assert(CFGAddVariable(cfg) == DEALLOC_STMT);
       assert(CFGAddVariable(cfg) == METHOD_DECL_MODIFIERS);
 
       // Add all CFG rules
@@ -920,6 +925,8 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           STMT, 1, BREAK_STMT);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
           STMT, 1, RETURN_STMT);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerMove,
+          STMT, 1, DEALLOC_STMT);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerExprStmt,
           EXPR_STMT, 2, EXPR, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerAssignStmt,
@@ -1008,6 +1015,8 @@ Parser *SyntaxCreateParser(Lexer *lexer) {
           RETURN_STMT, 2, RETURN, SEMICOL);
       ParserAddRuleAndHandler(parserConfig, SyntaxHandlerReturnStmt,
           RETURN_STMT, 3, RETURN, EXPR, SEMICOL);
+      ParserAddRuleAndHandler(parserConfig, SyntaxHandlerDeallocStmt,
+          DEALLOC_STMT, 3, DEALLOC, IDENTIFIER, SEMICOL);
 
       // DEBUG
       parserConfig->htmlFilePath = "visualize.html";

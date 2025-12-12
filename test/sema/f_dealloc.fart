@@ -1,0 +1,12 @@
+class Main {
+  fn main() {
+    var x = 3;
+    dealloc x;
+    dealloc Main;
+    dealloc main;
+    while true {
+    }
+    > label:
+    dealloc label;
+  }
+}

@@ -62,3 +62,7 @@
    75 |     var namespace_class_var = [32;1mfile6.Foo[0m.[31;1mx[0m; # error
 [31;1m[Error][0m f_term_in_method.fart:76: expected expression to be of type [32;1mBar[0m, got type [31;1mBar[0m instead
    76 |     var namespace_class_static : [32;1mBar[0m = [31;1mfile6.Foo.y[0m; # correct, type u32
+[31;1m[Error][0m f_term_in_method.fart:81: expected expression to be of type [32;1mbool[0m, got type [31;1mi32[0m instead
+   81 |     var y1: [32;1mbool[0m = [31;1mx.x[0m; # correct, type i32
+[31;1m[Error][0m f_term_in_method.fart:82: [31;1mx[0m is a non-static variable of type [32;1mBar[0m
+   82 |     var y2: bool = [32;1mBar[0m.[31;1mx[0m; # error
