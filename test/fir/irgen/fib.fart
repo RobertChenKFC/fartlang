@@ -1,0 +1,23 @@
+import print_int_lib.*;
+
+class Main {
+  fn fib(n: i32) -> i32 {
+    if n == 0 {
+      return n;
+    }
+    if n == 1 {
+      return n;
+    }
+    return Main.fib(n - 2) + Main.fib(n - 1);
+  }
+
+  fn print_fib(n: i32) {
+    Print.print_int(Main.fib(n));
+  }
+
+  fn main() {
+    for var n = 0; n < 20; n++ {
+      Main.print_fib(n);
+    }
+  }
+}
