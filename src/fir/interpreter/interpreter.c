@@ -196,9 +196,9 @@ void InterpreterUpdatePc(
         assert(retVar);
         retVal = InterpreterGetVarVal(interpreter, retVar);
       }
-      // Now that we have retrived the return value, we can pop all the callee's
+      // Now that we have retrived the return value, we can pop all the caller's
       // variables from the variable table
-      InterpreterPopFuncVars(interpreter, IrBasicBlockGetParentFunc(block));
+      InterpreterPopFuncVars(interpreter, IrBasicBlockGetParentFunc(nextBlock));
       if (interpreter->retVar) {
         InterpreterSetVarVal(interpreter, interpreter->retVar, retVal);
       }
@@ -387,12 +387,16 @@ bool InterpreterValIsTrue(uint64_t val) {
 
 void InterpreterPushFuncVars(Interpreter *interpreter, IrFunc *func) {
   IrForVar(func, var) {
-    VectorAdd(interpreter->varStack,
-              (void*)InterpreterGetVarVal(interpreter, var));
+    uint64_t val = InterpreterGetVarVal(interpreter, var);
+    VectorAdd(interpreter->varStack, (void*)val);
   }
+
+  VectorAdd(interpreter->varStack, (void*)interpreter->retVar);
 }
 
 void InterpreterPopFuncVars(Interpreter *interpreter, IrFunc *func) {
+  interpreter->retVar = VectorPop(interpreter->varStack);
+
   int numVars = 0;
   IrForVar(func, var) {
     ++numVars;
@@ -405,7 +409,8 @@ void InterpreterPopFuncVars(Interpreter *interpreter, IrFunc *func) {
   int i = 0;
   Vector *stack = interpreter->varStack;
   IrForVar(func, var) {
-    valBuf[i++] = (uint64_t)VectorPop(stack);
+    uint64_t val = (uint64_t)VectorPop(stack);
+    valBuf[i++] = val;
   }
   i = numVars - 1;
   IrForVar(func, var) {

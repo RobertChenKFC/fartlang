@@ -21,8 +21,12 @@ struct Interpreter {
   HashTable *vars;
   // A stack of operations (IrOp*) to jump to whenever we return from a function
   Vector *opStack;
-  // A stack of local variables of all the callers, which are restored to "vars"
-  // whenever we return from the callee
+  // A stack of local variable values. Each time the a function call is made,
+  // the following are pushed to the stack (in this order):
+  // - The value of all local variables of the caller, pushed in the order that
+  //   the variables are registered in the caller function
+  // - The variable (IrVar*) to store the return value of the function call
+  //   when the callee returns. If no return value is expected, NULL is pushed
   Vector *varStack;
   // An argument vector (of uint64_t) used whenever a wrapped C function is
   // called
