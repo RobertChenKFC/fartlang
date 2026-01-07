@@ -1,0 +1,20 @@
+import print_int_lib.*;
+
+class Main {
+  fn mccarthy(n: i32) -> i32 {
+    if n > 100 {
+      return n - 10;
+    }
+    return Main.mccarthy(Main.mccarthy(n + 11));
+  }
+
+  fn print_mccarthy(n: i32) {
+    Print.print_int(Main.mccarthy(n));
+  }
+
+  fn main() {
+    for var n = 90; n < 110; n++ {
+      Main.print_mccarthy(n);
+    }
+  }
+}
